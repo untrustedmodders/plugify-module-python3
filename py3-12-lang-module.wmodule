@@ -1,0 +1,15 @@
+{
+  "fileVersion": 1,
+  "version": 1,
+  "versionName": "1.0",
+  "friendlyName": "Python3.12 language module",
+  "language": "python3",
+  "description": "Adds support for Python3 plugins",
+  "createdBy": "untrustedmodders",
+  "createdByURL": "https://github.com/untrustedmodders/",
+  "docsURL": "https://github.com/untrustedmodders/py3-12-lang-module/README.md",
+  "downloadURL": "https://github.com/orgs/untrustedmodders/py3-12-lang-module.zip",
+  "supportURL": "https://github.com/untrustedmodders/py3-12-lang-module/issues",
+  "supportedPlatforms": [],
+  "forceLoad": false
+}
