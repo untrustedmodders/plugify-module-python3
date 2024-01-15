@@ -1,5 +1,7 @@
 #include <wizard/language_module.h>
 #include <module_export.h>
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
 
 using namespace wizard;
 
@@ -14,13 +16,15 @@ namespace py3lm {
 				return ErrorData{ "Provider not exposed" };
 			}
 
-			// TODO: implement
+			Py_Initialize();
+			PyRun_SimpleString("from time import time,ctime\n"
+				"print('Today is', ctime(time()))\n");
 
 			return InitResultData{};
 		}
 
 		void Shutdown() override {
-			// TODO: implement
+			Py_Finalize();
 		}
 
 		void OnMethodExport(const IPlugin& plugin) override {

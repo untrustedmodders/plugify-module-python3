@@ -30,3 +30,18 @@ target_link_libraries(${PROJECT_NAME} PRIVATE wizard)
 include(GenerateExportHeader)
 generate_export_header(${PROJECT_NAME} EXPORT_MACRO_NAME PY3LM_EXPORT EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/exports/module_export.h)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/exports)
+
+#
+# Python 3.12
+#
+add_library(python3 SHARED IMPORTED)
+if(WIN32)
+    set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/debug/python312_d.dll")
+    set_property(TARGET python3 PROPERTY IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/debug/python312_d.lib")
+    set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/release/python312.dll")
+    set_property(TARGET python3 PROPERTY IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/release/python312.lib")
+endif()
+target_link_libraries(${PROJECT_NAME} PRIVATE python3)
+string(TOLOWER ${CMAKE_SYSTEM_NAME} SYSTEM_NAME_LOWER)
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/include/pyconfig.h" DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/include/python3.12")
+target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/include/python3.12")
