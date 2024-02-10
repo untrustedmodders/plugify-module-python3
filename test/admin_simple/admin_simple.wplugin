@@ -1,0 +1,19 @@
+{
+	"fileVersion": 1,
+	"version": 1,
+	"versionName": "1.0",
+	"friendlyName": "Admin Simple",
+	"description": "Admin Simple",
+	"createdBy": "untrustedmodders",
+	"createdByURL": "https://github.com/untrustedmodders/",
+	"docsURL": "https://github.com/orgs/untrustedmodders/README.md",
+	"downloadURL": "https://github.com/orgs/untrustedmodders/admin_simple.zip",
+	"updateURL": "https://github.com/untrustedmodders/wizard/issues",
+	"assemblyPath": "utils/admin_simple.py",
+	"supportedPlatforms": [],
+	"languageModule": {
+		"name": "python3"
+	},
+	"dependencies": [],
+	"exportedMethods": []
+}
