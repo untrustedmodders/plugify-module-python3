@@ -11,5 +11,6 @@
   "downloadURL": "https://github.com/orgs/untrustedmodders/py3-12-lang-module.zip",
   "updateURL": "https://github.com/untrustedmodders/py3-12-lang-module/issues",
   "supportedPlatforms": [],
+  "libraryDirectories": ["python3.12"],
   "forceLoad": false
 }
