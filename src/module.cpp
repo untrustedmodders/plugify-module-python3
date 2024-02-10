@@ -1,14 +1,15 @@
-#include <wizard/wizard_provider.h>
-#include <wizard/log.h>
-#include <wizard/language_module.h>
-#include <wizard/module.h>
-#include <wizard/plugin.h>
+#include <plugify/plugify_provider.h>
+#include <plugify/log.h>
+#include <plugify/language_module.h>
+#include <plugify/module.h>
+#include <plugify/plugin_descriptor.h>
+#include <plugify/plugin.h>
 #include <module_export.h>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <unordered_map>
 
-using namespace wizard;
+using namespace plugify;
 namespace fs = std::filesystem;
 
 namespace py3lm {
@@ -27,7 +28,7 @@ namespace py3lm {
 		Python3LanguageModule() = default;
 
 		// ILanguageModule
-		InitResult Initialize(std::weak_ptr<IWizardProvider> provider, const IModule& module) override {
+		InitResult Initialize(std::weak_ptr<IPlugifyProvider> provider, const IModule& module) override {
 			if (!(_provider = provider.lock())) {
 				return ErrorData{ "Provider not exposed" };
 			}
@@ -104,20 +105,20 @@ namespace py3lm {
 				return ErrorData{ std::format("Failed to init python: {}", status.err_msg) };
 			}
 
-			PyObject* const wizardPluginModuleName = PyUnicode_DecodeFSDefault("wizard.plugin");
-			if (!wizardPluginModuleName) {
+			PyObject* const plugifyPluginModuleName = PyUnicode_DecodeFSDefault("plugify.plugin");
+			if (!plugifyPluginModuleName) {
 				PyErr_Print();
-				return ErrorData{ "Failed to allocate wizard.plugin module string" };
+				return ErrorData{ "Failed to allocate plugify.plugin module string" };
 			}
 
-			PyObject* const wizardPluginModule = PyImport_Import(wizardPluginModuleName);
-			Py_DECREF(wizardPluginModuleName);
-			if (!wizardPluginModule) {
+			PyObject* const plugifyPluginModule = PyImport_Import(plugifyPluginModuleName);
+			Py_DECREF(plugifyPluginModuleName);
+			if (!plugifyPluginModule) {
 				PyErr_Print();
-				return ErrorData{ "Failed to import wizard.plugin python module" };
+				return ErrorData{ "Failed to import plugify.plugin python module" };
 			}
 
-			Py_DECREF(wizardPluginModule);
+			Py_DECREF(plugifyPluginModule);
 
 			return InitResultData{};
 		}
@@ -141,16 +142,13 @@ namespace py3lm {
 			std::error_code ec;
 
 			const fs::path& baseFolder = plugin.GetBaseDir();
-			const fs::path& filePath = plugin.GetFilePath();
-			fs::path filePathRelative = fs::relative(filePath, baseFolder, ec);
-			if (ec) {
-				return ErrorData{ "Assembly path not relative to plugin base" };
-			}
+			fs::path filePathRelative = plugin.GetDescriptor().entryPoint;
 			if (filePathRelative.empty() || filePathRelative.extension() != ".py") {
-				return ErrorData{ "Incorrect assembly path: empty or not .py" };
+				return ErrorData{ "Incorrect entry point: empty or not .py" };
 			}
+			const fs::path filePath = baseFolder / filePathRelative;
 			if (!fs::exists(filePath, ec) || !fs::is_regular_file(filePath, ec)) {
-				return ErrorData{ std::format("Assembly file '{}' not exist", filePath.string()) };
+				return ErrorData{ std::format("Module file '{}' not exist", filePath.string()) };
 			}
 			const fs::path pluginsFolder = baseFolder.parent_path();
 			filePathRelative = fs::relative(filePath, pluginsFolder, ec);
@@ -275,7 +273,7 @@ namespace py3lm {
 		}
 
 	private:
-		std::shared_ptr<IWizardProvider> _provider;
+		std::shared_ptr<IPlugifyProvider> _provider;
 		std::unordered_map<std::string, PyObject*> _pluginsMap;
 	};
 

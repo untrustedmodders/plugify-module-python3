@@ -1,4 +1,4 @@
-from wizard.plugin import Plugin, PluginInfo
+from plugify.plugin import Plugin, PluginInfo
 
 __plugin__ = PluginInfo('AdminSimple')
 

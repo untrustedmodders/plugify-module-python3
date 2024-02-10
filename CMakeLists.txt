@@ -12,20 +12,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 #
-# Wizard
+# Plugify
 #
-set(WIZARD_BUILD_DLL ON CACHE INTERNAL "")
-set(WIZARD_BUILD_SHARED_LIB ON CACHE INTERNAL "")
-add_subdirectory(external/wizard)
+set(PLUGIFY_BUILD_SHARED_LIB ON CACHE INTERNAL "")
+add_subdirectory(external/plugify)
 
 #
-# Python 3 Language Module for Wizard
+# Python 3 Language Module for Plugify
 #
 set(PY3LM_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/module.cpp")
 add_library(${PROJECT_NAME} SHARED ${PY3LM_SOURCES})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE wizard)
+target_link_libraries(${PROJECT_NAME} PRIVATE plugify::plugify)
 
 include(GenerateExportHeader)
 generate_export_header(${PROJECT_NAME} EXPORT_MACRO_NAME PY3LM_EXPORT EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/exports/module_export.h)
