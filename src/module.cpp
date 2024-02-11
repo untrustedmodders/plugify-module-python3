@@ -125,8 +125,8 @@ namespace py3lm {
 
 		void Shutdown() override {
 			if (Py_IsInitialized()) {
-				for (const auto& [_, pluginModule] : _pluginsMap) {
-					Py_DECREF(pluginModule);
+				for (const auto& [_, pluginData] : _pluginsMap) {
+					Py_DECREF(pluginData._module);
 				}
 				_pluginsMap.clear();
 
@@ -229,13 +229,13 @@ namespace py3lm {
 				return;
 			}
 
-			auto* const pluginModule = std::get<PyObject*>(*it);
-			if (!pluginModule) {
+			const auto& pluginData = std::get<PluginData>(*it);
+			if (!pluginData._module) {
 				_provider->Log(std::format("[py3lm] {}: null plugin module", context), Severity::Error);
 				return;
 			}
 
-			PyObject* const pluginInfo = PyObject_GetAttrString(pluginModule, "__plugin__");
+			PyObject* const pluginInfo = PyObject_GetAttrString(pluginData._module, "__plugin__");
 			if (!pluginInfo) {
 				PyErr_Print();
 				_provider->Log(std::format("[py3lm] {}: module.__plugin__ not found", context), Severity::Error);
@@ -274,7 +274,10 @@ namespace py3lm {
 
 	private:
 		std::shared_ptr<IPlugifyProvider> _provider;
-		std::unordered_map<std::string, PyObject*> _pluginsMap;
+		struct PluginData {
+			PyObject* _module = nullptr;
+		};
+		std::unordered_map<std::string, PluginData> _pluginsMap;
 	};
 
 	Python3LanguageModule g_py3lm;
