@@ -126,6 +126,7 @@ namespace py3lm {
 		void Shutdown() override {
 			if (Py_IsInitialized()) {
 				for (const auto& [_, pluginData] : _pluginsMap) {
+					Py_DECREF(pluginData._instance);
 					Py_DECREF(pluginData._module);
 				}
 				_pluginsMap.clear();
@@ -196,16 +197,17 @@ namespace py3lm {
 			}
 
 			const int resultCode = PyObject_SetAttrString(pluginInfo, "instance", pluginInstance);
-			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginInfo);
 			if (resultCode != 0) {
+				Py_DECREF(pluginInstance);
 				Py_DECREF(pluginModule);
 				PyErr_Print();
 				return ErrorData{ "Failed to save plugin instance" };
 			}
 
-			const auto [_, result] = _pluginsMap.try_emplace(plugin.GetName(), pluginModule);
+			const auto [_, result] = _pluginsMap.try_emplace(plugin.GetName(), pluginModule, pluginInstance);
 			if (!result) {
+				Py_DECREF(pluginInstance);
 				Py_DECREF(pluginModule);
 				return ErrorData{ std::format("Plugin name duplicate") };
 			}
@@ -230,36 +232,20 @@ namespace py3lm {
 			}
 
 			const auto& pluginData = std::get<PluginData>(*it);
-			if (!pluginData._module) {
-				_provider->Log(std::format("[py3lm] {}: null plugin module", context), Severity::Error);
-				return;
-			}
-
-			PyObject* const pluginInfo = PyObject_GetAttrString(pluginData._module, "__plugin__");
-			if (!pluginInfo) {
-				PyErr_Print();
-				_provider->Log(std::format("[py3lm] {}: module.__plugin__ not found", context), Severity::Error);
-				return;
-			}
-
-			PyObject* const pluginInstance = PyObject_GetAttrString(pluginInfo, "instance");
-			Py_DECREF(pluginInfo);
-			if (!pluginInstance) {
-				PyErr_Print();
-				_provider->Log(std::format("[py3lm] {}: module.__plugin__.instance not found", context), Severity::Error);
+			if (!pluginData._instance) {
+				_provider->Log(std::format("[py3lm] {}: null plugin instance", context), Severity::Error);
 				return;
 			}
 
 			PyObject* const nameString = PyUnicode_DecodeFSDefault(name.c_str());
 			if (!nameString) {
-				Py_DECREF(pluginInstance);
 				PyErr_Print();
 				_provider->Log(std::format("[py3lm] {}: failed to allocate name string", context), Severity::Error);
 				return;
 			}
 
-			if (PyObject_HasAttr(pluginInstance, nameString)) {
-				PyObject* const returnObject = PyObject_CallMethodNoArgs(pluginInstance, nameString);
+			if (PyObject_HasAttr(pluginData._instance, nameString)) {
+				PyObject* const returnObject = PyObject_CallMethodNoArgs(pluginData._instance, nameString);
 				if (!returnObject) {
 					PyErr_Print();
 					_provider->Log(std::format("[py3lm] {}: call '{}' failed", context, name), Severity::Error);
@@ -267,7 +253,6 @@ namespace py3lm {
 			}
 
 			Py_DECREF(nameString);
-			Py_DECREF(pluginInstance);
 
 			return;
 		}
@@ -276,6 +261,7 @@ namespace py3lm {
 		std::shared_ptr<IPlugifyProvider> _provider;
 		struct PluginData {
 			PyObject* _module = nullptr;
+			PyObject* _instance = nullptr;
 		};
 		std::unordered_map<std::string, PluginData> _pluginsMap;
 	};
