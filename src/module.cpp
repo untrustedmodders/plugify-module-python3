@@ -1,3 +1,4 @@
+#include <plugify/function.h>
 #include <plugify/plugify_provider.h>
 #include <plugify/log.h>
 #include <plugify/language_module.h>
@@ -7,6 +8,7 @@
 #include <module_export.h>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <asmjit/asmjit.h>
 #include <unordered_map>
 
 using namespace plugify;
@@ -21,6 +23,18 @@ namespace py3lm {
 				start_pos += to.length();
 			}
 		}
+
+		using MethodExportError = std::string;
+		using MethodExportData = Function;
+		using MethodExportResult = std::variant<MethodExportError, MethodExportData>;
+
+		MethodExportResult GenerateMethodExport(const Method& method, const asmjit::JitRuntime& jitRuntime, PyObject* pluginModule, PyObject* pluginInstance) {
+			return MethodExportError{ std::format("{} (I have paws)", method.name) };
+		}
+
+		void InternalCall(const Method* method, const Parameters* params, const uint8_t count, const ReturnValue* ret) {
+			
+		}
 	}
 
 	class Python3LanguageModule final : public ILanguageModule {
@@ -32,6 +46,8 @@ namespace py3lm {
 			if (!(_provider = provider.lock())) {
 				return ErrorData{ "Provider not exposed" };
 			}
+
+			_jitRuntime = std::make_shared<asmjit::JitRuntime>();
 
 			std::error_code ec;
 			const fs::path moduleBasePath = fs::absolute(module.GetBaseDir(), ec);
@@ -132,6 +148,7 @@ namespace py3lm {
 
 				Py_Finalize();
 			}
+			_jitRuntime.reset();
 			_provider.reset();
 		}
 
@@ -212,11 +229,36 @@ namespace py3lm {
 			}
 
 			const auto& exportedMethods = plugin.GetDescriptor().exportedMethods;
-			std::vector<MethodData> methods;
+			bool exportResult = true;
+			std::vector<std::string> exportErrors;
+			std::vector<std::tuple<std::reference_wrapper<const Method>, Function>> methodsHolders;
+
 			if (!exportedMethods.empty()) {
+				if (_jitRuntime) {
+					for (const auto& method : exportedMethods) {
+						MethodExportResult generateResult = GenerateMethodExport(method, *_jitRuntime, pluginModule, pluginInstance);
+						if (auto* data = std::get_if<MethodExportError>(&generateResult)) {
+							exportResult = false;
+							exportErrors.emplace_back(std::move(*data));
+							continue;
+						}
+						methodsHolders.emplace_back(std::cref(method), std::move(std::get<MethodExportData>(generateResult)));
+					}
+				}
+				else {
+					exportResult = false;
+					exportErrors.emplace_back("Invalid language module jit runtime");
+				}
+			}
+
+			if (!exportResult) {
 				Py_DECREF(pluginInstance);
 				Py_DECREF(pluginModule);
-				return ErrorData{ std::format("Methods export not implemented") };
+				std::string errorString = "Methods export error(s): " + exportErrors[0];
+				for (auto it = std::next(exportErrors.begin()); it != exportErrors.end(); ++it) {
+					std::format_to(std::back_inserter(errorString), ", {}", *it);
+				}
+				return ErrorData{ std::move(errorString) };
 			}
 
 			const auto [_, result] = _pluginsMap.try_emplace(plugin.GetName(), pluginModule, pluginInstance);
@@ -224,6 +266,14 @@ namespace py3lm {
 				Py_DECREF(pluginInstance);
 				Py_DECREF(pluginModule);
 				return ErrorData{ std::format("Save plugin data to map unsuccessful") };
+			}
+
+			std::vector<MethodData> methods;
+			methods.reserve(methodsHolders.size());
+
+			for (auto& [method, holder] : methodsHolders) {
+				methods.emplace_back(method.get().name, holder.GetJitFunc(method, &InternalCall));
+				_pythonMethods.emplace_back(std::move(holder));
 			}
 
 			return LoadResultData{ std::move(methods) };
@@ -273,11 +323,13 @@ namespace py3lm {
 
 	private:
 		std::shared_ptr<IPlugifyProvider> _provider;
+		std::shared_ptr<asmjit::JitRuntime> _jitRuntime;
 		struct PluginData {
 			PyObject* _module = nullptr;
 			PyObject* _instance = nullptr;
 		};
 		std::unordered_map<std::string, PluginData> _pluginsMap;
+		std::vector<Function> _pythonMethods;
 	};
 
 	Python3LanguageModule g_py3lm;

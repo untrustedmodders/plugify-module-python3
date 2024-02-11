@@ -15,6 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Plugify
 #
 set(PLUGIFY_BUILD_SHARED_LIB ON CACHE INTERNAL "")
+set(PLUGIFY_BUILD_FUNCTION ON CACHE INTERNAL "")
 add_subdirectory(external/plugify)
 
 #
@@ -24,7 +25,7 @@ set(PY3LM_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/module.cpp")
 add_library(${PROJECT_NAME} SHARED ${PY3LM_SOURCES})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE plugify::plugify)
+target_link_libraries(${PROJECT_NAME} PRIVATE plugify::plugify plugify::plugify-function asmjit::asmjit)
 
 include(GenerateExportHeader)
 generate_export_header(${PROJECT_NAME} EXPORT_MACRO_NAME PY3LM_EXPORT EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/exports/module_export.h)
