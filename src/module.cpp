@@ -78,7 +78,6 @@ namespace py3lm {
 
 				config.module_search_paths_set = 1;
 
-				
 				status = PyWideStringList_Append(&config.module_search_paths, modulesZipPath.wstring().c_str());
 				if (PyStatus_Exception(status)) {
 					break;
@@ -100,7 +99,7 @@ namespace py3lm {
 
 				break;
 			}
-			
+
 			if (PyStatus_Exception(status)) {
 				return ErrorData{ std::format("Failed to init python: {}", status.err_msg) };
 			}
