@@ -132,6 +132,7 @@ namespace py3lm {
 
 				Py_Finalize();
 			}
+			_provider.reset();
 		}
 
 		void OnMethodExport(const IPlugin& plugin) override {
