@@ -204,14 +204,28 @@ namespace py3lm {
 				return ErrorData{ "Failed to save plugin instance" };
 			}
 
-			const auto [_, result] = _pluginsMap.try_emplace(plugin.GetName(), pluginModule, pluginInstance);
-			if (!result) {
+			if (_pluginsMap.contains(plugin.GetName())) {
 				Py_DECREF(pluginInstance);
 				Py_DECREF(pluginModule);
 				return ErrorData{ std::format("Plugin name duplicate") };
 			}
 
-			return LoadResultData{};
+			const auto& exportedMethods = plugin.GetDescriptor().exportedMethods;
+			std::vector<MethodData> methods;
+			if (!exportedMethods.empty()) {
+				Py_DECREF(pluginInstance);
+				Py_DECREF(pluginModule);
+				return ErrorData{ std::format("Methods export not implemented") };
+			}
+
+			const auto [_, result] = _pluginsMap.try_emplace(plugin.GetName(), pluginModule, pluginInstance);
+			if (!result) {
+				Py_DECREF(pluginInstance);
+				Py_DECREF(pluginModule);
+				return ErrorData{ std::format("Save plugin data to map unsuccessful") };
+			}
+
+			return LoadResultData{ std::move(methods) };
 		}
 
 		void OnPluginStart(const IPlugin& plugin) override {
