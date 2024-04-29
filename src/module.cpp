@@ -1030,7 +1030,8 @@ namespace py3lm {
 				return ErrorData{ std::format("Save plugin data to map unsuccessful") };
 			}
 
-			std::vector<MethodData> methods(methodsHolders.size());
+			std::vector<MethodData> methods;
+			methods.reserve(methodsHolders.size());
 			_pythonMethods.reserve(methodsHolders.size());
 
 			for (auto& [method, methodData] : methodsHolders) {
