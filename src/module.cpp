@@ -2516,11 +2516,22 @@ namespace py3lm {
 
 			Py_DECREF(plugifyPluginModule);
 
+			_ppsModule = PyImport_ImportModule("plugify.pps");
+			if (!_ppsModule) {
+				PyErr_Print();
+				return ErrorData{ "Failed to import plugify.pps python module" };
+			}
+
 			return InitResultData{};
 		}
 
 		void Shutdown() override {
 			if (Py_IsInitialized()) {
+				if (_ppsModule) {
+					Py_DECREF(_ppsModule);
+					_ppsModule = nullptr;
+				}
+
 				for (const auto& data : _pythonMethods) {
 					Py_DECREF(data.pythonFunction);
 				}
@@ -2532,15 +2543,20 @@ namespace py3lm {
 
 				Py_Finalize();
 			}
+			_moduleDefinitions.clear();
+			_moduleMethods.clear();
+			_moduleFunctions.clear();
 			_pythonMethods.clear();
 			_pluginsMap.clear();
 			_jitRuntime.reset();
 			_provider.reset();
-			_moduleMethods.clear();
-			_moduleDefinitions.clear();
 		}
 
 		void OnMethodExport(const IPlugin& plugin) override {
+			if (!_ppsModule) {
+				return;
+			}
+
 			auto& moduleMethods = _moduleMethods.emplace_back();
 
 			for (const auto& [name, addr] : plugin.GetMethods()) {
@@ -2562,14 +2578,22 @@ namespace py3lm {
 
 						PyMethodDef& def = moduleMethods.emplace_back();
 						def.ml_name = name.c_str();
-						def.ml_meth = (PyCFunction)methodAddr;
+						def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
 						def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
 						def.ml_doc = NULL;
 
-						_pythonMethods.emplace_back(std::move(function));
+						_moduleFunctions.emplace_back(std::move(function));
 						break;
 					}
 				}
+			}
+
+			{
+				PyMethodDef& def = moduleMethods.emplace_back();
+				def.ml_name = nullptr;
+				def.ml_meth = nullptr;
+				def.ml_flags = 0;
+				def.ml_doc = nullptr;
 			}
 
 			PyModuleDef& moduleDef = _moduleDefinitions.emplace_back();
@@ -2578,8 +2602,14 @@ namespace py3lm {
 			moduleDef.m_doc = NULL;
 			moduleDef.m_size = -1;
 			moduleDef.m_methods = moduleMethods.data();
+			moduleDef.m_slots = NULL;
+			moduleDef.m_traverse = NULL;
+			moduleDef.m_clear = NULL;
+			moduleDef.m_free = NULL;
 
-			// TODO: Do smth with defirenitions (generate module, ect)
+			PyObject* moduleObject = PyModule_Create(&moduleDef);
+			PyObject_SetAttrString(_ppsModule, plugin.GetName().c_str(), moduleObject);
+			Py_DECREF(moduleObject);
 		}
 
 		LoadResult OnPluginLoad(const IPlugin& plugin) override {
@@ -2751,8 +2781,10 @@ namespace py3lm {
 		};
 		std::unordered_map<std::string, PluginData> _pluginsMap;
 		std::vector<PythonMethodData> _pythonMethods;
+		PyObject* _ppsModule = nullptr;
 		std::vector<std::vector<PyMethodDef>> _moduleMethods;
 		std::vector<PyModuleDef> _moduleDefinitions;
+		std::vector<Function> _moduleFunctions;
 	};
 
 	Python3LanguageModule g_py3lm;
