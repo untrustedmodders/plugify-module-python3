@@ -1,5 +1,6 @@
 #include <plugify/function.h>
 #include <plugify/plugify_provider.h>
+#include <plugify/compat_format.h>
 #include <plugify/log.h>
 #include <plugify/language_module.h>
 #include <plugify/module.h>
@@ -8,6 +9,7 @@
 #include <module_export.h>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <dyncall/dyncall.h>
 #include <asmjit/asmjit.h>
 #include <cuchar>
 #include <climits>
@@ -223,6 +225,155 @@ namespace py3lm {
 				return std::nullopt;
 			}
 			return std::move(array);
+		}
+
+		template<typename T>
+		void* CreateValue(PyObject* pItem) {
+			auto value = ValueFromObject<T>(pItem);
+			if (value) {
+				return new T(std::move(*value));
+			}
+			return nullptr;
+		}
+
+		template<typename T>
+		void* CreateArray(PyObject* pItem) {
+			if constexpr (std::is_same_v<T, char>) {
+				if (!PyUnicode_Check(pItem)) {
+					PyErr_SetString(PyExc_TypeError, "Tuple element must be an unicode.");
+					return nullptr;
+				}
+
+				PyObject* const utf8Obj = PyUnicode_AsUTF8String(pItem);
+				if (utf8Obj) {
+					const char* utf8Value = PyBytes_AsString(utf8Obj);
+					auto* array = new std::vector<char>(utf8Value, utf8Value + strlen(utf8Value));
+					Py_DECREF(utf8Obj);
+					return array;
+				}
+				else {
+					PyErr_SetString(PyExc_TypeError, "Tuple element must be a string.");
+					return nullptr;
+				}
+			}
+			else if constexpr (std::is_same_v<T, char16_t>) {
+				if (!PyUnicode_Check(pItem)) {
+					PyErr_SetString(PyExc_TypeError, "Tuple element must be an unicode.");
+					return nullptr;
+				}
+
+				Py_ssize_t size = PyUnicode_GetLength(pItem);
+				auto* array = new std::vector<char16_t>(static_cast<size_t>(size));
+				PyUnicode_AsWideChar(pItem, reinterpret_cast<wchar_t*>(array->data()), size);
+				return array;
+			}
+			else {
+				if (!PyList_Check(pItem) && !PyTuple_Check(pItem)) {
+					PyErr_SetString(PyExc_TypeError, "Tuple element must be an list or tuple.");
+					return nullptr;
+				}
+				Py_ssize_t size = PySequence_Size(pItem);
+				if (size == -1) {
+					PyErr_SetString(PyExc_ValueError, "Sequence must have valid size.");
+					return nullptr;
+				}
+
+				auto* array = new std::vector<T>(static_cast<size_t>(size));
+				for (Py_ssize_t i = 0; i < size; ++i) {
+					PyObject* const element = PySequence_GetItem(pItem, i);
+
+					bool valid;
+					if constexpr (std::is_same_v<T, char> || std::is_same_v<T, std::string>) {
+						valid = PyUnicode_Check(pItem);
+					}
+					else if constexpr (std::is_same_v<T, bool>) {
+						valid = PyBool_Check(element);
+					}
+					else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+						valid = PyFloat_Check(element);
+					}
+					else {
+						valid = PyLong_Check(element);
+					}
+
+					if (valid) {
+						if constexpr (std::is_same_v<T, uintptr_t>) {
+							(*array)[i] = reinterpret_cast<T>(PyLong_AsVoidPtr(element));
+						}
+						else if constexpr (std::is_same_v<T, bool>) {
+							(*array)[i] = (element == Py_True);
+						}
+						else if constexpr (std::is_same_v<T, float>) {
+							(*array)[i] = static_cast<float>(PyFloat_AsDouble(element));
+						}
+						else if constexpr (std::is_same_v<T, double>) {
+							(*array)[i] = PyFloat_AsDouble(element);
+						}
+						else if constexpr (std::is_same_v<T, int64_t>) {
+							(*array)[i] = static_cast<T>(PyLong_AsLongLong(element));
+						}
+						else if constexpr (std::is_same_v<T, uint64_t>) {
+							(*array)[i] = static_cast<T>(PyLong_AsUnsignedLongLong(element));
+						}
+						else if constexpr (std::is_same_v<T, uint32_t> || std::is_same_v<T, uint16_t> || std::is_same_v<T, uint8_t>) {
+							(*array)[i] = static_cast<T>(PyLong_AsUnsignedLong(element));
+						}
+						else {
+							(*array)[i] = static_cast<T>(PyLong_AsLong(element));
+						}
+					}
+					else {
+						delete reinterpret_cast<std::vector<T>*>(array);
+						Py_XDECREF(element);
+						if constexpr (std::is_same_v<T, char> || std::is_same_v<T, char16_t> || std::is_same_v<T, std::string>) {
+							PyErr_SetString(PyExc_TypeError, "List or tuple must be an unicode.");
+						}
+						else if constexpr (std::is_same_v<T, bool>) {
+							PyErr_SetString(PyExc_TypeError, "List or tuple must be a bool.");
+						}
+						else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+							PyErr_SetString(PyExc_TypeError, "List or tuple must be a float.");
+						}
+						else {
+							PyErr_SetString(PyExc_TypeError, "List or tuple must be a long.");
+						}
+						return nullptr;
+					}
+					Py_XDECREF(element);
+				}
+				return array;
+			}
+		}
+
+		void* CreateStringArray(PyObject* pItem) {
+			if (!PyList_Check(pItem) && !PyTuple_Check(pItem)) {
+				PyErr_SetString(PyExc_TypeError, "Tuple element must be an list or tuple.");
+				return nullptr;
+			}
+			Py_ssize_t size = PySequence_Size(pItem);
+			auto* array = new std::vector<std::string>();
+			array->reserve(static_cast<size_t>(size));
+			for (Py_ssize_t i = 0; i < size; ++i) {
+				PyObject* const element = PySequence_GetItem(pItem, i);
+				if (PyUnicode_Check(element)) {
+					PyObject* const utf8Obj = PyUnicode_AsUTF8String(pItem);
+					if (utf8Obj) {
+						array->emplace_back(PyBytes_AsString(utf8Obj));
+						Py_DECREF(utf8Obj);
+					}
+					else {
+						PyErr_SetString(PyExc_TypeError, "Tuple element must be a string.");
+					}
+				}
+				else {
+					delete reinterpret_cast<std::vector<std::string>*>(array);
+					Py_XDECREF(element);
+					PyErr_SetString(PyExc_TypeError, "List or tuple elements must be unicode");
+					return nullptr;
+				}
+				Py_XDECREF(element);
+			}
+			return array;
 		}
 
 		void SetFallbackReturn(ValueType retType, const ReturnValue* ret, const Parameters* params) {
@@ -798,6 +949,1473 @@ namespace py3lm {
 
 			return MethodExportData{ std::move(function), func };
 		}
+
+		struct ArgsScope {
+			DCCallVM* vm;
+			std::vector<std::pair<void*, ValueType>> storage; // used to store array temp memory
+
+			ArgsScope(uint8_t size) {
+				vm = dcNewCallVM(4096);
+				dcMode(vm, DC_CALL_C_DEFAULT);
+				dcReset(vm);
+				if (size) {
+					storage.reserve(size);
+				}
+			}
+
+			~ArgsScope() {
+				for (auto& [ptr, type] : storage) {
+					switch (type) {
+					case ValueType::Invalid:
+					case ValueType::Void:
+						// Should not trigger!
+						break;
+					case ValueType::Bool: {
+						delete reinterpret_cast<bool*>(ptr);
+						break;
+					}
+					case ValueType::Char8: {
+						delete reinterpret_cast<char*>(ptr);
+						break;
+					}
+					case ValueType::Char16: {
+						delete reinterpret_cast<char16_t*>(ptr);
+						break;
+					}
+					case ValueType::Int8: {
+						delete reinterpret_cast<int8_t*>(ptr);
+						break;
+					}
+					case ValueType::Int16: {
+						delete reinterpret_cast<int16_t*>(ptr);
+						break;
+					}
+					case ValueType::Int32: {
+						delete reinterpret_cast<int32_t*>(ptr);
+						break;
+					}
+					case ValueType::Int64: {
+						delete reinterpret_cast<int64_t*>(ptr);
+						break;
+					}
+					case ValueType::UInt8: {
+						delete reinterpret_cast<uint8_t*>(ptr);
+						break;
+					}
+					case ValueType::UInt16: {
+						delete reinterpret_cast<uint16_t*>(ptr);
+						break;
+					}
+					case ValueType::UInt32: {
+						delete reinterpret_cast<uint32_t*>(ptr);
+						break;
+					}
+					case ValueType::UInt64: {
+						delete reinterpret_cast<uint64_t*>(ptr);
+						break;
+					}
+					case ValueType::Function:
+					case ValueType::Ptr64: {
+						delete reinterpret_cast<uintptr_t*>(ptr);
+						break;
+					}
+					case ValueType::Float: {
+						delete reinterpret_cast<float*>(ptr);
+						break;
+					}
+					case ValueType::Double: {
+						delete reinterpret_cast<double*>(ptr);
+						break;
+					}
+					case ValueType::String: {
+						delete reinterpret_cast<std::string*>(ptr);
+						break;
+					}
+					case ValueType::ArrayBool: {
+						delete reinterpret_cast<std::vector<bool>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayChar8: {
+						delete reinterpret_cast<std::vector<char>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayChar16: {
+						delete reinterpret_cast<std::vector<char16_t>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayInt8: {
+						delete reinterpret_cast<std::vector<int16_t>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayInt16: {
+						delete reinterpret_cast<std::vector<int16_t>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayInt32: {
+						delete reinterpret_cast<std::vector<int32_t>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayInt64: {
+						delete reinterpret_cast<std::vector<int64_t>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayUInt8: {
+						delete reinterpret_cast<std::vector<uint8_t>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayUInt16: {
+						delete reinterpret_cast<std::vector<uint16_t>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayUInt32: {
+						delete reinterpret_cast<std::vector<uint32_t>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayUInt64: {
+						delete reinterpret_cast<std::vector<uint64_t>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayPtr64: {
+						delete reinterpret_cast<std::vector<uintptr_t>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayFloat: {
+						delete reinterpret_cast<std::vector<float>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayDouble: {
+						delete reinterpret_cast<std::vector<double>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayString: {
+						delete reinterpret_cast<std::vector<std::string>*>(ptr);
+						break;
+					}
+					default:
+						puts("Unsupported types!");
+						break;
+					}
+				}
+				dcFree(vm);
+			}
+		};
+
+		void ExternalCallNoArgs(const Method* method, void* addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
+			bool hasRet = method->retType.type > ValueType::LastPrimitive;
+
+			ArgsScope a(hasRet);
+
+			if (hasRet) {
+				void* value;
+				switch (method->retType.type) {
+				case ValueType::String:
+					value = new std::string();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayBool:
+					value = new std::vector<bool>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayChar8:
+					value = new std::vector<char>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayChar16:
+					value = new std::vector<char16_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayInt8:
+					value = new std::vector<int8_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayInt16:
+					value = new std::vector<int16_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayInt32:
+					value = new std::vector<int32_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayInt64:
+					value = new std::vector<int64_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayUInt8:
+					value = new std::vector<uint8_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayUInt16:
+					value = new std::vector<uint16_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayUInt32:
+					value = new std::vector<uint32_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayUInt64:
+					value = new std::vector<uint64_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayPtr64:
+					value = new std::vector<uintptr_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayFloat:
+					value = new std::vector<float>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayDouble:
+					value = new std::vector<double>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayString:
+					value = new std::vector<std::string>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				default:
+					// Should not require storage
+					break;
+				}
+			}
+
+			switch (method->retType.type) {
+			case ValueType::Invalid:
+				break;
+			case ValueType::Void:
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(Py_None);
+				break;
+			case ValueType::Bool: {
+				bool val = dcCallBool(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Char8: {
+				char val = dcCallChar(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Char16: {
+				char16_t val = static_cast<char16_t>(dcCallShort(a.vm, addr));
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Int8: {
+				int8_t val = dcCallChar(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Int16: {
+				int16_t val = dcCallShort(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Int32: {
+				int32_t val = dcCallInt(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Int64: {
+				int64_t val = dcCallLongLong(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::UInt8: {
+				uint8_t val = static_cast<uint8_t>(dcCallChar(a.vm, addr));
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::UInt16: {
+				uint16_t val = static_cast<uint16_t>(dcCallShort(a.vm, addr));
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::UInt32: {
+				uint32_t val = static_cast<uint32_t>(dcCallInt(a.vm, addr));
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::UInt64: {
+				uint64_t val = static_cast<uint64_t>(dcCallLongLong(a.vm, addr));
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Function:
+			case ValueType::Ptr64: {
+				uintptr_t val = reinterpret_cast<uintptr_t>(dcCallPointer(a.vm, addr));
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Float: {
+				float val = dcCallFloat(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Double: {
+				double val = dcCallDouble(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::String: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObject(*reinterpret_cast<std::string*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayBool: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<bool>(*reinterpret_cast<std::vector<bool>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayChar8: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<char>(*reinterpret_cast<std::vector<char>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayChar16: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<char16_t>(*reinterpret_cast<std::vector<char16_t>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayInt8: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<int8_t>(*reinterpret_cast<std::vector<int8_t>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayInt16: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<int16_t>(*reinterpret_cast<std::vector<int16_t>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayInt32: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<int32_t>(*reinterpret_cast<std::vector<int32_t>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayInt64: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<int64_t>(*reinterpret_cast<std::vector<int64_t>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayUInt8: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<uint8_t>(*reinterpret_cast<std::vector<uint8_t>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayUInt16: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<uint16_t>(*reinterpret_cast<std::vector<uint16_t>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayUInt32: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<uint32_t>(*reinterpret_cast<std::vector<uint32_t>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayUInt64: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<uint64_t>(*reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayPtr64: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<uintptr_t>(*reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayFloat: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<float>(*reinterpret_cast<std::vector<float>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayDouble: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<double>(*reinterpret_cast<std::vector<double>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			case ValueType::ArrayString: {
+				dcCallVoid(a.vm, addr);
+				ret->SetReturnPtr(CreatePyObjectList<std::string>(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[0]))));
+				break;
+			}
+			default:
+				puts("Unsupported types!");
+				break;
+			}
+		}
+
+		void ExternalCall(const Method* method, void* addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
+			//auto self = p->GetArgument<PyObject*>(0);
+			auto args = p->GetArgument<PyObject*>(1);
+
+			if (!PyTuple_Check(args)) {
+				std::string error(std::format("Function \"{}\" expects a tuple of arguments", method->funcName));
+				PyErr_SetString(PyExc_TypeError, error.c_str());
+				ret->SetReturnPtr(Py_None);
+				return;
+			}
+
+			Py_ssize_t size = PyTuple_Size(args);
+			if (size != static_cast<Py_ssize_t>(count)) {
+				std::string error(std::format("Wrong number of parameters, {} when {} required.", size, count));
+				PyErr_SetString(PyExc_TypeError, error.c_str());
+				ret->SetReturnPtr(Py_None);
+				return;
+			}
+
+			bool hasRet = method->retType.type > ValueType::LastPrimitive;
+
+			ArgsScope a(hasRet ? count + 1 : count);
+
+			/// prepare arguments
+
+			void* value;
+			Py_ssize_t refsCount = 0;
+
+			if (hasRet) {
+				switch (method->retType.type) {
+				case ValueType::String:
+					value = new std::string();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayBool:
+					value = new std::vector<bool>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayChar8:
+					value = new std::vector<char>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayChar16:
+					value = new std::vector<char16_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayInt8:
+					value = new std::vector<int8_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayInt16:
+					value = new std::vector<int16_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayInt32:
+					value = new std::vector<int32_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayInt64:
+					value = new std::vector<int64_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayUInt8:
+					value = new std::vector<uint8_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayUInt16:
+					value = new std::vector<uint16_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayUInt32:
+					value = new std::vector<uint32_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayUInt64:
+					value = new std::vector<uint64_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayPtr64:
+					value = new std::vector<uintptr_t>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayFloat:
+					value = new std::vector<float>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayDouble:
+					value = new std::vector<double>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::ArrayString:
+					value = new std::vector<std::string>();
+					a.storage.emplace_back(value, method->retType.type);
+					dcArgPointer(a.vm, value);
+					break;
+				default:
+					// Should not require storage
+					break;
+				}
+			}
+
+			for (Py_ssize_t i = 0; i < size; ++i) {
+				PyObject* pItem = PyTuple_GetItem(args, i);
+
+				auto& param = method->paramTypes[i];
+				// Pass by refs or values ?
+				if (param.ref) {
+					refsCount++;
+					/// By references
+					switch (param.type) {
+					case ValueType::Invalid:
+					case ValueType::Void:
+						// Should not trigger!
+						break;
+					case ValueType::Bool: {
+						value = CreateValue<bool>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Char8: {
+						value = CreateValue<char>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Char16: {
+						value = CreateValue<char16_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Int8: {
+						value = CreateValue<int8_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Int16: {
+						value = CreateValue<int16_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Int32: {
+						value = CreateValue<int32_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Int64: {
+						value = CreateValue<int64_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::UInt8: {
+						value = CreateValue<uint8_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::UInt16: {
+						value = CreateValue<uint16_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::UInt32: {
+						value = CreateValue<uint32_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::UInt64: {
+						value = CreateValue<uint64_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Function:
+					case ValueType::Ptr64: {
+						value = CreateValue<uintptr_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Float: {
+						value = CreateValue<float>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Double: {
+						value = CreateValue<double>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::String: {
+						value = CreateValue<std::string>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayBool: {
+						value = CreateArray<bool>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayChar8: {
+						value = CreateArray<char>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayChar16: {
+						value = CreateArray<char16_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayInt8: {
+						value = CreateArray<int8_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayInt16: {
+						value = CreateArray<int16_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayInt32: {
+						value = CreateArray<int32_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayInt64: {
+						value = CreateArray<int64_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayUInt8: {
+						value = CreateArray<uint8_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayUInt16: {
+						value = CreateArray<uint16_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayUInt32: {
+						value = CreateArray<uint32_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayUInt64: {
+						value = CreateArray<uint64_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayPtr64: {
+						value = CreateArray<uintptr_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayFloat: {
+						value = CreateArray<float>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayDouble: {
+						value = CreateArray<double>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayString: {
+						value = CreateStringArray(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					default:
+						puts("Unsupported types!");
+						break;
+					}
+				}
+				else {
+					/// By values
+					switch (param.type) {
+					case ValueType::Invalid:
+					case ValueType::Void:
+						// Should not trigger!
+						break;
+					case ValueType::Bool: {
+						auto boolVal = ValueFromObject<bool>(pItem);
+						if (!boolVal.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgBool(a.vm, *boolVal);
+						break;
+					}
+					case ValueType::Char8: {
+						auto charVal = ValueFromObject<char>(pItem);
+						if (!charVal.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgChar(a.vm, *charVal);
+						break;
+					}
+					case ValueType::Char16: {
+						auto wcharVal = ValueFromObject<char16_t>(pItem);
+						if (!wcharVal.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgShort(a.vm, static_cast<short>(*wcharVal));
+						break;
+					}
+					case ValueType::Int8: {
+						auto int8Val = ValueFromObject<int8_t>(pItem);
+						if (!int8Val.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgChar(a.vm, *int8Val);
+						break;
+					}
+					case ValueType::Int16: {
+						auto int16Val = ValueFromObject<int16_t>(pItem);
+						if (!int16Val.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgShort(a.vm, *int16Val);
+						break;
+					}
+					case ValueType::Int32: {
+						auto int32Val = ValueFromObject<int32_t>(pItem);
+						if (!int32Val.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgInt(a.vm, *int32Val);
+						break;
+					}
+					case ValueType::Int64: {
+						auto int64Val = ValueFromObject<int64_t>(pItem);
+						if (!int64Val.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgLongLong(a.vm, *int64Val);
+						break;
+					}
+					case ValueType::UInt8: {
+						auto uint8Val = ValueFromObject<uint8_t>(pItem);
+						if (!uint8Val.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgChar(a.vm, static_cast<int8_t>(*uint8Val));
+						break;
+					}
+					case ValueType::UInt16: {
+						auto uint16Val = ValueFromObject<uint16_t>(pItem);
+						if (!uint16Val.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgShort(a.vm, static_cast<int16_t>(*uint16Val));
+						break;
+					}
+					case ValueType::UInt32: {
+						auto uint32Val = ValueFromObject<uint32_t>(pItem);
+						if (!uint32Val.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgInt(a.vm, static_cast<int32_t>(*uint32Val));
+						break;
+					}
+					case ValueType::UInt64: {
+						auto uint64Val = ValueFromObject<uint64_t>(pItem);
+						if (!uint64Val.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgLongLong(a.vm, static_cast<int64_t>(*uint64Val));
+						break;
+					}
+					case ValueType::Function:
+					case ValueType::Ptr64: {
+						auto ptrVal = ValueFromObject<uintptr_t>(pItem);
+						if (!ptrVal.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgPointer(a.vm, reinterpret_cast<void*>(*ptrVal));
+						break;
+					}
+					case ValueType::Float: {
+						auto floatVal = ValueFromObject<float>(pItem);
+						if (!floatVal.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgFloat(a.vm, *floatVal);
+						break;
+					}
+					case ValueType::Double: {
+						auto doubleVal = ValueFromObject<double>(pItem);
+						if (!doubleVal.has_value()) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						dcArgDouble(a.vm, *doubleVal);
+						break;
+					}
+					case ValueType::String: {
+						value = CreateValue<std::string>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayBool: {
+						value = CreateArray<bool>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayChar8: {
+						value = CreateArray<char>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayChar16: {
+						value = CreateArray<char16_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayInt8: {
+						value = CreateArray<int8_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayInt16: {
+						value = CreateArray<int16_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayInt32: {
+						value = CreateArray<int32_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayInt64: {
+						value = CreateArray<int64_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayUInt8: {
+						value = CreateArray<uint8_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayUInt16: {
+						value = CreateArray<uint16_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayUInt32: {
+						value = CreateArray<uint32_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayUInt64: {
+						value = CreateArray<uint64_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayPtr64: {
+						value = CreateArray<uintptr_t>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayFloat: {
+						value = CreateArray<float>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayDouble: {
+						value = CreateArray<double>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::ArrayString: {
+						value = CreateStringArray(pItem);
+						if (!value) {
+							ret->SetReturnPtr(Py_None);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					default:
+						puts("Unsupported types!");
+						break;
+					}
+				}
+			}
+
+			/// call function and set return
+
+			PyObject* retObj = nullptr;
+
+			switch (method->retType.type) {
+			case ValueType::Invalid:
+				break;
+			case ValueType::Void:
+				dcCallVoid(a.vm, addr);
+				retObj = Py_None;
+				break;
+			case ValueType::Bool: {
+				bool val = dcCallBool(a.vm, addr);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Char8: {
+				char val = dcCallChar(a.vm, addr);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Char16: {
+				char16_t val = static_cast<char16_t>(dcCallShort(a.vm, addr));
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Int8: {
+				int8_t val = dcCallChar(a.vm, addr);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Int16: {
+				int16_t val = dcCallShort(a.vm, addr);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Int32: {
+				int32_t val = dcCallInt(a.vm, addr);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Int64: {
+				int64_t val = dcCallLongLong(a.vm, addr);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::UInt8: {
+				uint8_t val = static_cast<uint8_t>(dcCallChar(a.vm, addr));
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::UInt16: {
+				uint16_t val = static_cast<uint16_t>(dcCallShort(a.vm, addr));
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::UInt32: {
+				uint32_t val = static_cast<uint32_t>(dcCallInt(a.vm, addr));
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::UInt64: {
+				uint64_t val = static_cast<uint64_t>(dcCallLongLong(a.vm, addr));
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Function:
+			case ValueType::Ptr64: {
+				uintptr_t val = reinterpret_cast<uintptr_t>(dcCallPointer(a.vm, addr));
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Float: {
+				float val = dcCallFloat(a.vm, addr);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Double: {
+				double val = dcCallDouble(a.vm, addr);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::String: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObject(*reinterpret_cast<std::string*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayBool: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<bool>(*reinterpret_cast<std::vector<bool>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayChar8: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<char>(*reinterpret_cast<std::vector<char>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayChar16: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<char16_t>(*reinterpret_cast<std::vector<char16_t>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayInt8: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<int8_t>(*reinterpret_cast<std::vector<int8_t>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayInt16: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<int16_t>(*reinterpret_cast<std::vector<int16_t>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayInt32: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<int32_t>(*reinterpret_cast<std::vector<int32_t>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayInt64: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<int64_t>(*reinterpret_cast<std::vector<int64_t>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayUInt8: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<uint8_t>(*reinterpret_cast<std::vector<uint8_t>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayUInt16: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<uint16_t>(*reinterpret_cast<std::vector<uint16_t>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayUInt32: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<uint32_t>(*reinterpret_cast<std::vector<uint32_t>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayUInt64: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<uint64_t>(*reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayPtr64: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<uintptr_t>(*reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayFloat: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<float>(*reinterpret_cast<std::vector<float>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayDouble: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<double>(*reinterpret_cast<std::vector<double>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			case ValueType::ArrayString: {
+				dcCallVoid(a.vm, addr);
+				retObj = CreatePyObjectList<std::string>(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[0])));
+				break;
+			}
+			default:
+				puts("Unsupported types!");
+				break;
+			}
+
+			/// pull data from reference arguments back to python
+			if (refsCount) {
+				// return as tuple
+				PyObject* retTuple = PyTuple_New(hasRet ? refsCount + 1 : refsCount);
+
+				Py_ssize_t k = 0;
+
+				if (hasRet) {
+					PyTuple_SET_ITEM(retTuple, k++, retObj);
+				}
+
+				PyObject* pValue;
+				for (Py_ssize_t i = 0, j = hasRet; i < size; ++i) {
+					auto& param = method->paramTypes[i];
+					if (param.ref) {
+						switch (param.type) {
+						case ValueType::Invalid:
+						case ValueType::Void:
+							// Should not trigger!
+							break;
+						case ValueType::Bool: {
+							pValue = CreatePyObject(*reinterpret_cast<bool*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						}
+						case ValueType::Char8:
+							pValue = CreatePyObject(*reinterpret_cast<char*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Char16:
+							pValue = CreatePyObject(*reinterpret_cast<char16_t*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Int8:
+							pValue = CreatePyObject(*reinterpret_cast<int8_t*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Int16:
+							pValue = CreatePyObject(*reinterpret_cast<int16_t*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Int32:
+							pValue = CreatePyObject(*reinterpret_cast<int32_t*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Int64:
+							pValue = CreatePyObject(*reinterpret_cast<int64_t*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::UInt8:
+							pValue = CreatePyObject(*reinterpret_cast<uint8_t*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::UInt16:
+							pValue = CreatePyObject(*reinterpret_cast<uint16_t*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::UInt32:
+							pValue = CreatePyObject(*reinterpret_cast<uint32_t*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::UInt64:
+							pValue = CreatePyObject(*reinterpret_cast<uint64_t*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Float:
+							pValue = CreatePyObject(*reinterpret_cast<float*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Double:
+							pValue = CreatePyObject(*reinterpret_cast<double*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::String:
+							pValue = CreatePyObject(*reinterpret_cast<std::string*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Function:
+						case ValueType::Ptr64:
+							pValue = CreatePyObject(*reinterpret_cast<uintptr_t*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayBool:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<bool>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayChar8:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<char>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayChar16:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<char16_t>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayInt8:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<int8_t>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayInt16:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<int16_t>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayInt32:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<int32_t>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayInt64:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<int64_t>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayUInt8:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uint8_t>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayUInt16:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uint16_t>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayUInt32:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uint32_t>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayUInt64:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayPtr64:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayFloat:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<float>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayDouble:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<double>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::ArrayString:
+							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						}
+						if (k >= refsCount)
+							break;
+					}
+				}
+
+				ret->SetReturnPtr(retTuple);
+			}
+			else {
+				// return as single object
+				ret->SetReturnPtr(retObj);
+			}
+		}
 	}
 
 	class Python3LanguageModule final : public ILanguageModule {
@@ -918,10 +2536,50 @@ namespace py3lm {
 			_pluginsMap.clear();
 			_jitRuntime.reset();
 			_provider.reset();
+			_moduleMethods.clear();
+			_moduleDefinitions.clear();
 		}
 
 		void OnMethodExport(const IPlugin& plugin) override {
-			// TODO: implement
+			auto& moduleMethods = _moduleMethods.emplace_back();
+
+			for (const auto& [name, addr] : plugin.GetMethods()) {
+				for (const auto& method : plugin.GetDescriptor().exportedMethods) {
+					if (name == method.name) {
+						Function function(_jitRuntime);
+
+						asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
+						sig.addArg(asmjit::TypeId::kUIntPtr);
+						sig.addArg(asmjit::TypeId::kUIntPtr);
+						sig.setRet(asmjit::TypeId::kUIntPtr);
+
+						bool noArgs = method.paramTypes.empty();
+
+						// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
+						void* methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, addr);
+						if (!methodAddr)
+							break;
+
+						PyMethodDef& def = moduleMethods.emplace_back();
+						def.ml_name = name.c_str();
+						def.ml_meth = (PyCFunction)methodAddr;
+						def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
+						def.ml_doc = NULL;
+
+						_pythonMethods.emplace_back(std::move(function));
+						break;
+					}
+				}
+			}
+
+			PyModuleDef& moduleDef = _moduleDefinitions.emplace_back();
+			moduleDef.m_base = PyModuleDef_HEAD_INIT;
+			moduleDef.m_name = plugin.GetName().c_str();
+			moduleDef.m_doc = NULL;
+			moduleDef.m_size = -1;
+			moduleDef.m_methods = moduleMethods.data();
+
+			// TODO: Do smth with defirenitions (generate module, ect)
 		}
 
 		LoadResult OnPluginLoad(const IPlugin& plugin) override {
@@ -1093,6 +2751,8 @@ namespace py3lm {
 		};
 		std::unordered_map<std::string, PluginData> _pluginsMap;
 		std::vector<PythonMethodData> _pythonMethods;
+		std::vector<std::vector<PyMethodDef>> _moduleMethods;
+		std::vector<PyModuleDef> _moduleDefinitions;
 	};
 
 	Python3LanguageModule g_py3lm;

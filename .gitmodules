@@ -1,3 +1,6 @@
 [submodule "external/plugify"]
 	path = external/plugify
 	url = https://github.com/untrustedmodders/plugify.git
+[submodule "external/dyncall"]
+	path = external/dyncall
+	url = https://github.com/LWJGL-CI/dyncall

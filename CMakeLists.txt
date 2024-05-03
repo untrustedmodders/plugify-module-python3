@@ -5,7 +5,7 @@ if(POLICY CMP0092)
 endif()
 
 
-project(py3-12-lang-module VERSION 1.0.0.0  DESCRIPTION "Python 3.12 Language Module" HOMEPAGE_URL "https://github.com/untrustedmodders/py3-12-lang-module" LANGUAGES "CXX")
+project(py3-12-lang-module VERSION 1.0.0.0  DESCRIPTION "Python 3.12 Language Module" HOMEPAGE_URL "https://github.com/untrustedmodders/py3-12-lang-module" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,17 +19,30 @@ set(PLUGIFY_BUILD_FUNCTION ON CACHE INTERNAL "")
 add_subdirectory(external/plugify)
 
 #
+# dyncall
+#
+# Must be last. Overwise, fail feature tests from Plugify
+add_subdirectory(external/dyncall)
+
+#
 # Python 3 Language Module for Plugify
 #
 set(PY3LM_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/module.cpp")
 add_library(${PROJECT_NAME} SHARED ${PY3LM_SOURCES})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE plugify::plugify plugify::plugify-function asmjit::asmjit)
+target_link_libraries(${PROJECT_NAME} PRIVATE plugify::plugify plugify::plugify-function asmjit::asmjit dyncall_s)
+include_directories(external/dyncall/)
 
 include(GenerateExportHeader)
 generate_export_header(${PROJECT_NAME} EXPORT_MACRO_NAME PY3LM_EXPORT EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/exports/module_export.h)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/exports)
+
+if(APPLE)
+	target_link_options(${PROJECT_NAME} PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/sym/exported_symbols.lds")
+elseif(UNIX)
+	target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/sym/version_script.lds")
+endif()
 
 #
 # Python 3.12
