@@ -15,6 +15,7 @@
 #include <climits>
 #include <unordered_map>
 #include <array>
+#include <memory>
 
 using namespace plugify;
 namespace fs = std::filesystem;
@@ -2596,7 +2597,7 @@ namespace py3lm {
 				def.ml_doc = nullptr;
 			}
 
-			PyModuleDef& moduleDef = _moduleDefinitions.emplace_back();
+			PyModuleDef& moduleDef = *(_moduleDefinitions.emplace_back(std::make_unique<PyModuleDef>()).get());
 			moduleDef.m_base = PyModuleDef_HEAD_INIT;
 			moduleDef.m_name = plugin.GetName().c_str();
 			moduleDef.m_doc = NULL;
@@ -2783,7 +2784,7 @@ namespace py3lm {
 		std::vector<PythonMethodData> _pythonMethods;
 		PyObject* _ppsModule = nullptr;
 		std::vector<std::vector<PyMethodDef>> _moduleMethods;
-		std::vector<PyModuleDef> _moduleDefinitions;
+		std::vector<std::unique_ptr<PyModuleDef>> _moduleDefinitions;
 		std::vector<Function> _moduleFunctions;
 	};
 
