@@ -381,6 +381,8 @@ namespace py3lm {
 
 		void SetFallbackReturn(ValueType retType, const ReturnValue* ret, const Parameters* params) {
 			switch (retType) {
+			case ValueType::Void:
+				break;
 			case ValueType::Bool:
 			case ValueType::Char8:
 			case ValueType::Char16:
