@@ -26,6 +26,8 @@ namespace py3lm {
 		PyObject* pythonFunction{};
 	};
 
+	PyObject* GetOrCreateFunctionObject(const Method& paramType, void* funcAddr);
+
 	namespace {
 		void ReplaceAll(std::string& str, const std::string& from, const std::string& to) {
 			size_t start_pos{};
@@ -748,8 +750,8 @@ namespace py3lm {
 			return arrayObject;
 		}
 
-		PyObject* ParamToObject(ValueType type, const Parameters* params, uint8_t index) {
-			switch (type) {
+		PyObject* ParamToObject(const Property& paramType, const Parameters* params, uint8_t index) {
+			switch (paramType.type) {
 			case ValueType::Bool:
 				return CreatePyObject(params->GetArgument<bool>(index));
 			case ValueType::Char8:
@@ -779,9 +781,7 @@ namespace py3lm {
 			case ValueType::Double:
 				return CreatePyObject(params->GetArgument<double>(index));
 			case ValueType::Function:
-				// TODO: Generate External call
-				// TODO: if address is wrapped External call, get origial python object
-				return CreatePyObject(params->GetArgument<void*>(index));
+				return GetOrCreateFunctionObject(*(paramType.prototype.get()), params->GetArgument<void*>(index));
 			case ValueType::String:
 				return CreatePyObject(*(params->GetArgument<const std::string*>(index)));
 			case ValueType::ArrayBool:
@@ -840,7 +840,7 @@ namespace py3lm {
 				}
 				else {
 					for (uint8_t index = 0; index < params_count; ++index) {
-						PyObject* const arg = ParamToObject(method->paramTypes[index].type, params, params_start_index + index);
+						PyObject* const arg = ParamToObject(method->paramTypes[index], params, params_start_index + index);
 						if (!arg) {
 							processResult = ParamProcess::Error;
 							break;
@@ -2542,8 +2542,14 @@ namespace py3lm {
 					Py_DECREF(pluginData._module);
 				}
 
+				for (const auto& [_, object] : _externalMap) {
+					Py_DECREF(object);
+				}
+
 				Py_Finalize();
 			}
+			_externalMap.clear();
+			_externalFunctions.clear();
 			_moduleDefinitions.clear();
 			_moduleMethods.clear();
 			_moduleFunctions.clear();
@@ -2739,6 +2745,54 @@ namespace py3lm {
 			TryCallPluginMethodNoArgs(plugin, "plugin_end", "OnPluginEnd");
 		}
 
+	public:
+		PyObject* FindExternal(void* funcAddr) const {
+			const auto it = _externalMap.find(funcAddr);
+			if (it != _externalMap.end()) {
+				return std::get<PyObject*>(*it);
+			}
+			return nullptr;
+		}
+
+		PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
+			if (PyObject* const object = FindExternal(funcAddr)) {
+				Py_INCREF(object);
+				return object;
+			}
+
+			Function function(_jitRuntime);
+			
+			asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
+			sig.addArg(asmjit::TypeId::kUIntPtr);
+			sig.addArg(asmjit::TypeId::kUIntPtr);
+			sig.setRet(asmjit::TypeId::kUIntPtr);
+			
+			const bool noArgs = method.paramTypes.empty();
+			
+			void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, funcAddr);
+			if (!methodAddr) {
+				return nullptr;
+			}
+			
+			auto defPtr = std::make_unique<PyMethodDef>();
+			PyMethodDef& def = *(defPtr.get());
+			def.ml_name = "PlugifyExternal";
+			def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
+			def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
+			def.ml_doc = nullptr;
+
+			PyObject* const object = PyCFunction_New(defPtr.get(), nullptr);
+			if (!object) {
+				return nullptr;
+			}
+
+			_externalFunctions.emplace_back(std::move(function), std::move(defPtr));
+			Py_INCREF(object);
+			_externalMap.emplace(funcAddr, object);
+
+			return object;
+		}
+
 	private:
 		void TryCallPluginMethodNoArgs(const IPlugin& plugin, const std::string& name, const std::string& context) {
 			const auto it = _pluginsMap.find(plugin.GetName());
@@ -2786,6 +2840,12 @@ namespace py3lm {
 		std::vector<std::vector<PyMethodDef>> _moduleMethods;
 		std::vector<std::unique_ptr<PyModuleDef>> _moduleDefinitions;
 		std::vector<Function> _moduleFunctions;
+		struct ExternalHolder {
+			Function func;
+			std::unique_ptr<PyMethodDef> def;
+		};
+		std::vector<ExternalHolder> _externalFunctions;
+		std::unordered_map<void*, PyObject*> _externalMap;
 	};
 
 	Python3LanguageModule g_py3lm;
@@ -2793,5 +2853,9 @@ namespace py3lm {
 	extern "C"
 	PY3LM_EXPORT ILanguageModule* GetLanguageModule() {
 		return &g_py3lm;
+	}
+
+	static PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
+		return g_py3lm.GetOrCreateFunctionObject(method, funcAddr);
 	}
 }
