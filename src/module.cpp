@@ -2562,63 +2562,18 @@ namespace py3lm {
 		}
 
 		void OnMethodExport(const IPlugin& plugin) override {
-			if (!_ppsModule) {
-				return;
-			}
-
-			auto& moduleMethods = _moduleMethods.emplace_back();
-
-			for (const auto& [name, addr] : plugin.GetMethods()) {
-				for (const auto& method : plugin.GetDescriptor().exportedMethods) {
-					if (name == method.name) {
-						Function function(_jitRuntime);
-
-						asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
-						sig.addArg(asmjit::TypeId::kUIntPtr);
-						sig.addArg(asmjit::TypeId::kUIntPtr);
-						sig.setRet(asmjit::TypeId::kUIntPtr);
-
-						bool noArgs = method.paramTypes.empty();
-
-						// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-						void* methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, addr);
-						if (!methodAddr)
-							break;
-
-						PyMethodDef& def = moduleMethods.emplace_back();
-						def.ml_name = name.c_str();
-						def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
-						def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
-						def.ml_doc = NULL;
-
-						_moduleFunctions.emplace_back(std::move(function));
-						break;
-					}
+			if (_ppsModule) {
+				PyObject* moduleObject = CreateInternalModule(plugin);
+				if (!moduleObject) {
+					moduleObject = CreateExternalModule(plugin);
+				}
+				if (moduleObject) {
+					PyObject_SetAttrString(_ppsModule, plugin.GetName().c_str(), moduleObject);
+					Py_DECREF(moduleObject);
+					return;
 				}
 			}
-
-			{
-				PyMethodDef& def = moduleMethods.emplace_back();
-				def.ml_name = nullptr;
-				def.ml_meth = nullptr;
-				def.ml_flags = 0;
-				def.ml_doc = nullptr;
-			}
-
-			PyModuleDef& moduleDef = *(_moduleDefinitions.emplace_back(std::make_unique<PyModuleDef>()).get());
-			moduleDef.m_base = PyModuleDef_HEAD_INIT;
-			moduleDef.m_name = plugin.GetName().c_str();
-			moduleDef.m_doc = NULL;
-			moduleDef.m_size = -1;
-			moduleDef.m_methods = moduleMethods.data();
-			moduleDef.m_slots = NULL;
-			moduleDef.m_traverse = NULL;
-			moduleDef.m_clear = NULL;
-			moduleDef.m_free = NULL;
-
-			PyObject* moduleObject = PyModule_Create(&moduleDef);
-			PyObject_SetAttrString(_ppsModule, plugin.GetName().c_str(), moduleObject);
-			Py_DECREF(moduleObject);
+			_provider->Log(std::format("[py3lm] Fail to export '{}' plugin methods", plugin.GetName()), Severity::Error);
 		}
 
 		LoadResult OnPluginLoad(const IPlugin& plugin) override {
@@ -2796,6 +2751,93 @@ namespace py3lm {
 		}
 
 	private:
+		PyObject* FindPythonMethod(void* addr) const {
+			for (const auto& data : _pythonMethods) {
+				if (data.jitFunction.GetFunction() == addr) {
+					return data.pythonFunction;
+				}
+			}
+			return nullptr;
+		}
+
+		PyObject* CreateInternalModule(const IPlugin& plugin) {
+			if (!_pluginsMap.contains(plugin.GetName())) {
+				return nullptr;
+			}
+
+			PyObject* moduleObject = PyModule_New(plugin.GetName().c_str());
+
+			for (const auto& [name, addr] : plugin.GetMethods()) {
+				for (const auto& method : plugin.GetDescriptor().exportedMethods) {
+					if (name == method.name) {
+						PyObject* const methodObject = FindPythonMethod(addr);
+						if (!methodObject) {
+							_provider->Log(std::format("[py3lm] Not found '{}' method while CreateInternalModule for '{}' plugin", name, plugin.GetName()), Severity::Fatal);
+							std::terminate();
+						}
+						PyObject_SetAttrString(moduleObject, name.c_str(), methodObject);
+						break;
+					}
+				}
+			}
+			
+			return moduleObject;
+		}
+
+		PyObject* CreateExternalModule(const IPlugin& plugin) {
+			auto& moduleMethods = _moduleMethods.emplace_back();
+
+			for (const auto& [name, addr] : plugin.GetMethods()) {
+				for (const auto& method : plugin.GetDescriptor().exportedMethods) {
+					if (name == method.name) {
+						Function function(_jitRuntime);
+
+						asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
+						sig.addArg(asmjit::TypeId::kUIntPtr);
+						sig.addArg(asmjit::TypeId::kUIntPtr);
+						sig.setRet(asmjit::TypeId::kUIntPtr);
+
+						const bool noArgs = method.paramTypes.empty();
+
+						// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
+						void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, addr);
+						if (!methodAddr)
+							break;
+
+						PyMethodDef& def = moduleMethods.emplace_back();
+						def.ml_name = name.c_str();
+						def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
+						def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
+						def.ml_doc = nullptr;
+
+						_moduleFunctions.emplace_back(std::move(function));
+						break;
+					}
+				}
+			}
+
+			{
+				PyMethodDef& def = moduleMethods.emplace_back();
+				def.ml_name = nullptr;
+				def.ml_meth = nullptr;
+				def.ml_flags = 0;
+				def.ml_doc = nullptr;
+			}
+
+			PyModuleDef& moduleDef = *(_moduleDefinitions.emplace_back(std::make_unique<PyModuleDef>()).get());
+			moduleDef.m_base = PyModuleDef_HEAD_INIT;
+			moduleDef.m_name = plugin.GetName().c_str();
+			moduleDef.m_doc = nullptr;
+			moduleDef.m_size = -1;
+			moduleDef.m_methods = moduleMethods.data();
+			moduleDef.m_slots = nullptr;
+			moduleDef.m_traverse = nullptr;
+			moduleDef.m_clear = nullptr;
+			moduleDef.m_free = nullptr;
+
+			return PyModule_Create(&moduleDef);
+		}
+
 		void TryCallPluginMethodNoArgs(const IPlugin& plugin, const std::string& name, const std::string& context) {
 			const auto it = _pluginsMap.find(plugin.GetName());
 			if (it == _pluginsMap.end()) {
