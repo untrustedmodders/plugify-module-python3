@@ -1362,8 +1362,8 @@ namespace py3lm {
 		}
 
 		void ExternalCall(const Method* method, void* addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
-			//auto self = p->GetArgument<PyObject*>(0);
-			auto args = p->GetArgument<PyObject*>(1);
+			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
+			const auto args = p->GetArgument<PyObject*>(1);
 
 			if (!PyTuple_Check(args)) {
 				std::string error(std::format("Function \"{}\" expects a tuple of arguments", method->funcName));
@@ -1372,17 +1372,18 @@ namespace py3lm {
 				return;
 			}
 
-			Py_ssize_t size = PyTuple_Size(args);
-			if (size != static_cast<Py_ssize_t>(count)) {
-				std::string error(std::format("Wrong number of parameters, {} when {} required.", size, count));
+			const auto paramCount = static_cast<uint8_t>(method->paramTypes.size());
+			const Py_ssize_t size = PyTuple_Size(args);
+			if (size != static_cast<Py_ssize_t>(paramCount)) {
+				std::string error(std::format("Wrong number of parameters, {} when {} required.", size, paramCount));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
 				ret->SetReturnPtr(nullptr);
 				return;
 			}
 
-			bool hasRet = method->retType.type > ValueType::LastPrimitive;
+			const bool hasRet = method->retType.type > ValueType::LastPrimitive;
 
-			ArgsScope a(hasRet ? count + 1 : count);
+			ArgsScope a(hasRet ? paramCount + 1 : paramCount);
 
 			/// prepare arguments
 
