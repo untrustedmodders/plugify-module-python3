@@ -1368,7 +1368,7 @@ namespace py3lm {
 			if (!PyTuple_Check(args)) {
 				std::string error(std::format("Function \"{}\" expects a tuple of arguments", method->funcName));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
-				ret->SetReturnPtr(Py_None);
+				ret->SetReturnPtr(nullptr);
 				return;
 			}
 
@@ -1376,7 +1376,7 @@ namespace py3lm {
 			if (size != static_cast<Py_ssize_t>(count)) {
 				std::string error(std::format("Wrong number of parameters, {} when {} required.", size, count));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
-				ret->SetReturnPtr(Py_None);
+				ret->SetReturnPtr(nullptr);
 				return;
 			}
 
@@ -1493,7 +1493,7 @@ namespace py3lm {
 					case ValueType::Bool: {
 						value = CreateValue<bool>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1503,7 +1503,7 @@ namespace py3lm {
 					case ValueType::Char8: {
 						value = CreateValue<char>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1513,7 +1513,7 @@ namespace py3lm {
 					case ValueType::Char16: {
 						value = CreateValue<char16_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1523,7 +1523,7 @@ namespace py3lm {
 					case ValueType::Int8: {
 						value = CreateValue<int8_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1533,7 +1533,7 @@ namespace py3lm {
 					case ValueType::Int16: {
 						value = CreateValue<int16_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1543,7 +1543,7 @@ namespace py3lm {
 					case ValueType::Int32: {
 						value = CreateValue<int32_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1553,7 +1553,7 @@ namespace py3lm {
 					case ValueType::Int64: {
 						value = CreateValue<int64_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1563,7 +1563,7 @@ namespace py3lm {
 					case ValueType::UInt8: {
 						value = CreateValue<uint8_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1573,7 +1573,7 @@ namespace py3lm {
 					case ValueType::UInt16: {
 						value = CreateValue<uint16_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1583,7 +1583,7 @@ namespace py3lm {
 					case ValueType::UInt32: {
 						value = CreateValue<uint32_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1593,7 +1593,7 @@ namespace py3lm {
 					case ValueType::UInt64: {
 						value = CreateValue<uint64_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1604,7 +1604,7 @@ namespace py3lm {
 					case ValueType::Ptr64: {
 						value = CreateValue<uintptr_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1614,7 +1614,7 @@ namespace py3lm {
 					case ValueType::Float: {
 						value = CreateValue<float>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1624,7 +1624,7 @@ namespace py3lm {
 					case ValueType::Double: {
 						value = CreateValue<double>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1634,7 +1634,7 @@ namespace py3lm {
 					case ValueType::String: {
 						value = CreateValue<std::string>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1644,7 +1644,7 @@ namespace py3lm {
 					case ValueType::ArrayBool: {
 						value = CreateArray<bool>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1654,7 +1654,7 @@ namespace py3lm {
 					case ValueType::ArrayChar8: {
 						value = CreateArray<char>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1664,7 +1664,7 @@ namespace py3lm {
 					case ValueType::ArrayChar16: {
 						value = CreateArray<char16_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1674,7 +1674,7 @@ namespace py3lm {
 					case ValueType::ArrayInt8: {
 						value = CreateArray<int8_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1684,7 +1684,7 @@ namespace py3lm {
 					case ValueType::ArrayInt16: {
 						value = CreateArray<int16_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1694,7 +1694,7 @@ namespace py3lm {
 					case ValueType::ArrayInt32: {
 						value = CreateArray<int32_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1704,7 +1704,7 @@ namespace py3lm {
 					case ValueType::ArrayInt64: {
 						value = CreateArray<int64_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1714,7 +1714,7 @@ namespace py3lm {
 					case ValueType::ArrayUInt8: {
 						value = CreateArray<uint8_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1724,7 +1724,7 @@ namespace py3lm {
 					case ValueType::ArrayUInt16: {
 						value = CreateArray<uint16_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1734,7 +1734,7 @@ namespace py3lm {
 					case ValueType::ArrayUInt32: {
 						value = CreateArray<uint32_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1744,7 +1744,7 @@ namespace py3lm {
 					case ValueType::ArrayUInt64: {
 						value = CreateArray<uint64_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1754,7 +1754,7 @@ namespace py3lm {
 					case ValueType::ArrayPtr64: {
 						value = CreateArray<uintptr_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1764,7 +1764,7 @@ namespace py3lm {
 					case ValueType::ArrayFloat: {
 						value = CreateArray<float>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1774,7 +1774,7 @@ namespace py3lm {
 					case ValueType::ArrayDouble: {
 						value = CreateArray<double>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1784,7 +1784,7 @@ namespace py3lm {
 					case ValueType::ArrayString: {
 						value = CreateStringArray(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1806,7 +1806,7 @@ namespace py3lm {
 					case ValueType::Bool: {
 						auto boolVal = ValueFromObject<bool>(pItem);
 						if (!boolVal.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgBool(a.vm, *boolVal);
@@ -1815,7 +1815,7 @@ namespace py3lm {
 					case ValueType::Char8: {
 						auto charVal = ValueFromObject<char>(pItem);
 						if (!charVal.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgChar(a.vm, *charVal);
@@ -1824,7 +1824,7 @@ namespace py3lm {
 					case ValueType::Char16: {
 						auto wcharVal = ValueFromObject<char16_t>(pItem);
 						if (!wcharVal.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgShort(a.vm, static_cast<short>(*wcharVal));
@@ -1833,7 +1833,7 @@ namespace py3lm {
 					case ValueType::Int8: {
 						auto int8Val = ValueFromObject<int8_t>(pItem);
 						if (!int8Val.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgChar(a.vm, *int8Val);
@@ -1842,7 +1842,7 @@ namespace py3lm {
 					case ValueType::Int16: {
 						auto int16Val = ValueFromObject<int16_t>(pItem);
 						if (!int16Val.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgShort(a.vm, *int16Val);
@@ -1851,7 +1851,7 @@ namespace py3lm {
 					case ValueType::Int32: {
 						auto int32Val = ValueFromObject<int32_t>(pItem);
 						if (!int32Val.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgInt(a.vm, *int32Val);
@@ -1860,7 +1860,7 @@ namespace py3lm {
 					case ValueType::Int64: {
 						auto int64Val = ValueFromObject<int64_t>(pItem);
 						if (!int64Val.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgLongLong(a.vm, *int64Val);
@@ -1869,7 +1869,7 @@ namespace py3lm {
 					case ValueType::UInt8: {
 						auto uint8Val = ValueFromObject<uint8_t>(pItem);
 						if (!uint8Val.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgChar(a.vm, static_cast<int8_t>(*uint8Val));
@@ -1878,7 +1878,7 @@ namespace py3lm {
 					case ValueType::UInt16: {
 						auto uint16Val = ValueFromObject<uint16_t>(pItem);
 						if (!uint16Val.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgShort(a.vm, static_cast<int16_t>(*uint16Val));
@@ -1887,7 +1887,7 @@ namespace py3lm {
 					case ValueType::UInt32: {
 						auto uint32Val = ValueFromObject<uint32_t>(pItem);
 						if (!uint32Val.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgInt(a.vm, static_cast<int32_t>(*uint32Val));
@@ -1896,7 +1896,7 @@ namespace py3lm {
 					case ValueType::UInt64: {
 						auto uint64Val = ValueFromObject<uint64_t>(pItem);
 						if (!uint64Val.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgLongLong(a.vm, static_cast<int64_t>(*uint64Val));
@@ -1906,7 +1906,7 @@ namespace py3lm {
 					case ValueType::Ptr64: {
 						auto ptrVal = ValueFromObject<uintptr_t>(pItem);
 						if (!ptrVal.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgPointer(a.vm, reinterpret_cast<void*>(*ptrVal));
@@ -1915,7 +1915,7 @@ namespace py3lm {
 					case ValueType::Float: {
 						auto floatVal = ValueFromObject<float>(pItem);
 						if (!floatVal.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgFloat(a.vm, *floatVal);
@@ -1924,7 +1924,7 @@ namespace py3lm {
 					case ValueType::Double: {
 						auto doubleVal = ValueFromObject<double>(pItem);
 						if (!doubleVal.has_value()) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						dcArgDouble(a.vm, *doubleVal);
@@ -1933,7 +1933,7 @@ namespace py3lm {
 					case ValueType::String: {
 						value = CreateValue<std::string>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1943,7 +1943,7 @@ namespace py3lm {
 					case ValueType::ArrayBool: {
 						value = CreateArray<bool>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1953,7 +1953,7 @@ namespace py3lm {
 					case ValueType::ArrayChar8: {
 						value = CreateArray<char>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1963,7 +1963,7 @@ namespace py3lm {
 					case ValueType::ArrayChar16: {
 						value = CreateArray<char16_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1973,7 +1973,7 @@ namespace py3lm {
 					case ValueType::ArrayInt8: {
 						value = CreateArray<int8_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1983,7 +1983,7 @@ namespace py3lm {
 					case ValueType::ArrayInt16: {
 						value = CreateArray<int16_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -1993,7 +1993,7 @@ namespace py3lm {
 					case ValueType::ArrayInt32: {
 						value = CreateArray<int32_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -2003,7 +2003,7 @@ namespace py3lm {
 					case ValueType::ArrayInt64: {
 						value = CreateArray<int64_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -2013,7 +2013,7 @@ namespace py3lm {
 					case ValueType::ArrayUInt8: {
 						value = CreateArray<uint8_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -2023,7 +2023,7 @@ namespace py3lm {
 					case ValueType::ArrayUInt16: {
 						value = CreateArray<uint16_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -2033,7 +2033,7 @@ namespace py3lm {
 					case ValueType::ArrayUInt32: {
 						value = CreateArray<uint32_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -2043,7 +2043,7 @@ namespace py3lm {
 					case ValueType::ArrayUInt64: {
 						value = CreateArray<uint64_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -2053,7 +2053,7 @@ namespace py3lm {
 					case ValueType::ArrayPtr64: {
 						value = CreateArray<uintptr_t>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -2063,7 +2063,7 @@ namespace py3lm {
 					case ValueType::ArrayFloat: {
 						value = CreateArray<float>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -2073,7 +2073,7 @@ namespace py3lm {
 					case ValueType::ArrayDouble: {
 						value = CreateArray<double>(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
@@ -2083,7 +2083,7 @@ namespace py3lm {
 					case ValueType::ArrayString: {
 						value = CreateStringArray(pItem);
 						if (!value) {
-							ret->SetReturnPtr(Py_None);
+							ret->SetReturnPtr(nullptr);
 							return;
 						}
 						a.storage.emplace_back(value, param.type);
