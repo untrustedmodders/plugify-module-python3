@@ -26,7 +26,7 @@ namespace py3lm {
 		PyObject* pythonFunction{};
 	};
 
-	PyObject* GetOrCreateFunctionObject(const Method& paramType, void* funcAddr);
+	PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr);
 
 	namespace {
 		void ReplaceAll(std::string& str, const std::string& from, const std::string& to) {
