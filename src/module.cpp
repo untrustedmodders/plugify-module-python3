@@ -2536,6 +2536,10 @@ namespace py3lm {
 					_ppsModule = nullptr;
 				}
 
+				for (const auto& [_, object] : _externalMap) {
+					Py_DECREF(object);
+				}
+
 				for (const auto& data : _pythonMethods) {
 					Py_DECREF(data.pythonFunction);
 				}
@@ -2543,10 +2547,6 @@ namespace py3lm {
 				for (const auto& [_, pluginData] : _pluginsMap) {
 					Py_DECREF(pluginData._instance);
 					Py_DECREF(pluginData._module);
-				}
-
-				for (const auto& [_, object] : _externalMap) {
-					Py_DECREF(object);
 				}
 
 				Py_Finalize();
