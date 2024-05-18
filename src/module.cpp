@@ -27,6 +27,7 @@ namespace py3lm {
 	};
 
 	PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr);
+	std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object);
 
 	namespace {
 		void ReplaceAll(std::string& str, const std::string& from, const std::string& to) {
@@ -235,6 +236,14 @@ namespace py3lm {
 			auto value = ValueFromObject<T>(pItem);
 			if (value) {
 				return new T(std::move(*value));
+			}
+			return nullptr;
+		}
+
+		void* CreateFunction(const Method& method, PyObject* pItem) {
+			auto value = GetOrCreateFunctionValue(method, pItem);
+			if (value) {
+				return new void*(std::move(*value));
 			}
 			return nullptr;
 		}
@@ -895,6 +904,12 @@ namespace py3lm {
 			Py_DECREF(result);
 		}
 
+		std::tuple<bool, Function> CreateInternalCall(const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, const Method& method, PyObject* func) {
+			Function function(jitRuntime);
+			void* const methodAddr = function.GetJitFunc(method, &InternalCall, reinterpret_cast<void*>(func));
+			return { methodAddr != nullptr, std::move(function) };
+		}
+
 		MethodExportResult GenerateMethodExport(const Method& method, const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, PyObject* pluginModule, PyObject* pluginInstance) {
 			PyObject* func{};
 
@@ -941,11 +956,9 @@ namespace py3lm {
 				func = bind;
 			}
 
-			Function function(jitRuntime);
+			auto [result, function] = CreateInternalCall(jitRuntime, method, func);
 
-			void* const methodAddr = function.GetJitFunc(method, &InternalCall, reinterpret_cast<void*>(func));
-
-			if (!methodAddr) {
+			if (!result) {
 				Py_DECREF(func);
 				return MethodExportError{ std::format("{} (jit error: {})", method.name, function.GetError()) };
 			}
@@ -1104,7 +1117,7 @@ namespace py3lm {
 		};
 
 		void ExternalCallNoArgs(const Method* method, void* addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
-			bool hasRet = method->retType.type > ValueType::LastPrimitive;
+			const bool hasRet = method->retType.type > ValueType::LastPrimitive;
 
 			ArgsScope a(hasRet);
 
@@ -1601,7 +1614,6 @@ namespace py3lm {
 						dcArgPointer(a.vm, value);
 						break;
 					}
-					case ValueType::Function:
 					case ValueType::Ptr64: {
 						value = CreateValue<uintptr_t>(pItem);
 						if (!value) {
@@ -1634,6 +1646,16 @@ namespace py3lm {
 					}
 					case ValueType::String: {
 						value = CreateValue<std::string>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(nullptr);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Function: {
+						value = CreateFunction(*(param.prototype.get()), pItem);
 						if (!value) {
 							ret->SetReturnPtr(nullptr);
 							return;
@@ -1903,7 +1925,6 @@ namespace py3lm {
 						dcArgLongLong(a.vm, static_cast<int64_t>(*uint64Val));
 						break;
 					}
-					case ValueType::Function:
 					case ValueType::Ptr64: {
 						auto ptrVal = ValueFromObject<uintptr_t>(pItem);
 						if (!ptrVal.has_value()) {
@@ -1939,6 +1960,15 @@ namespace py3lm {
 						}
 						a.storage.emplace_back(value, param.type);
 						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Function: {
+						auto ptrVal = GetOrCreateFunctionValue(*(param.prototype.get()), pItem);
+						if (!ptrVal.has_value()) {
+							ret->SetReturnPtr(nullptr);
+							return;
+						}
+						dcArgPointer(a.vm, reinterpret_cast<void*>(*ptrVal));
 						break;
 					}
 					case ValueType::ArrayBool: {
@@ -2536,6 +2566,10 @@ namespace py3lm {
 					_ppsModule = nullptr;
 				}
 
+				for (const auto& data : _internalFunctions) {
+					Py_DECREF(data.pythonFunction);
+				}
+
 				for (const auto& [_, object] : _externalMap) {
 					Py_DECREF(object);
 				}
@@ -2551,6 +2585,8 @@ namespace py3lm {
 
 				Py_Finalize();
 			}
+			_internalMap.clear();
+			_internalFunctions.clear();
 			_externalMap.clear();
 			_externalFunctions.clear();
 			_moduleDefinitions.clear();
@@ -2688,7 +2724,9 @@ namespace py3lm {
 			_pythonMethods.reserve(methodsHolders.size());
 
 			for (auto& [method, methodData] : methodsHolders) {
-				methods.emplace_back(method.get().name, methodData.jitFunction.GetFunction());
+				void* const methodAddr = methodData.jitFunction.GetFunction();
+				methods.emplace_back(method.get().name, methodAddr);
+				_internalMap.emplace(methodData.pythonFunction, methodAddr);
 				_pythonMethods.emplace_back(std::move(methodData));
 			}
 
@@ -2749,6 +2787,39 @@ namespace py3lm {
 			_externalMap.emplace(funcAddr, object);
 
 			return object;
+		}
+
+		void* FindInternal(PyObject* object) const {
+			const auto it = _internalMap.find(object);
+			if (it != _internalMap.end()) {
+				return std::get<void*>(*it);
+			}
+			return nullptr;
+		}
+
+		std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object) {
+			if (!PyFunction_Check(object)) {
+				// TODO: set error
+				return std::nullopt;
+			}
+
+			if (void* const funcAddr = FindInternal(object)) {
+				return { funcAddr };
+			}
+
+			auto [result, function] = CreateInternalCall(_jitRuntime, method, object);
+			if (!result) {
+				// TODO: set error
+				return std::nullopt;
+			}
+
+			void* const funcAddr = function.GetFunction();
+
+			Py_INCREF(object);
+			_internalFunctions.emplace_back(std::move(function), object);
+			_internalMap.emplace(object, funcAddr);
+
+			return { funcAddr };
 		}
 
 	private:
@@ -2891,6 +2962,8 @@ namespace py3lm {
 		};
 		std::vector<ExternalHolder> _externalFunctions;
 		std::unordered_map<void*, PyObject*> _externalMap;
+		std::vector<PythonMethodData> _internalFunctions;
+		std::unordered_map<PyObject*, void*> _internalMap;
 	};
 
 	Python3LanguageModule g_py3lm;
@@ -2902,5 +2975,9 @@ namespace py3lm {
 
 	static PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
 		return g_py3lm.GetOrCreateFunctionObject(method, funcAddr);
+	}
+
+	static std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object) {
+		return g_py3lm.GetOrCreateFunctionValue(method, object);
 	}
 }
