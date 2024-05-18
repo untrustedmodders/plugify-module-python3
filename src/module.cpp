@@ -243,7 +243,7 @@ namespace py3lm {
 		void* CreateFunction(const Method& method, PyObject* pItem) {
 			auto value = GetOrCreateFunctionValue(method, pItem);
 			if (value) {
-				return new void*(std::move(*value));
+				return new uintptr_t(reinterpret_cast<uintptr_t>(*value));
 			}
 			return nullptr;
 		}
