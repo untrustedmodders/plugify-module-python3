@@ -653,6 +653,9 @@ namespace py3lm {
 					return true;
 				}
 				break;
+			default:
+				// TODO: Log fail description
+				std::terminate();
 			}
 
 			return false;
@@ -2311,15 +2314,10 @@ namespace py3lm {
 					auto& param = method->paramTypes[i];
 					if (param.ref) {
 						switch (param.type) {
-						case ValueType::Invalid:
-						case ValueType::Void:
-							// Should not trigger!
-							break;
-						case ValueType::Bool: {
+						case ValueType::Bool:
 							pValue = CreatePyObject(*reinterpret_cast<bool*>(std::get<0>(a.storage[j++])));
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
-						}
 						case ValueType::Char8:
 							pValue = CreatePyObject(*reinterpret_cast<char*>(std::get<0>(a.storage[j++])));
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
@@ -2437,6 +2435,9 @@ namespace py3lm {
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[j++])));
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
+						default:
+							// TODO: Log fail description
+							std::terminate();
 						}
 						if (k >= refsCount)
 							break;
