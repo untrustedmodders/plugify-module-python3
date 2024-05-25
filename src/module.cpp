@@ -403,7 +403,7 @@ namespace py3lm {
 			case ValueType::UInt16:
 			case ValueType::UInt32:
 			case ValueType::UInt64:
-			case ValueType::Ptr64:
+			case ValueType::Pointer:
 			case ValueType::Float:
 			case ValueType::Double:
 				// HACK: Fill all 8 byte with 0
@@ -428,7 +428,7 @@ namespace py3lm {
 			case ValueType::ArrayUInt16:
 			case ValueType::ArrayUInt32:
 			case ValueType::ArrayUInt64:
-			case ValueType::ArrayPtr64:
+			case ValueType::ArrayPointer:
 			case ValueType::ArrayFloat:
 			case ValueType::ArrayDouble: {
 				// HACK: Assume the same structure for empty array
@@ -517,7 +517,7 @@ namespace py3lm {
 					return true;
 				}
 				break;
-			case ValueType::Ptr64:
+			case ValueType::Pointer:
 				if (auto value = ValueFromObject<void*>(result)) {
 					ret->SetReturnPtr<void*>(*value);
 					return true;
@@ -625,7 +625,7 @@ namespace py3lm {
 					return true;
 				}
 				break;
-			case ValueType::ArrayPtr64:
+			case ValueType::ArrayPointer:
 				if (auto value = ArrayFromObject<void*>(result)) {
 					auto* const returnParam = params->GetArgument<std::vector<void*>*>(0);
 					std::construct_at(returnParam, std::move(*value));
@@ -785,7 +785,7 @@ namespace py3lm {
 				return CreatePyObject(params->GetArgument<uint32_t>(index));
 			case ValueType::UInt64:
 				return CreatePyObject(params->GetArgument<uint64_t>(index));
-			case ValueType::Ptr64:
+			case ValueType::Pointer:
 				return CreatePyObject(params->GetArgument<void*>(index));
 			case ValueType::Float:
 				return CreatePyObject(params->GetArgument<float>(index));
@@ -817,7 +817,7 @@ namespace py3lm {
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint32_t>*>(index)));
 			case ValueType::ArrayUInt64:
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint64_t>*>(index)));
-			case ValueType::ArrayPtr64:
+			case ValueType::ArrayPointer:
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<void*>*>(index)));
 			case ValueType::ArrayFloat:
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<float>*>(index)));
@@ -1031,7 +1031,7 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::Function:
-					case ValueType::Ptr64: {
+					case ValueType::Pointer: {
 						delete reinterpret_cast<uintptr_t*>(ptr);
 						break;
 					}
@@ -1091,7 +1091,7 @@ namespace py3lm {
 						delete reinterpret_cast<std::vector<uint64_t>*>(ptr);
 						break;
 					}
-					case ValueType::ArrayPtr64: {
+					case ValueType::ArrayPointer: {
 						delete reinterpret_cast<std::vector<uintptr_t>*>(ptr);
 						break;
 					}
@@ -1184,7 +1184,7 @@ namespace py3lm {
 					a.storage.emplace_back(value, method->retType.type);
 					dcArgPointer(a.vm, value);
 					break;
-				case ValueType::ArrayPtr64:
+				case ValueType::ArrayPointer:
 					value = new std::vector<uintptr_t>();
 					a.storage.emplace_back(value, method->retType.type);
 					dcArgPointer(a.vm, value);
@@ -1273,7 +1273,7 @@ namespace py3lm {
 				break;
 			}
 			case ValueType::Function:
-			case ValueType::Ptr64: {
+			case ValueType::Pointer: {
 				uintptr_t val = reinterpret_cast<uintptr_t>(dcCallPointer(a.vm, addr));
 				ret->SetReturnPtr(CreatePyObject(val));
 				break;
@@ -1348,7 +1348,7 @@ namespace py3lm {
 				ret->SetReturnPtr(CreatePyObjectList<uint64_t>(*reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[0]))));
 				break;
 			}
-			case ValueType::ArrayPtr64: {
+			case ValueType::ArrayPointer: {
 				dcCallVoid(a.vm, addr);
 				ret->SetReturnPtr(CreatePyObjectList<uintptr_t>(*reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[0]))));
 				break;
@@ -1465,7 +1465,7 @@ namespace py3lm {
 					a.storage.emplace_back(value, method->retType.type);
 					dcArgPointer(a.vm, value);
 					break;
-				case ValueType::ArrayPtr64:
+				case ValueType::ArrayPointer:
 					value = new std::vector<uintptr_t>();
 					a.storage.emplace_back(value, method->retType.type);
 					dcArgPointer(a.vm, value);
@@ -1614,7 +1614,7 @@ namespace py3lm {
 						dcArgPointer(a.vm, value);
 						break;
 					}
-					case ValueType::Ptr64: {
+					case ValueType::Pointer: {
 						value = CreateValue<uintptr_t>(pItem);
 						if (!value) {
 							ret->SetReturnPtr(nullptr);
@@ -1774,7 +1774,7 @@ namespace py3lm {
 						dcArgPointer(a.vm, value);
 						break;
 					}
-					case ValueType::ArrayPtr64: {
+					case ValueType::ArrayPointer: {
 						value = CreateArray<uintptr_t>(pItem);
 						if (!value) {
 							ret->SetReturnPtr(nullptr);
@@ -1925,7 +1925,7 @@ namespace py3lm {
 						dcArgLongLong(a.vm, static_cast<int64_t>(*uint64Val));
 						break;
 					}
-					case ValueType::Ptr64: {
+					case ValueType::Pointer: {
 						auto ptrVal = ValueFromObject<uintptr_t>(pItem);
 						if (!ptrVal.has_value()) {
 							ret->SetReturnPtr(nullptr);
@@ -2081,7 +2081,7 @@ namespace py3lm {
 						dcArgPointer(a.vm, value);
 						break;
 					}
-					case ValueType::ArrayPtr64: {
+					case ValueType::ArrayPointer: {
 						value = CreateArray<uintptr_t>(pItem);
 						if (!value) {
 							ret->SetReturnPtr(nullptr);
@@ -2195,7 +2195,7 @@ namespace py3lm {
 				break;
 			}
 			case ValueType::Function:
-			case ValueType::Ptr64: {
+			case ValueType::Pointer: {
 				uintptr_t val = reinterpret_cast<uintptr_t>(dcCallPointer(a.vm, addr));
 				retObj = CreatePyObject(val);
 				break;
@@ -2270,7 +2270,7 @@ namespace py3lm {
 				retObj = CreatePyObjectList<uint64_t>(*reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[0])));
 				break;
 			}
-			case ValueType::ArrayPtr64: {
+			case ValueType::ArrayPointer: {
 				dcCallVoid(a.vm, addr);
 				retObj = CreatePyObjectList<uintptr_t>(*reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[0])));
 				break;
@@ -2373,7 +2373,7 @@ namespace py3lm {
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Function:
-						case ValueType::Ptr64:
+						case ValueType::Pointer:
 							pValue = CreatePyObject(*reinterpret_cast<uintptr_t*>(std::get<0>(a.storage[j++])));
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
@@ -2421,7 +2421,7 @@ namespace py3lm {
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[j++])));
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
-						case ValueType::ArrayPtr64:
+						case ValueType::ArrayPointer:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[j++])));
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
