@@ -415,8 +415,7 @@ namespace py3lm {
 				break;
 			}
 			case ValueType::Function:
-				// TODO: Log fail description
-				std::terminate();
+				ret->SetReturnPtr<void*>(nullptr);
 				break;
 			case ValueType::ArrayChar8:
 			case ValueType::ArrayChar16:
