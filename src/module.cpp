@@ -664,6 +664,7 @@ namespace py3lm {
 		template<typename T>
 		PyObject* CreatePyObject(T /*value*/) {
 			static_assert(always_false_v<T>, "CreatePyObject specialization required");
+			return nullptr;
 		}
 
 		template<>
