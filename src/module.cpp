@@ -162,17 +162,17 @@ namespace py3lm {
 
 		template<>
 		std::optional<uint16_t> ValueFromObject(PyObject* object) {
-			return ValueFromNumberObject<uint8_t, PyLong_AsUnsignedLong>(object);
+			return ValueFromNumberObject<uint16_t, PyLong_AsUnsignedLong>(object);
 		}
 
 		template<>
 		std::optional<uint32_t> ValueFromObject(PyObject* object) {
-			return ValueFromNumberObject<uint8_t, PyLong_AsUnsignedLong>(object);
+			return ValueFromNumberObject<uint32_t, PyLong_AsUnsignedLong>(object);
 		}
 
 		template<>
 		std::optional<uint64_t> ValueFromObject(PyObject* object) {
-			return ValueFromNumberObject<uint8_t, PyLong_AsUnsignedLongLong>(object);
+			return ValueFromNumberObject<uint64_t, PyLong_AsUnsignedLongLong>(object);
 		}
 
 		template<>
