@@ -851,18 +851,18 @@ namespace py3lm {
 			};
 			ParamProcess processResult = ParamProcess::NoError;
 
-			uint8_t params_count = static_cast<uint8_t>(method->paramTypes.size());
-			uint8_t params_start_index = method->retType.type > ValueType::LastPrimitive ? 1 : 0;
+			uint8_t paramsCount = static_cast<uint8_t>(method->paramTypes.size());
+			uint8_t paramsStartIndex = method->retType.type > ValueType::LastPrimitive ? 1 : 0;
 
 			PyObject* argTuple = nullptr;
-			if (params_count) {
-				argTuple = PyTuple_New(params_count);
+			if (paramsCount) {
+				argTuple = PyTuple_New(paramsCount);
 				if (!argTuple) {
 					processResult = ParamProcess::Error;
 				}
 				else {
-					for (uint8_t index = 0; index < params_count; ++index) {
-						PyObject* const arg = ParamToObject(method->paramTypes[index], params, params_start_index + index);
+					for (uint8_t index = 0; index < paramsCount; ++index) {
+						PyObject* const arg = ParamToObject(method->paramTypes[index], params, paramsStartIndex + index);
 						if (!arg) {
 							processResult = ParamProcess::Error;
 							break;
