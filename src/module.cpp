@@ -1152,7 +1152,7 @@ namespace py3lm {
 						ParamConvertionFunc const convertFunc = paramType.ref ? &ParamRefToObject : &ParamToObject;
 						PyObject* const arg = convertFunc(paramType, params, paramsStartIndex + index);
 						if (!arg) {
-							processResult = ParamProcess::Error;
+							processResult = PyErr_Occurred() ? ParamProcess::ErrorWithException : ParamProcess::Error;
 							break;
 						}
 						if (PyTuple_SetItem(argTuple, index, arg) != 0) {
