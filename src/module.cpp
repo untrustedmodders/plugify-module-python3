@@ -2895,7 +2895,6 @@ namespace py3lm {
 			if (Py_IsInitialized()) {
 				if (_ppsModule) {
 					Py_DECREF(_ppsModule);
-					_ppsModule = nullptr;
 				}
 
 				for (const auto& data : _internalFunctions) {
@@ -2917,6 +2916,7 @@ namespace py3lm {
 
 				Py_Finalize();
 			}
+			_ppsModule = nullptr;
 			_internalMap.clear();
 			_internalFunctions.clear();
 			_externalMap.clear();
