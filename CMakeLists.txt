@@ -70,3 +70,8 @@ endif()
 string(TOLOWER ${CMAKE_SYSTEM_NAME} SYSTEM_NAME_LOWER)
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/include/pyconfig.h" DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/include/python3.12")
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/include/python3.12")
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    PY3LM_PLATFORM_WINDOWS=$<BOOL:${WIN32}>
+    PY3LM_PLATFORM_APPLE=$<BOOL:${APPLE}>
+    PY3LM_PLATFORM_LINUX=$<BOOL:${LINUX}>)

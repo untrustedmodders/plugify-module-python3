@@ -6,6 +6,7 @@
 #include <plugify/module.h>
 #include <plugify/plugin_descriptor.h>
 #include <plugify/plugin.h>
+#include <plugify/math.h>
 #include <module_export.h>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
@@ -26,6 +27,14 @@ namespace py3lm {
 		PyObject* pythonFunction{};
 	};
 
+	static PyObject* CreateVector2Object(const Vector2& vector);
+	static std::optional<Vector2> Vector2ValueFromObject(PyObject* object);
+	static PyObject* CreateVector3Object(const Vector3& vector);
+	static std::optional<Vector3> Vector3ValueFromObject(PyObject* object);
+	static PyObject* CreateVector4Object(const Vector4& vector);
+	static std::optional<Vector4> Vector4ValueFromObject(PyObject* object);
+	static PyObject* CreateMatrix4x4Object(const Matrix4x4& matrix);
+	static std::optional<Matrix4x4> Matrix4x4ValueFromObject(PyObject* object);
 	static PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr);
 	static std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object);
 
@@ -210,6 +219,26 @@ namespace py3lm {
 				return std::make_optional<std::string>(buffer, buffer + size);
 			}
 			return std::nullopt;
+		}
+
+		template<>
+		std::optional<Vector2> ValueFromObject(PyObject* object) {
+			return Vector2ValueFromObject(object);
+		}
+
+		template<>
+		std::optional<Vector3> ValueFromObject(PyObject* object) {
+			return Vector3ValueFromObject(object);
+		}
+
+		template<>
+		std::optional<Vector4> ValueFromObject(PyObject* object) {
+			return Vector4ValueFromObject(object);
+		}
+
+		template<>
+		std::optional<Matrix4x4> ValueFromObject(PyObject* object) {
+			return Matrix4x4ValueFromObject(object);
 		}
 
 		template<typename T>
@@ -432,6 +461,39 @@ namespace py3lm {
 				std::construct_at(returnParam);
 				break;
 			}
+			case ValueType::Vector2: {
+				ret->SetReturnPtr<Vector2>({});
+				break;
+			}
+#if PY3LM_PLATFORM_WINDOWS
+			case ValueType::Vector3: {
+				auto* const returnParam = params->GetArgument<Vector3*>(0);
+				std::construct_at(returnParam);
+				ret->SetReturnPtr<Vector3*>(returnParam);
+				break;
+			}
+			case ValueType::Vector4: {
+				auto* const returnParam = params->GetArgument<Vector4*>(0);
+				std::construct_at(returnParam);
+				ret->SetReturnPtr<Vector4*>(returnParam);
+				break;
+			}
+#elif PY3LM_PLATFORM_LINUX || PY3LM_PLATFORM_APPLE
+			case ValueType::Vector3: {
+				ret->SetReturnPtr<Vector3>({});
+				break;
+			}
+			case ValueType::Vector4: {
+				ret->SetReturnPtr<Vector4>({});
+				break;
+			}
+#endif // PY3LM_PLATFORM_WINDOWS
+			case ValueType::Matrix4x4: {
+				auto* const returnParam = params->GetArgument<Matrix4x4*>(0);
+				std::construct_at(returnParam);
+				ret->SetReturnPtr<Matrix4x4*>(returnParam);
+				break;
+			}
 			default:
 				// TODO: Log fail description
 				std::terminate();
@@ -641,6 +703,51 @@ namespace py3lm {
 				if (auto value = ArrayFromObject<std::string>(result)) {
 					auto* const returnParam = params->GetArgument<std::vector<std::string>*>(0);
 					std::construct_at(returnParam, std::move(*value));
+					return true;
+				}
+				break;
+			case ValueType::Vector2:
+				if (auto value = ValueFromObject<Vector2>(result)) {
+					ret->SetReturnPtr<Vector2>(*value);
+					return true;
+				}
+				break;
+#if PY3LM_PLATFORM_WINDOWS
+			case ValueType::Vector3:
+				if (auto value = ValueFromObject<Vector3>(result)) {
+					auto* const returnParam = params->GetArgument<Vector3*>(0);
+					std::construct_at(returnParam, std::move(*value));
+					ret->SetReturnPtr<Vector3*>(returnParam);
+					return true;
+				}
+				break;
+			case ValueType::Vector4:
+				if (auto value = ValueFromObject<Vector4>(result)) {
+					auto* const returnParam = params->GetArgument<Vector4*>(0);
+					std::construct_at(returnParam, std::move(*value));
+					ret->SetReturnPtr<Vector4*>(returnParam);
+					return true;
+				}
+				break;
+#elif PY3LM_PLATFORM_LINUX || PY3LM_PLATFORM_APPLE
+			case ValueType::Vector3:
+				if (auto value = ValueFromObject<Vector3>(result)) {
+					ret->SetReturnPtr<Vector3>(*value);
+					return true;
+				}
+				break;
+			case ValueType::Vector4:
+				if (auto value = ValueFromObject<Vector4>(result)) {
+					ret->SetReturnPtr<Vector4>(*value);
+					return true;
+				}
+				break;
+#endif // PY3LM_PLATFORM_WINDOWS
+			case ValueType::Matrix4x4:
+				if (auto value = ValueFromObject<Matrix4x4>(result)) {
+					auto* const returnParam = params->GetArgument<Matrix4x4*>(0);
+					std::construct_at(returnParam, std::move(*value));
+					ret->SetReturnPtr<Matrix4x4*>(returnParam);
 					return true;
 				}
 				break;
@@ -864,6 +971,34 @@ namespace py3lm {
 					return true;
 				}
 				break;
+			case ValueType::Vector2:
+				if (auto value = ValueFromObject<Vector2>(object)) {
+					auto* const param = params->GetArgument<Vector2*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Vector3:
+				if (auto value = ValueFromObject<Vector3>(object)) {
+					auto* const param = params->GetArgument<Vector3*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Vector4:
+				if (auto value = ValueFromObject<Vector4>(object)) {
+					auto* const param = params->GetArgument<Vector4*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Matrix4x4:
+				if (auto value = ValueFromObject<Vector2>(object)) {
+					auto* const param = params->GetArgument<Vector2*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
 			default:
 				// TODO: Log fail description
 				std::terminate();
@@ -965,6 +1100,26 @@ namespace py3lm {
 			return PyUnicode_FromStringAndSize(value.data(), static_cast<Py_ssize_t>(value.size()));
 		}
 
+		template<>
+		PyObject* CreatePyObject(Vector2 value) {
+			return CreateVector2Object(value);
+		}
+
+		template<>
+		PyObject* CreatePyObject(Vector3 value) {
+			return CreateVector3Object(value);
+		}
+
+		template<>
+		PyObject* CreatePyObject(Vector4 value) {
+			return CreateVector4Object(value);
+		}
+
+		template<>
+		PyObject* CreatePyObject(Matrix4x4 value) {
+			return CreateMatrix4x4Object(value);
+		}
+
 		template<typename T>
 		PyObject* CreatePyObjectList(const std::vector<T>& arrayArg) {
 			const auto size = static_cast<Py_ssize_t>(arrayArg.size());
@@ -1046,6 +1201,14 @@ namespace py3lm {
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<double>*>(index)));
 			case ValueType::ArrayString:
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<std::string>*>(index)));
+			case ValueType::Vector2:
+				return CreatePyObject(*(params->GetArgument<Vector2*>(index)));
+			case ValueType::Vector3:
+				return CreatePyObject(*(params->GetArgument<Vector3*>(index)));
+			case ValueType::Vector4:
+				return CreatePyObject(*(params->GetArgument<Vector4*>(index)));
+			case ValueType::Matrix4x4:
+				return CreatePyObject(*(params->GetArgument<Matrix4x4*>(index)));
 			default:
 				// TODO: Log fail description
 				std::terminate();
@@ -1115,6 +1278,14 @@ namespace py3lm {
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<double>*>(index)));
 			case ValueType::ArrayString:
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<std::string>*>(index)));
+			case ValueType::Vector2:
+				return CreatePyObject(*(params->GetArgument<Vector2*>(index)));
+			case ValueType::Vector3:
+				return CreatePyObject(*(params->GetArgument<Vector3*>(index)));
+			case ValueType::Vector4:
+				return CreatePyObject(*(params->GetArgument<Vector4*>(index)));
+			case ValueType::Matrix4x4:
+				return CreatePyObject(*(params->GetArgument<Matrix4x4*>(index)));
 			default:
 				// TODO: Log fail description
 				std::terminate();
@@ -1315,6 +1486,7 @@ namespace py3lm {
 		struct ArgsScope {
 			DCCallVM* vm;
 			std::vector<std::pair<void*, ValueType>> storage; // used to store array temp memory
+			DCaggr* ag = nullptr;
 
 			ArgsScope(uint8_t size) {
 				vm = dcNewCallVM(4096);
@@ -1448,11 +1620,30 @@ namespace py3lm {
 						delete reinterpret_cast<std::vector<std::string>*>(ptr);
 						break;
 					}
+					case ValueType::Vector2: {
+						delete reinterpret_cast<Vector2*>(ptr);
+						break;
+					}
+					case ValueType::Vector3: {
+						delete reinterpret_cast<Vector3*>(ptr);
+						break;
+					}
+					case ValueType::Vector4: {
+						delete reinterpret_cast<Vector4*>(ptr);
+						break;
+					}
+					case ValueType::Matrix4x4: {
+						delete reinterpret_cast<Matrix4x4*>(ptr);
+						break;
+					}
 					default:
 						puts("Unsupported types!");
 						std::terminate();
 						break;
 					}
+				}
+				if (ag) {
+					dcFreeAggr(ag);
 				}
 				dcFree(vm);
 			}
@@ -1545,6 +1736,38 @@ namespace py3lm {
 					value = new std::vector<std::string>();
 					a.storage.emplace_back(value, method->retType.type);
 					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::Vector2:
+					a.ag = dcNewAggr(2, sizeof(Vector2));
+					for (int i = 0; i < 2; ++i) {
+						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+					}
+					dcCloseAggr(a.ag);
+					dcBeginCallAggr(a.vm, a.ag);
+					break;
+				case ValueType::Vector3:
+					a.ag = dcNewAggr(3, sizeof(Vector3));
+					for (int i = 0; i < 3; ++i) {
+						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+					}
+					dcCloseAggr(a.ag);
+					dcBeginCallAggr(a.vm, a.ag);
+					break;
+				case ValueType::Vector4:
+					a.ag = dcNewAggr(4, sizeof(Vector4));
+					for (int i = 0; i < 4; ++i) {
+						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+					}
+					dcCloseAggr(a.ag);
+					dcBeginCallAggr(a.vm, a.ag);
+					break;
+				case ValueType::Matrix4x4:
+					a.ag = dcNewAggr(16, sizeof(Matrix4x4));
+					for (int i = 0; i < 16; ++i) {
+						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+					}
+					dcCloseAggr(a.ag);
+					dcBeginCallAggr(a.vm, a.ag);
 					break;
 				default:
 					// Should not require storage
@@ -1712,6 +1935,30 @@ namespace py3lm {
 				ret->SetReturnPtr(CreatePyObjectList<std::string>(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[0]))));
 				break;
 			}
+			case ValueType::Vector2: {
+				Vector2 val;
+				dcCallAggr(a.vm, addr, a.ag, &val);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Vector3: {
+				Vector3 val;
+				dcCallAggr(a.vm, addr, a.ag, &val);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Vector4: {
+				Vector4 val;
+				dcCallAggr(a.vm, addr, a.ag, &val);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Matrix4x4: {
+				Matrix4x4 val;
+				dcCallAggr(a.vm, addr, a.ag, &val);
+				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
 			default:
 				const std::string error(std::format("Return unsupported type {:#x}", static_cast<uint8_t>(method->retType.type)));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
@@ -1830,6 +2077,38 @@ namespace py3lm {
 					value = new std::vector<std::string>();
 					a.storage.emplace_back(value, method->retType.type);
 					dcArgPointer(a.vm, value);
+					break;
+				case ValueType::Vector2:
+					a.ag = dcNewAggr(2, sizeof(Vector2));
+					for (int i = 0; i < 2; ++i) {
+						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+					}
+					dcCloseAggr(a.ag);
+					dcBeginCallAggr(a.vm, a.ag);
+					break;
+				case ValueType::Vector3:
+					a.ag = dcNewAggr(3, sizeof(Vector3));
+					for (int i = 0; i < 3; ++i) {
+						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+					}
+					dcCloseAggr(a.ag);
+					dcBeginCallAggr(a.vm, a.ag);
+					break;
+				case ValueType::Vector4:
+					a.ag = dcNewAggr(4, sizeof(Vector4));
+					for (int i = 0; i < 4; ++i) {
+						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+					}
+					dcCloseAggr(a.ag);
+					dcBeginCallAggr(a.vm, a.ag);
+					break;
+				case ValueType::Matrix4x4:
+					a.ag = dcNewAggr(16, sizeof(Matrix4x4));
+					for (int i = 0; i < 16; ++i) {
+						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+					}
+					dcCloseAggr(a.ag);
+					dcBeginCallAggr(a.vm, a.ag);
 					break;
 				default:
 					// Should not require storage
@@ -2146,6 +2425,46 @@ namespace py3lm {
 						dcArgPointer(a.vm, value);
 						break;
 					}
+					case ValueType::Vector2: {
+						value = CreateValue<Vector2>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(nullptr);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Vector3: {
+						value = CreateValue<Vector3>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(nullptr);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Vector4: {
+						value = CreateValue<Vector4>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(nullptr);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Matrix4x4: {
+						value = CreateValue<Matrix4x4>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(nullptr);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
 					default: {
 						const std::string error(std::format("Param {} unsupported type {:#x}", i + 1, static_cast<uint8_t>(param.type)));
 						PyErr_SetString(PyExc_TypeError, error.c_str());
@@ -2452,6 +2771,46 @@ namespace py3lm {
 						dcArgPointer(a.vm, value);
 						break;
 					}
+					case ValueType::Vector2: {
+						value = CreateValue<Vector2>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(nullptr);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Vector3: {
+						value = CreateValue<Vector3>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(nullptr);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Vector4: {
+						value = CreateValue<Vector4>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(nullptr);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
+					case ValueType::Matrix4x4: {
+						value = CreateValue<Matrix4x4>(pItem);
+						if (!value) {
+							ret->SetReturnPtr(nullptr);
+							return;
+						}
+						a.storage.emplace_back(value, param.type);
+						dcArgPointer(a.vm, value);
+						break;
+					}
 					default: {
 						const std::string error(std::format("Param {} unsupported type {:#x}", i + 1, static_cast<uint8_t>(param.type)));
 						PyErr_SetString(PyExc_TypeError, error.c_str());
@@ -2626,6 +2985,30 @@ namespace py3lm {
 				retObj = CreatePyObjectList<std::string>(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[0])));
 				break;
 			}
+			case ValueType::Vector2: {
+				Vector2 val;
+				dcCallAggr(a.vm, addr, a.ag, &val);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Vector3: {
+				Vector3 val;
+				dcCallAggr(a.vm, addr, a.ag, &val);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Vector4: {
+				Vector4 val;
+				dcCallAggr(a.vm, addr, a.ag, &val);
+				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Matrix4x4: {
+				Matrix4x4 val;
+				dcCallAggr(a.vm, addr, a.ag, &val);
+				retObj = CreatePyObject(val);
+				break;
+			}
 			default: {
 				const std::string error(std::format("Return unsupported type {:#x}", static_cast<uint8_t>(method->retType.type)));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
@@ -2770,6 +3153,22 @@ namespace py3lm {
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[j++])));
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
+						case ValueType::Vector2:
+							pValue = CreatePyObject(*reinterpret_cast<Vector2*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Vector3:
+							pValue = CreatePyObject(*reinterpret_cast<Vector3*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Vector4:
+							pValue = CreatePyObject(*reinterpret_cast<Vector4*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
+						case ValueType::Matrix4x4:
+							pValue = CreatePyObject(*reinterpret_cast<Matrix4x4*>(std::get<0>(a.storage[j++])));
+							PyTuple_SET_ITEM(retTuple, k++, pValue);
+							break;
 						default:
 							// TODO: Log fail description
 							std::terminate();
@@ -2785,6 +3184,17 @@ namespace py3lm {
 				// return as single object
 				ret->SetReturnPtr(retObj);
 			}
+		}
+
+		template<typename T>
+		std::optional<T> GetObjectAttrAsValue(PyObject* object, const char* attr_name) {
+			PyObject* const attrObject = PyObject_GetAttrString(object, attr_name);
+			if (!attrObject) {
+				return std::nullopt;
+			}
+			const auto value = ValueFromObject<T>(attrObject);
+			Py_DECREF(attrObject);
+			return value;
 		}
 	}
 
@@ -2884,6 +3294,27 @@ namespace py3lm {
 				return ErrorData{ "Failed to import plugify.plugin python module" };
 			}
 
+			_Vector2TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector2");
+			if (!_Vector2TypeObject) {
+				PyErr_Print();
+				return ErrorData{ "Failed to find plugify.plugin.Vector2 type" };
+			}
+			_Vector3TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector3");
+			if (!_Vector3TypeObject) {
+				PyErr_Print();
+				return ErrorData{ "Failed to find plugify.plugin.Vector3 type" };
+			}
+			_Vector4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector4");
+			if (!_Vector4TypeObject) {
+				PyErr_Print();
+				return ErrorData{ "Failed to find plugify.plugin.Vector4 type" };
+			}
+			_Matrix4x4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Matrix4x4");
+			if (!_Matrix4x4TypeObject) {
+				PyErr_Print();
+				return ErrorData{ "Failed to find plugify.plugin.Matrix4x4 type" };
+			}
+
 			Py_DECREF(plugifyPluginModule);
 
 			_ppsModule = PyImport_ImportModule("plugify.pps");
@@ -2899,6 +3330,22 @@ namespace py3lm {
 			if (Py_IsInitialized()) {
 				if (_ppsModule) {
 					Py_DECREF(_ppsModule);
+				}
+
+				if (_Vector2TypeObject) {
+					Py_DECREF(_Vector2TypeObject);
+				}
+
+				if (_Vector3TypeObject) {
+					Py_DECREF(_Vector3TypeObject);
+				}
+
+				if (_Vector4TypeObject) {
+					Py_DECREF(_Vector4TypeObject);
+				}
+
+				if (_Matrix4x4TypeObject) {
+					Py_DECREF(_Matrix4x4TypeObject);
 				}
 
 				for (const auto& data : _internalFunctions) {
@@ -2921,6 +3368,10 @@ namespace py3lm {
 				Py_Finalize();
 			}
 			_ppsModule = nullptr;
+			_Vector2TypeObject = nullptr;
+			_Vector3TypeObject = nullptr;
+			_Vector4TypeObject = nullptr;
+			_Matrix4x4TypeObject = nullptr;
 			_internalMap.clear();
 			_internalFunctions.clear();
 			_externalMap.clear();
@@ -3158,6 +3609,327 @@ namespace py3lm {
 			return { funcAddr };
 		}
 
+		PyObject* CreateVector2Object(const Vector2& vector) {
+			PyObject* const args = PyTuple_New(Py_ssize_t{ 2 });
+			if (!args) {
+				return nullptr;
+			}
+			PyObject* const xObject = CreatePyObject(vector.x);
+			if (!xObject) {
+				Py_DECREF(args);
+				return nullptr;
+			}
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, xObject); // xObject ref taken by tuple
+			PyObject* const yObject = CreatePyObject(vector.y);
+			if (!yObject) {
+				Py_DECREF(args);
+				return nullptr;
+			}
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, yObject); // yObject ref taken by tuple
+			PyObject* const vectorObject = PyObject_CallObject(_Vector2TypeObject, args);
+			Py_DECREF(args);
+			return vectorObject;
+		}
+
+		std::optional<Vector2> Vector2ValueFromObject(PyObject* object) {
+			const int type_result = PyObject_IsInstance(object, _Vector2TypeObject);
+			if (type_result == -1) {
+				// Python exception was set by PyObject_IsInstance
+				return std::nullopt;
+			}
+			if (type_result == 0) {
+				return std::nullopt;
+			}
+			auto xValue = GetObjectAttrAsValue<float>(object, "x");
+			if (!xValue) {
+				return std::nullopt;
+			}
+			auto yValue = GetObjectAttrAsValue<float>(object, "y");
+			if (!yValue) {
+				return std::nullopt;
+			}
+			return Vector2{ *xValue, *yValue };
+		}
+
+		PyObject* CreateVector3Object(const Vector3& vector) {
+			PyObject* const args = PyTuple_New(Py_ssize_t{ 3 });
+			if (!args) {
+				return nullptr;
+			}
+			PyObject* const xObject = CreatePyObject(vector.x);
+			if (!xObject) {
+				Py_DECREF(args);
+				return nullptr;
+			}
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, xObject); // xObject ref taken by tuple
+			PyObject* const yObject = CreatePyObject(vector.y);
+			if (!yObject) {
+				Py_DECREF(args);
+				return nullptr;
+			}
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, yObject); // yObject ref taken by tuple
+			PyObject* const zObject = CreatePyObject(vector.z);
+			if (!zObject) {
+				Py_DECREF(args);
+				return nullptr;
+			}
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 2 }, zObject); // zObject ref taken by tuple
+			PyObject* const vectorObject = PyObject_CallObject(_Vector3TypeObject, args);
+			Py_DECREF(args);
+			return vectorObject;
+		}
+
+		std::optional<Vector3> Vector3ValueFromObject(PyObject* object) {
+			const int type_result = PyObject_IsInstance(object, _Vector3TypeObject);
+			if (type_result == -1) {
+				// Python exception was set by PyObject_IsInstance
+				return std::nullopt;
+			}
+			if (type_result == 0) {
+				return std::nullopt;
+			}
+			auto xValue = GetObjectAttrAsValue<float>(object, "x");
+			if (!xValue) {
+				return std::nullopt;
+			}
+			auto yValue = GetObjectAttrAsValue<float>(object, "y");
+			if (!yValue) {
+				return std::nullopt;
+			}
+			auto zValue = GetObjectAttrAsValue<float>(object, "z");
+			if (!zValue) {
+				return std::nullopt;
+			}
+			return Vector3{ *xValue, *yValue, *zValue };
+		}
+
+		PyObject* CreateVector4Object(const Vector4& vector) {
+			PyObject* const args = PyTuple_New(Py_ssize_t{ 4 });
+			if (!args) {
+				return nullptr;
+			}
+			PyObject* const xObject = CreatePyObject(vector.x);
+			if (!xObject) {
+				Py_DECREF(args);
+				return nullptr;
+			}
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, xObject); // xObject ref taken by tuple
+			PyObject* const yObject = CreatePyObject(vector.y);
+			if (!yObject) {
+				Py_DECREF(args);
+				return nullptr;
+			}
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, yObject); // yObject ref taken by tuple
+			PyObject* const zObject = CreatePyObject(vector.z);
+			if (!zObject) {
+				Py_DECREF(args);
+				return nullptr;
+			}
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 2 }, zObject); // zObject ref taken by tuple
+			PyObject* const wObject = CreatePyObject(vector.w);
+			if (!wObject) {
+				Py_DECREF(args);
+				return nullptr;
+			}
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 3 }, wObject); // wObject ref taken by tuple
+			PyObject* const vectorObject = PyObject_CallObject(_Vector4TypeObject, args);
+			Py_DECREF(args);
+			return vectorObject;
+		}
+
+		std::optional<Vector4> Vector4ValueFromObject(PyObject* object) {
+			const int type_result = PyObject_IsInstance(object, _Vector4TypeObject);
+			if (type_result == -1) {
+				// Python exception was set by PyObject_IsInstance
+				return std::nullopt;
+			}
+			if (type_result == 0) {
+				return std::nullopt;
+			}
+			auto xValue = GetObjectAttrAsValue<float>(object, "x");
+			if (!xValue) {
+				return std::nullopt;
+			}
+			auto yValue = GetObjectAttrAsValue<float>(object, "y");
+			if (!yValue) {
+				return std::nullopt;
+			}
+			auto zValue = GetObjectAttrAsValue<float>(object, "z");
+			if (!zValue) {
+				return std::nullopt;
+			}
+			auto wValue = GetObjectAttrAsValue<float>(object, "w");
+			if (!wValue) {
+				return std::nullopt;
+			}
+			return Vector4{ *xValue, *yValue, *zValue, *wValue };
+		}
+
+		PyObject* CreateMatrix4x4Object(const Matrix4x4& matrix) {
+			PyObject* const elementsObject = PyList_New(Py_ssize_t{ 16 });
+			if (!elementsObject) {
+				return nullptr;
+			}
+			PyObject* const m00Object = CreatePyObject(matrix.m00);
+			if (!m00Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 0 }, m00Object); // m00Object ref taken by list
+			PyObject* const m01Object = CreatePyObject(matrix.m01);
+			if (!m01Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 1 }, m01Object); // m01Object ref taken by list
+			PyObject* const m02Object = CreatePyObject(matrix.m02);
+			if (!m02Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 2 }, m02Object); // m02Object ref taken by list
+			PyObject* const m03Object = CreatePyObject(matrix.m03);
+			if (!m03Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 3 }, m03Object); // m03Object ref taken by list
+			PyObject* const m10Object = CreatePyObject(matrix.m10);
+			if (!m10Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 4 }, m10Object); // m10Object ref taken by list
+			PyObject* const m11Object = CreatePyObject(matrix.m11);
+			if (!m11Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 5 }, m11Object); // m11Object ref taken by list
+			PyObject* const m12Object = CreatePyObject(matrix.m12);
+			if (!m12Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 6 }, m12Object); // m12Object ref taken by list
+			PyObject* const m13Object = CreatePyObject(matrix.m13);
+			if (!m13Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 7 }, m13Object); // m13Object ref taken by list
+			PyObject* const m20Object = CreatePyObject(matrix.m20);
+			if (!m20Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 8 }, m20Object); // m20Object ref taken by list
+			PyObject* const m21Object = CreatePyObject(matrix.m21);
+			if (!m21Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 9 }, m21Object); // m21Object ref taken by list
+			PyObject* const m22Object = CreatePyObject(matrix.m22);
+			if (!m22Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 10 }, m22Object); // m22Object ref taken by list
+			PyObject* const m23Object = CreatePyObject(matrix.m23);
+			if (!m23Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 11 }, m23Object); // m23Object ref taken by list
+			PyObject* const m30Object = CreatePyObject(matrix.m30);
+			if (!m30Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 12 }, m30Object); // m30Object ref taken by list
+			PyObject* const m31Object = CreatePyObject(matrix.m31);
+			if (!m31Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 13 }, m31Object); // m31Object ref taken by list
+			PyObject* const m32Object = CreatePyObject(matrix.m32);
+			if (!m32Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 14 }, m32Object); // m32Object ref taken by list
+			PyObject* const m33Object = CreatePyObject(matrix.m33);
+			if (!m33Object) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 15 }, m33Object); // m33Object ref taken by list
+			PyObject* const args = PyTuple_New(Py_ssize_t{ 1 });
+			if (!args) {
+				Py_DECREF(elementsObject);
+				return nullptr;
+			}
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, elementsObject); // elementsObject ref taken by tuple
+			PyObject* const vectorObject = PyObject_CallObject(_Matrix4x4TypeObject, args);
+			Py_DECREF(args);
+			return vectorObject;
+		}
+
+		std::optional<Matrix4x4> Matrix4x4ValueFromObject(PyObject* object) {
+			const int type_result = PyObject_IsInstance(object, _Matrix4x4TypeObject);
+			if (type_result == -1) {
+				// Python exception was set by PyObject_IsInstance
+				return std::nullopt;
+			}
+			if (type_result == 0) {
+				return std::nullopt;
+			}
+			PyObject* const elementsListObject = PyObject_GetAttrString(object, "elements");
+			if (!elementsListObject) {
+				return std::nullopt;
+			}
+			if (!PyList_CheckExact(elementsListObject)) {
+				Py_DECREF(elementsListObject);
+				return std::nullopt;
+			}
+			if (PyList_Size(elementsListObject) != Py_ssize_t{ 4 }) {
+				Py_DECREF(elementsListObject);
+				return std::nullopt;
+			}
+			Matrix4x4 matrix{};
+			for (Py_ssize_t i = 0; i < Py_ssize_t{ 4 }; ++i) {
+				PyObject* const elementsRowListObject = PyList_GetItem(elementsListObject, i);
+				if (!elementsRowListObject) {
+					Py_DECREF(elementsListObject);
+					return std::nullopt;
+				}
+				if (!PyList_CheckExact(elementsRowListObject)) {
+					Py_DECREF(elementsListObject);
+					return std::nullopt;
+				}
+				if (PyList_Size(elementsRowListObject) != Py_ssize_t{ 4 }) {
+					Py_DECREF(elementsListObject);
+					return std::nullopt;
+				}
+				for (Py_ssize_t j = 0; j < Py_ssize_t{ 4 }; ++j) {
+					PyObject* const mObject = PyList_GetItem(elementsRowListObject, j);
+					if (!mObject) {
+						Py_DECREF(elementsListObject);
+						return std::nullopt;
+					}
+					const auto mValue = ValueFromObject<float>(mObject);
+					if (!mValue) {
+						Py_DECREF(elementsListObject);
+						return std::nullopt;
+					}
+					matrix.data[static_cast<size_t>(i * Py_ssize_t{ 4 } + j)] = *mValue;
+				}
+			}
+			return { std::move(matrix) };
+		}
+
 	private:
 		PyObject* FindPythonMethod(void* addr) const {
 			for (const auto& data : _pythonMethods) {
@@ -3288,6 +4060,11 @@ namespace py3lm {
 		};
 		std::unordered_map<std::string, PluginData> _pluginsMap;
 		std::vector<PythonMethodData> _pythonMethods;
+		PyObject* _PluginTypeObject = nullptr;
+		PyObject* _Vector2TypeObject = nullptr;
+		PyObject* _Vector3TypeObject = nullptr;
+		PyObject* _Vector4TypeObject = nullptr;
+		PyObject* _Matrix4x4TypeObject = nullptr;
 		PyObject* _ppsModule = nullptr;
 		std::vector<std::vector<PyMethodDef>> _moduleMethods;
 		std::vector<std::unique_ptr<PyModuleDef>> _moduleDefinitions;
@@ -3315,5 +4092,37 @@ namespace py3lm {
 
 	static std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object) {
 		return g_py3lm.GetOrCreateFunctionValue(method, object);
+	}
+
+	static PyObject* CreateVector2Object(const Vector2& vector) {
+		return g_py3lm.CreateVector2Object(vector);
+	}
+
+	static std::optional<Vector2> Vector2ValueFromObject(PyObject* object) {
+		return g_py3lm.Vector2ValueFromObject(object);
+	}
+
+	static PyObject* CreateVector3Object(const Vector3& vector) {
+		return g_py3lm.CreateVector3Object(vector);
+	}
+
+	static std::optional<Vector3> Vector3ValueFromObject(PyObject* object) {
+		return g_py3lm.Vector3ValueFromObject(object);
+	}
+
+	static PyObject* CreateVector4Object(const Vector4& vector) {
+		return g_py3lm.CreateVector4Object(vector);
+	}
+
+	static std::optional<Vector4> Vector4ValueFromObject(PyObject* object) {
+		return g_py3lm.Vector4ValueFromObject(object);
+	}
+
+	static PyObject* CreateMatrix4x4Object(const Matrix4x4& matrix) {
+		return g_py3lm.CreateMatrix4x4Object(matrix);
+	}
+
+	static std::optional<Matrix4x4> Matrix4x4ValueFromObject(PyObject* object) {
+		return g_py3lm.Matrix4x4ValueFromObject(object);
 	}
 }
