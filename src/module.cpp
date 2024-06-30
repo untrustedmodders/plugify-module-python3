@@ -835,6 +835,8 @@ namespace py3lm {
 			case ValueType::ArrayString:
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<std::string>*>(index)));
 			default:
+				// TODO: Log fail description
+				std::terminate();
 				return nullptr;
 			}
 		}
