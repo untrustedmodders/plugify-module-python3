@@ -240,14 +240,6 @@ namespace py3lm {
 			return nullptr;
 		}
 
-		void* CreateFunction(const Method& method, PyObject* pItem) {
-			auto value = GetOrCreateFunctionValue(method, pItem);
-			if (value) {
-				return new uintptr_t(reinterpret_cast<uintptr_t>(*value));
-			}
-			return nullptr;
-		}
-
 		template<typename T>
 		void* CreateArray(PyObject* pItem) {
 			if constexpr (std::is_same_v<T, char>) {
@@ -660,6 +652,226 @@ namespace py3lm {
 			return false;
 		}
 
+		bool SetRefParam(PyObject* object, const Property& paramType, const Parameters* params, uint8_t index) {
+			switch (paramType.type) {
+			case ValueType::Bool:
+				if (auto value = ValueFromObject<bool>(object)) {
+					auto* const param = params->GetArgument<bool*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Char8:
+				if (auto value = ValueFromObject<char>(object)) {
+					auto* const param = params->GetArgument<char*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Char16:
+				if (auto value = ValueFromObject<char16_t>(object)) {
+					auto* const param = params->GetArgument<char16_t*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Int8:
+				if (auto value = ValueFromObject<int8_t>(object)) {
+					auto* const param = params->GetArgument<int8_t*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Int16:
+				if (auto value = ValueFromObject<int16_t>(object)) {
+					auto* const param = params->GetArgument<int16_t*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Int32:
+				if (auto value = ValueFromObject<int32_t>(object)) {
+					auto* const param = params->GetArgument<int32_t*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Int64:
+				if (auto value = ValueFromObject<int64_t>(object)) {
+					auto* const param = params->GetArgument<int64_t*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::UInt8:
+				if (auto value = ValueFromObject<uint8_t>(object)) {
+					auto* const param = params->GetArgument<uint8_t*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::UInt16:
+				if (auto value = ValueFromObject<uint16_t>(object)) {
+					auto* const param = params->GetArgument<uint16_t*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::UInt32:
+				if (auto value = ValueFromObject<uint32_t>(object)) {
+					auto* const param = params->GetArgument<uint32_t*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::UInt64:
+				if (auto value = ValueFromObject<uint64_t>(object)) {
+					auto* const param = params->GetArgument<uint64_t*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Pointer:
+				if (auto value = ValueFromObject<void*>(object)) {
+					auto* const param = params->GetArgument<void**>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Float:
+				if (auto value = ValueFromObject<float>(object)) {
+					auto* const param = params->GetArgument<float*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::Double:
+				if (auto value = ValueFromObject<double>(object)) {
+					auto* const param = params->GetArgument<double*>(index);
+					*param = *value;
+					return true;
+				}
+				break;
+			case ValueType::String:
+				if (auto value = ValueFromObject<std::string>(object)) {
+					auto* const param = params->GetArgument<std::string*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayBool:
+				if (auto value = ArrayFromObject<bool>(object)) {
+					auto* const param = params->GetArgument<std::vector<bool>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayChar8:
+				if (auto value = ArrayFromObject<char>(object)) {
+					auto* const param = params->GetArgument<std::vector<char>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayChar16:
+				if (auto value = ArrayFromObject<char16_t>(object)) {
+					auto* const param = params->GetArgument<std::vector<char16_t>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayInt8:
+				if (auto value = ArrayFromObject<int8_t>(object)) {
+					auto* const param = params->GetArgument<std::vector<int8_t>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayInt16:
+				if (auto value = ArrayFromObject<int16_t>(object)) {
+					auto* const param = params->GetArgument<std::vector<int16_t>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayInt32:
+				if (auto value = ArrayFromObject<int32_t>(object)) {
+					auto* const param = params->GetArgument<std::vector<int32_t>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayInt64:
+				if (auto value = ArrayFromObject<int64_t>(object)) {
+					auto* const param = params->GetArgument<std::vector<int64_t>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayUInt8:
+				if (auto value = ArrayFromObject<uint8_t>(object)) {
+					auto* const param = params->GetArgument<std::vector<uint8_t>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayUInt16:
+				if (auto value = ArrayFromObject<uint16_t>(object)) {
+					auto* const param = params->GetArgument<std::vector<uint16_t>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayUInt32:
+				if (auto value = ArrayFromObject<uint32_t>(object)) {
+					auto* const param = params->GetArgument<std::vector<uint32_t>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayUInt64:
+				if (auto value = ArrayFromObject<uint64_t>(object)) {
+					auto* const param = params->GetArgument<std::vector<uint64_t>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayPointer:
+				if (auto value = ArrayFromObject<void*>(object)) {
+					auto* const param = params->GetArgument<std::vector<void*>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayFloat:
+				if (auto value = ArrayFromObject<float>(object)) {
+					auto* const param = params->GetArgument<std::vector<float>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayDouble:
+				if (auto value = ArrayFromObject<double>(object)) {
+					auto* const param = params->GetArgument<std::vector<double>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayString:
+				if (auto value = ArrayFromObject<std::string>(object)) {
+					auto* const param = params->GetArgument<std::vector<std::string>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			default:
+				// TODO: Log fail description
+				std::terminate();
+			}
+
+			return false;
+		}
+
 		template<typename T>
 		PyObject* CreatePyObject(T /*value*/) {
 			static_assert(always_false_v<T>, "CreatePyObject specialization required");
@@ -841,6 +1053,75 @@ namespace py3lm {
 			}
 		}
 
+		PyObject* ParamRefToObject(const Property& paramType, const Parameters* params, uint8_t index) {
+			switch (paramType.type) {
+			case ValueType::Bool:
+				return CreatePyObject(*(params->GetArgument<bool*>(index)));
+			case ValueType::Char8:
+				return CreatePyObject(*(params->GetArgument<char*>(index)));
+			case ValueType::Char16:
+				return CreatePyObject(*(params->GetArgument<char16_t*>(index)));
+			case ValueType::Int8:
+				return CreatePyObject(*(params->GetArgument<int8_t*>(index)));
+			case ValueType::Int16:
+				return CreatePyObject(*(params->GetArgument<int16_t*>(index)));
+			case ValueType::Int32:
+				return CreatePyObject(*(params->GetArgument<int32_t*>(index)));
+			case ValueType::Int64:
+				return CreatePyObject(*(params->GetArgument<int64_t*>(index)));
+			case ValueType::UInt8:
+				return CreatePyObject(*(params->GetArgument<uint8_t*>(index)));
+			case ValueType::UInt16:
+				return CreatePyObject(*(params->GetArgument<uint16_t*>(index)));
+			case ValueType::UInt32:
+				return CreatePyObject(*(params->GetArgument<uint32_t*>(index)));
+			case ValueType::UInt64:
+				return CreatePyObject(*(params->GetArgument<uint64_t*>(index)));
+			case ValueType::Pointer:
+				return CreatePyObject(*(params->GetArgument<void**>(index)));
+			case ValueType::Float:
+				return CreatePyObject(*(params->GetArgument<float*>(index)));
+			case ValueType::Double:
+				return CreatePyObject(*(params->GetArgument<double*>(index)));
+			case ValueType::String:
+				return CreatePyObject(*(params->GetArgument<const std::string*>(index)));
+			case ValueType::ArrayBool:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<bool>*>(index)));
+			case ValueType::ArrayChar8:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<char>*>(index)));
+			case ValueType::ArrayChar16:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<char16_t>*>(index)));
+			case ValueType::ArrayInt8:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<int8_t>*>(index)));
+			case ValueType::ArrayInt16:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<int16_t>*>(index)));
+			case ValueType::ArrayInt32:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<int32_t>*>(index)));
+			case ValueType::ArrayInt64:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<int64_t>*>(index)));
+			case ValueType::ArrayUInt8:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint8_t>*>(index)));
+			case ValueType::ArrayUInt16:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint16_t>*>(index)));
+			case ValueType::ArrayUInt32:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint32_t>*>(index)));
+			case ValueType::ArrayUInt64:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint64_t>*>(index)));
+			case ValueType::ArrayPointer:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<void*>*>(index)));
+			case ValueType::ArrayFloat:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<float>*>(index)));
+			case ValueType::ArrayDouble:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<double>*>(index)));
+			case ValueType::ArrayString:
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<std::string>*>(index)));
+			default:
+				// TODO: Log fail description
+				std::terminate();
+				return nullptr;
+			}
+		}
+
 		void InternalCall(const Method* method, void* data, const Parameters* params, const uint8_t count, const ReturnValue* ret) {
 			PyObject* const func = reinterpret_cast<PyObject*>(data);
 
@@ -852,6 +1133,7 @@ namespace py3lm {
 			ParamProcess processResult = ParamProcess::NoError;
 
 			uint8_t paramsCount = static_cast<uint8_t>(method->paramTypes.size());
+			uint8_t refParamsCount = 0;
 			uint8_t paramsStartIndex = method->retType.type > ValueType::LastPrimitive ? 1 : 0;
 
 			PyObject* argTuple = nullptr;
@@ -862,7 +1144,13 @@ namespace py3lm {
 				}
 				else {
 					for (uint8_t index = 0; index < paramsCount; ++index) {
-						PyObject* const arg = ParamToObject(method->paramTypes[index], params, paramsStartIndex + index);
+						const auto& paramType = method->paramTypes[index];
+						if (paramType.ref) {
+							++refParamsCount;
+						}
+						using ParamConvertionFunc = PyObject* (*)(const Property&, const Parameters*, uint8_t);
+						ParamConvertionFunc const convertFunc = paramType.ref ? &ParamRefToObject : &ParamToObject;
+						PyObject* const arg = convertFunc(paramType, params, paramsStartIndex + index);
 						if (!arg) {
 							processResult = ParamProcess::Error;
 							break;
@@ -890,6 +1178,8 @@ namespace py3lm {
 				return;
 			}
 
+			const bool hasRefParams = refParamsCount != 0;
+
 			PyObject* const result = PyObject_CallObject(func, argTuple);
 
 			if (argTuple) {
@@ -904,7 +1194,52 @@ namespace py3lm {
 				return;
 			}
 
-			if (!SetReturn(result, method->retType.type, ret, params)) {
+			if (hasRefParams) {
+				if (!PyTuple_CheckExact(result)) {
+					// SetErrorString
+					// 
+					// PyErr_Print();
+
+					Py_DECREF(result);
+
+					SetFallbackReturn(method->retType.type, ret, params);
+
+					return;
+				}
+				if (PyTuple_Size(result) != static_cast<Py_ssize_t>(1 + refParamsCount)) {
+					// SetErrorString
+					// 
+					// PyErr_Print();
+
+					Py_DECREF(result);
+
+					SetFallbackReturn(method->retType.type, ret, params);
+
+					return;
+				}
+			}
+
+			PyObject* const returnObject = hasRefParams ? PyTuple_GET_ITEM(result, Py_ssize_t{ 0 }) : result;
+
+			if (hasRefParams) {
+				for (uint8_t index = 0, k = 0; index < paramsCount; ++index) {
+					const auto& paramType = method->paramTypes[index];
+					if (!paramType.ref) {
+						continue;
+					}
+					if (!SetRefParam(PyTuple_GET_ITEM(result, Py_ssize_t{ 1 + k }), paramType, params, paramsStartIndex + index)) {
+						// SetErrorString
+						// 
+						// PyErr_Print();
+					}
+					++k;
+					if (k == refParamsCount) {
+						break;
+					}
+				}
+			}
+
+			if (!SetReturn(returnObject, method->retType.type, ret, params)) {
 				if (PyErr_Occurred()) {
 					PyErr_Print();
 				}
@@ -1041,7 +1376,6 @@ namespace py3lm {
 						delete reinterpret_cast<uint64_t*>(ptr);
 						break;
 					}
-					case ValueType::Function:
 					case ValueType::Pointer: {
 						delete reinterpret_cast<uintptr_t*>(ptr);
 						break;
@@ -1657,16 +1991,6 @@ namespace py3lm {
 					}
 					case ValueType::String: {
 						value = CreateValue<std::string>(pItem);
-						if (!value) {
-							ret->SetReturnPtr(nullptr);
-							return;
-						}
-						a.storage.emplace_back(value, param.type);
-						dcArgPointer(a.vm, value);
-						break;
-					}
-					case ValueType::Function: {
-						value = CreateFunction(*(param.prototype.get()), pItem);
 						if (!value) {
 							ret->SetReturnPtr(nullptr);
 							return;
@@ -2378,7 +2702,6 @@ namespace py3lm {
 							pValue = CreatePyObject(*reinterpret_cast<std::string*>(std::get<0>(a.storage[j++])));
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
-						case ValueType::Function:
 						case ValueType::Pointer:
 							pValue = CreatePyObject(*reinterpret_cast<uintptr_t*>(std::get<0>(a.storage[j++])));
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
