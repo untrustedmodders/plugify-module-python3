@@ -673,11 +673,17 @@ namespace py3lm {
 
 		template<>
 		PyObject* CreatePyObject(char value) {
-			return PyUnicode_FromStringAndSize(&value, static_cast<Py_ssize_t>(1));
+			if (value == char{ 0 }) {
+				return PyUnicode_FromStringAndSize(nullptr, Py_ssize_t{ 0 });
+			}
+			return PyUnicode_FromStringAndSize(&value, Py_ssize_t{ 1 });
 		}
 
 		template<>
 		PyObject* CreatePyObject(char16_t value) {
+			if (value == char16_t{ 0 }) {
+				return PyUnicode_FromStringAndSize(nullptr, Py_ssize_t{ 0 });
+			}
 			std::mbstate_t state{};
 			std::array<char, MB_LEN_MAX> out{};
 			std::size_t rc = std::c16rtomb(out.data(), value, &state);
