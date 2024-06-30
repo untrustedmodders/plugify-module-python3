@@ -1714,7 +1714,9 @@ namespace py3lm {
 				break;
 			}
 			default:
-				puts("Unsupported types!");
+				const std::string error(std::format("Return unsupported type {:#x}", static_cast<uint8_t>(method->retType.type)));
+				PyErr_SetString(PyExc_TypeError, error.c_str());
+				ret->SetReturnPtr(nullptr);
 				break;
 			}
 		}
@@ -1845,10 +1847,6 @@ namespace py3lm {
 					refsCount++;
 					/// By references
 					switch (param.type) {
-					case ValueType::Invalid:
-					case ValueType::Void:
-						// Should not trigger!
-						break;
 					case ValueType::Bool: {
 						value = CreateValue<bool>(pItem);
 						if (!value) {
@@ -2149,18 +2147,17 @@ namespace py3lm {
 						dcArgPointer(a.vm, value);
 						break;
 					}
-					default:
-						puts("Unsupported types!");
-						break;
+					default: {
+						const std::string error(std::format("Param {} unsupported type {:#x}", i + 1, static_cast<uint8_t>(param.type)));
+						PyErr_SetString(PyExc_TypeError, error.c_str());
+						ret->SetReturnPtr(nullptr);
+						return;
+					}
 					}
 				}
 				else {
 					/// By values
 					switch (param.type) {
-					case ValueType::Invalid:
-					case ValueType::Void:
-						// Should not trigger!
-						break;
 					case ValueType::Bool: {
 						auto boolVal = ValueFromObject<bool>(pItem);
 						if (!boolVal.has_value()) {
@@ -2456,9 +2453,12 @@ namespace py3lm {
 						dcArgPointer(a.vm, value);
 						break;
 					}
-					default:
-						puts("Unsupported types!");
-						break;
+					default: {
+						const std::string error(std::format("Param {} unsupported type {:#x}", i + 1, static_cast<uint8_t>(param.type)));
+						PyErr_SetString(PyExc_TypeError, error.c_str());
+						ret->SetReturnPtr(nullptr);
+						return;
+					}
 					}
 				}
 			}
