@@ -4,6 +4,10 @@ if(POLICY CMP0092)
     cmake_policy(SET CMP0092 NEW) # Don't add -W3 warning level by default.
 endif()
 
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 
 project(py3-12-lang-module VERSION 1.0.0.0  DESCRIPTION "Python 3.12 Language Module" HOMEPAGE_URL "https://github.com/untrustedmodders/py3-12-lang-module" LANGUAGES CXX)
 
@@ -22,8 +26,7 @@ add_subdirectory(external/plugify)
 #
 # dyncall
 #
-# Must be last. Overwise, fail feature tests from Plugify
-add_subdirectory(external/dyncall)
+include(cmake/dyncall.cmake)
 
 #
 # Python 3 Language Module for Plugify
@@ -33,7 +36,7 @@ set(PY3LM_SOURCES
 add_library(${PROJECT_NAME} SHARED ${PY3LM_SOURCES})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE plugify::plugify plugify::plugify-function asmjit::asmjit dyncall_s)
-include_directories(external/dyncall/)
+include_directories(${dyncall_SOURCE_DIR})
 
 include(GenerateExportHeader)
 generate_export_header(${PROJECT_NAME} EXPORT_MACRO_NAME PY3LM_EXPORT EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/exports/module_export.h)
