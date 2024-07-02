@@ -438,8 +438,8 @@ namespace py3lm {
 			}
 		}
 
-		bool SetReturn(PyObject* result, ValueType retType, const ReturnValue* ret, const Parameters* params) {
-			switch (retType) {
+		bool SetReturn(PyObject* result, const Property& retType, const ReturnValue* ret, const Parameters* params) {
+			switch (retType.type) {
 			case ValueType::Void:
 				return true;
 			case ValueType::Bool:
@@ -527,7 +527,7 @@ namespace py3lm {
 				}
 				break;
 			case ValueType::Function:
-				if (auto value = ValueFromObject<void*>(result)) {
+				if (auto value = GetOrCreateFunctionValue(*(retType.prototype), result)) {
 					ret->SetReturnPtr<void*>(*value);
 					return true;
 				}
@@ -1239,7 +1239,7 @@ namespace py3lm {
 				}
 			}
 
-			if (!SetReturn(returnObject, method->retType.type, ret, params)) {
+			if (!SetReturn(returnObject, method->retType, ret, params)) {
 				if (PyErr_Occurred()) {
 					PyErr_Print();
 				}
@@ -1617,7 +1617,6 @@ namespace py3lm {
 				ret->SetReturnPtr(CreatePyObject(val));
 				break;
 			}
-			case ValueType::Function:
 			case ValueType::Pointer: {
 				uintptr_t val = reinterpret_cast<uintptr_t>(dcCallPointer(a.vm, addr));
 				ret->SetReturnPtr(CreatePyObject(val));
@@ -1631,6 +1630,11 @@ namespace py3lm {
 			case ValueType::Double: {
 				double val = dcCallDouble(a.vm, addr);
 				ret->SetReturnPtr(CreatePyObject(val));
+				break;
+			}
+			case ValueType::Function: {
+				void* val = dcCallPointer(a.vm, addr);
+				ret->SetReturnPtr(GetOrCreateFunctionObject(*(method->retType.prototype.get()), val));
 				break;
 			}
 			case ValueType::String: {
@@ -2529,7 +2533,6 @@ namespace py3lm {
 				retObj = CreatePyObject(val);
 				break;
 			}
-			case ValueType::Function:
 			case ValueType::Pointer: {
 				uintptr_t val = reinterpret_cast<uintptr_t>(dcCallPointer(a.vm, addr));
 				retObj = CreatePyObject(val);
@@ -2543,6 +2546,11 @@ namespace py3lm {
 			case ValueType::Double: {
 				double val = dcCallDouble(a.vm, addr);
 				retObj = CreatePyObject(val);
+				break;
+			}
+			case ValueType::Function: {
+				void* val = dcCallPointer(a.vm, addr);
+				retObj = GetOrCreateFunctionObject(*(method->retType.prototype.get()), val);
 				break;
 			}
 			case ValueType::String: {
