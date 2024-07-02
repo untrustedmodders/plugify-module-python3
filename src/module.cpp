@@ -1328,10 +1328,6 @@ namespace py3lm {
 			~ArgsScope() {
 				for (auto& [ptr, type] : storage) {
 					switch (type) {
-					case ValueType::Invalid:
-					case ValueType::Void:
-						// Should not trigger!
-						break;
 					case ValueType::Bool: {
 						delete reinterpret_cast<bool*>(ptr);
 						break;
@@ -1454,6 +1450,7 @@ namespace py3lm {
 					}
 					default:
 						puts("Unsupported types!");
+						std::terminate();
 						break;
 					}
 				}
@@ -1556,8 +1553,6 @@ namespace py3lm {
 			}
 
 			switch (method->retType.type) {
-			case ValueType::Invalid:
-				break;
 			case ValueType::Void:
 				dcCallVoid(a.vm, addr);
 				ret->SetReturnPtr(Py_None);
@@ -2472,8 +2467,6 @@ namespace py3lm {
 			PyObject* retObj = nullptr;
 
 			switch (method->retType.type) {
-			case ValueType::Invalid:
-				break;
 			case ValueType::Void:
 				dcCallVoid(a.vm, addr);
 				retObj = Py_None;
@@ -2633,9 +2626,12 @@ namespace py3lm {
 				retObj = CreatePyObjectList<std::string>(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[0])));
 				break;
 			}
-			default:
-				puts("Unsupported types!");
+			default: {
+				const std::string error(std::format("Return unsupported type {:#x}", static_cast<uint8_t>(method->retType.type)));
+				PyErr_SetString(PyExc_TypeError, error.c_str());
+				ret->SetReturnPtr(nullptr);
 				break;
+			}
 			}
 
 			/// pull data from reference arguments back to python
