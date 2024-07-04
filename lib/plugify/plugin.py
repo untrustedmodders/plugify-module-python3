@@ -3,9 +3,9 @@ class Plugin:
 
 
 class PluginInfo:
-    def __init__(self, class_name):
+    def __init__(self, class_name, instance):
         self.class_name = class_name
-        self.instance = None
+        self.instance = instance
 
 
 class Vector2:

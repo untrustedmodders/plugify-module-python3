@@ -1,7 +1,5 @@
 import sys
-from plugify.plugin import Plugin, PluginInfo, Vector2, Vector3, Vector4, Matrix4x4
-
-__plugin__ = PluginInfo('CrossCallWorker')
+from plugify.plugin import Plugin, Vector2, Vector3, Vector4, Matrix4x4
 
 
 class CrossCallWorker(Plugin):

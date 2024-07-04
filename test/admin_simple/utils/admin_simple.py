@@ -1,6 +1,5 @@
-from plugify.plugin import Plugin, PluginInfo
+from plugify.plugin import Plugin
 
-__plugin__ = PluginInfo('AdminSimple')
 
 class AdminSimple(Plugin):
 	def plugin_start(self):

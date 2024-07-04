@@ -9,7 +9,7 @@
 	"docsURL": "",
 	"downloadURL": "",
 	"updateURL": "",
-	"entryPoint": "cross_call_worker.py",
+	"entryPoint": "cross_call_worker.CrossCallWorker",
 	"supportedPlatforms": [],
 	"languageModule": {
 		"name": "python3"

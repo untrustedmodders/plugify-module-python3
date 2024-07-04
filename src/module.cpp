@@ -3294,6 +3294,19 @@ namespace py3lm {
 				return ErrorData{ "Failed to import plugify.plugin python module" };
 			}
 
+			_PluginTypeObject = PyObject_GetAttrString(plugifyPluginModule, "Plugin");
+			if (!_PluginTypeObject) {
+				Py_DECREF(plugifyPluginModule);
+				PyErr_Print();
+				return ErrorData{ "Failed to find plugify.plugin.Plugin type" };
+			}
+			_PluginInfoTypeObject = PyObject_GetAttrString(plugifyPluginModule, "PluginInfo");
+			if (!_PluginInfoTypeObject) {
+				Py_DECREF(plugifyPluginModule);
+				PyErr_Print();
+				return ErrorData{ "Failed to find plugify.plugin.PluginInfo type" };
+			}
+
 			_Vector2TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector2");
 			if (!_Vector2TypeObject) {
 				Py_DECREF(plugifyPluginModule);
@@ -3352,6 +3365,14 @@ namespace py3lm {
 					Py_DECREF(_Matrix4x4TypeObject);
 				}
 
+				if (_PluginTypeObject) {
+					Py_DECREF(_PluginTypeObject);
+				}
+
+				if (_PluginInfoTypeObject) {
+					Py_DECREF(_PluginInfoTypeObject);
+				}
+
 				for (const auto& data : _internalFunctions) {
 					Py_DECREF(data.pythonFunction);
 				}
@@ -3376,6 +3397,8 @@ namespace py3lm {
 			_Vector3TypeObject = nullptr;
 			_Vector4TypeObject = nullptr;
 			_Matrix4x4TypeObject = nullptr;
+			_PluginTypeObject = nullptr;
+			_PluginInfoTypeObject = nullptr;
 			_internalMap.clear();
 			_internalFunctions.clear();
 			_externalMap.clear();
@@ -3405,14 +3428,33 @@ namespace py3lm {
 		}
 
 		LoadResult OnPluginLoad(const IPlugin& plugin) override {
-			std::error_code ec;
+			const std::string& entryPoint = plugin.GetDescriptor().entryPoint;
+			if (entryPoint.empty()) {
+				return ErrorData{ "Incorrect entry point: empty" };
+			}
+			if (entryPoint.find_first_of("/\\") != std::string::npos) {
+				return ErrorData{ "Incorrect entry point: contains '/' or '\\'" };
+			}
+			const std::string::size_type lastDotPos = entryPoint.find_last_of('.');
+			if (lastDotPos == std::string::npos) {
+				return ErrorData{ "Incorrect entry point: not have any dot '.' character" };
+			}
+			std::string_view className(entryPoint.begin() + (lastDotPos + 1), entryPoint.end());
+			if (className.empty()) {
+				return ErrorData{ "Incorrect entry point: empty class name part" };
+			}
+			std::string_view modulePathRel(entryPoint.begin(), entryPoint.begin() + lastDotPos);
+			if (modulePathRel.empty()) {
+				return ErrorData{ "Incorrect entry point: empty module path part" };
+			}
 
 			const fs::path& baseFolder = plugin.GetBaseDir();
-			fs::path filePathRelative = plugin.GetDescriptor().entryPoint;
-			if (filePathRelative.empty() || filePathRelative.extension() != ".py") {
-				return ErrorData{ "Incorrect entry point: empty or not .py" };
-			}
+			auto modulePath = std::string(modulePathRel);
+			ReplaceAll(modulePath, ".", { static_cast<char>(fs::path::preferred_separator) });
+			fs::path filePathRelative = modulePath;
+			filePathRelative.replace_extension(".py");
 			const fs::path filePath = baseFolder / filePathRelative;
+			std::error_code ec;
 			if (!fs::exists(filePath, ec) || !fs::is_regular_file(filePath, ec)) {
 				return ErrorData{ std::format("Module file '{}' not exist", filePath.string()) };
 			}
@@ -3424,56 +3466,78 @@ namespace py3lm {
 
 			_provider->Log(std::format("[py3lm] Load plugin module '{}'", moduleName), Severity::Verbose);
 
-			PyObject* const moduleNameString = PyUnicode_DecodeFSDefault(moduleName.c_str());
-			if (!moduleNameString) {
-				PyErr_Print();
-				return ErrorData{ "Failed to allocate string for plugin module name" };
-			}
-
-			PyObject* const pluginModule = PyImport_Import(moduleNameString);
-			Py_DECREF(moduleNameString);
+			PyObject* const pluginModule = PyImport_ImportModule(moduleName.c_str());
 			if (!pluginModule) {
 				PyErr_Print();
 				return ErrorData{ std::format("Failed to import {} module", moduleName) };
 			}
 
-			PyObject* const pluginInfo = PyObject_GetAttrString(pluginModule, "__plugin__");
-			if (!pluginInfo) {
-				Py_DECREF(pluginModule);
-				PyErr_Print();
-				return ErrorData{ "Plugin info (__plugin__) not found in module" };
-			}
-
-			PyObject* const classNameString = PyObject_GetAttrString(pluginInfo, "class_name");
+			PyObject* const classNameString = PyUnicode_FromStringAndSize(className.data(), static_cast<Py_ssize_t>(className.size()));
 			if (!classNameString) {
-				Py_DECREF(pluginInfo);
 				Py_DECREF(pluginModule);
-				PyErr_Print();
-				return ErrorData{ "Plugin main class name (__plugin__.class_name) not found in module" };
+				return ErrorData{ "Allocate class name string failed" };
 			}
 
-			PyObject* const pluginInstance = PyObject_CallMethodNoArgs(pluginModule, classNameString);
-			Py_DECREF(classNameString);
+			PyObject* const pluginClass = PyObject_GetAttr(pluginModule, classNameString);
+			if (!pluginClass) {
+				Py_DECREF(classNameString);
+				Py_DECREF(pluginModule);
+				PyErr_Print();
+				return ErrorData{ "Failed to find plugin class" };
+			}
+
+			const int typeResult = PyObject_IsSubclass(pluginClass, _PluginTypeObject);
+			if (typeResult != 1) {
+				Py_DECREF(pluginClass);
+				Py_DECREF(classNameString);
+				Py_DECREF(pluginModule);
+				PyErr_Print();
+				return ErrorData{ std::format("Class '{}' not subclass of Plugin", className) };
+			}
+
+			PyObject* const pluginInstance = PyObject_CallNoArgs(pluginClass);
+			Py_DECREF(pluginClass);
 			if (!pluginInstance) {
-				Py_DECREF(pluginInfo);
+				Py_DECREF(classNameString);
 				Py_DECREF(pluginModule);
 				PyErr_Print();
 				return ErrorData{ "Failed to create plugin instance" };
 			}
 
-			const int resultCode = PyObject_SetAttrString(pluginInfo, "instance", pluginInstance);
+			PyObject* const args = PyTuple_New(Py_ssize_t{ 2 });
+			if (!args) {
+				Py_DECREF(pluginInstance);
+				Py_DECREF(classNameString);
+				Py_DECREF(pluginModule);
+				return ErrorData{ "Failed to save instance: arguments tuple is null" };
+			}
+
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, classNameString); // classNameString ref taken by list
+			Py_INCREF(pluginInstance);
+			PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, pluginInstance); // pluginInstance ref taken by list
+
+			PyObject* const pluginInfo = PyObject_CallObject(_PluginInfoTypeObject, args);
+			Py_DECREF(args);
+			if (!pluginInfo) {
+				Py_DECREF(pluginInstance);
+				Py_DECREF(pluginModule);
+				PyErr_Print();
+				return ErrorData{ "Failed to save instance: plugin info not constructed" };
+			}
+
+			const int resultCode = PyObject_SetAttrString(pluginModule, "__plugin__", pluginInfo);
 			Py_DECREF(pluginInfo);
 			if (resultCode != 0) {
 				Py_DECREF(pluginInstance);
 				Py_DECREF(pluginModule);
 				PyErr_Print();
-				return ErrorData{ "Failed to save plugin instance" };
+				return ErrorData{ "Failed to save instance: assignment fail" };
 			}
 
 			if (_pluginsMap.contains(plugin.GetName())) {
 				Py_DECREF(pluginInstance);
 				Py_DECREF(pluginModule);
-				return ErrorData{ std::format("Plugin name duplicate") };
+				return ErrorData{ "Plugin name duplicate" };
 			}
 
 			const auto& exportedMethods = plugin.GetDescriptor().exportedMethods;
@@ -4065,6 +4129,7 @@ namespace py3lm {
 		std::unordered_map<std::string, PluginData> _pluginsMap;
 		std::vector<PythonMethodData> _pythonMethods;
 		PyObject* _PluginTypeObject = nullptr;
+		PyObject* _PluginInfoTypeObject = nullptr;
 		PyObject* _Vector2TypeObject = nullptr;
 		PyObject* _Vector3TypeObject = nullptr;
 		PyObject* _Vector4TypeObject = nullptr;
