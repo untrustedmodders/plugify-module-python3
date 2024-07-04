@@ -3296,21 +3296,25 @@ namespace py3lm {
 
 			_Vector2TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector2");
 			if (!_Vector2TypeObject) {
+				Py_DECREF(plugifyPluginModule);
 				PyErr_Print();
 				return ErrorData{ "Failed to find plugify.plugin.Vector2 type" };
 			}
 			_Vector3TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector3");
 			if (!_Vector3TypeObject) {
+				Py_DECREF(plugifyPluginModule);
 				PyErr_Print();
 				return ErrorData{ "Failed to find plugify.plugin.Vector3 type" };
 			}
 			_Vector4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector4");
 			if (!_Vector4TypeObject) {
+				Py_DECREF(plugifyPluginModule);
 				PyErr_Print();
 				return ErrorData{ "Failed to find plugify.plugin.Vector4 type" };
 			}
 			_Matrix4x4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Matrix4x4");
 			if (!_Matrix4x4TypeObject) {
+				Py_DECREF(plugifyPluginModule);
 				PyErr_Print();
 				return ErrorData{ "Failed to find plugify.plugin.Matrix4x4 type" };
 			}
