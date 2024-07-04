@@ -3636,12 +3636,12 @@ namespace py3lm {
 		}
 
 		std::optional<Vector2> Vector2ValueFromObject(PyObject* object) {
-			const int type_result = PyObject_IsInstance(object, _Vector2TypeObject);
-			if (type_result == -1) {
+			const int typeResult = PyObject_IsInstance(object, _Vector2TypeObject);
+			if (typeResult == -1) {
 				// Python exception was set by PyObject_IsInstance
 				return std::nullopt;
 			}
-			if (type_result == 0) {
+			if (typeResult == 0) {
 				return std::nullopt;
 			}
 			auto xValue = GetObjectAttrAsValue<float>(object, "x");
@@ -3684,12 +3684,12 @@ namespace py3lm {
 		}
 
 		std::optional<Vector3> Vector3ValueFromObject(PyObject* object) {
-			const int type_result = PyObject_IsInstance(object, _Vector3TypeObject);
-			if (type_result == -1) {
+			const int typeResult = PyObject_IsInstance(object, _Vector3TypeObject);
+			if (typeResult == -1) {
 				// Python exception was set by PyObject_IsInstance
 				return std::nullopt;
 			}
-			if (type_result == 0) {
+			if (typeResult == 0) {
 				return std::nullopt;
 			}
 			auto xValue = GetObjectAttrAsValue<float>(object, "x");
@@ -3742,12 +3742,12 @@ namespace py3lm {
 		}
 
 		std::optional<Vector4> Vector4ValueFromObject(PyObject* object) {
-			const int type_result = PyObject_IsInstance(object, _Vector4TypeObject);
-			if (type_result == -1) {
+			const int typeResult = PyObject_IsInstance(object, _Vector4TypeObject);
+			if (typeResult == -1) {
 				// Python exception was set by PyObject_IsInstance
 				return std::nullopt;
 			}
-			if (type_result == 0) {
+			if (typeResult == 0) {
 				return std::nullopt;
 			}
 			auto xValue = GetObjectAttrAsValue<float>(object, "x");
@@ -3882,12 +3882,12 @@ namespace py3lm {
 		}
 
 		std::optional<Matrix4x4> Matrix4x4ValueFromObject(PyObject* object) {
-			const int type_result = PyObject_IsInstance(object, _Matrix4x4TypeObject);
-			if (type_result == -1) {
+			const int typeResult = PyObject_IsInstance(object, _Matrix4x4TypeObject);
+			if (typeResult == -1) {
 				// Python exception was set by PyObject_IsInstance
 				return std::nullopt;
 			}
-			if (type_result == 0) {
+			if (typeResult == 0) {
 				return std::nullopt;
 			}
 			PyObject* const elementsListObject = PyObject_GetAttrString(object, "elements");
