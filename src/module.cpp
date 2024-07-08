@@ -3029,13 +3029,11 @@ namespace py3lm {
 			/// pull data from reference arguments back to python
 			if (refsCount) {
 				// return as tuple
-				PyObject* retTuple = PyTuple_New(hasRet ? refsCount + 1 : refsCount);
+				PyObject* retTuple = PyTuple_New(1 + refsCount);
 
 				Py_ssize_t k = 0;
 
-				if (hasRet) {
-					PyTuple_SET_ITEM(retTuple, k++, retObj);
-				}
+				PyTuple_SET_ITEM(retTuple, k++, retObj);
 
 				PyObject* pValue;
 				for (Py_ssize_t i = 0, j = hasRet; i < size; ++i) {
@@ -3284,7 +3282,7 @@ namespace py3lm {
 							// TODO: Log fail description
 							std::terminate();
 						}
-						if (k >= refsCount)
+						if (k >= refsCount + 1)
 							break;
 					}
 				}
