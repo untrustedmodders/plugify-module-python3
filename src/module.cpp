@@ -3044,138 +3044,240 @@ namespace py3lm {
 						switch (param.type) {
 						case ValueType::Bool:
 							pValue = CreatePyObject(*reinterpret_cast<bool*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Char8:
 							pValue = CreatePyObject(*reinterpret_cast<char*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Char16:
 							pValue = CreatePyObject(*reinterpret_cast<char16_t*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Int8:
 							pValue = CreatePyObject(*reinterpret_cast<int8_t*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Int16:
 							pValue = CreatePyObject(*reinterpret_cast<int16_t*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Int32:
 							pValue = CreatePyObject(*reinterpret_cast<int32_t*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Int64:
 							pValue = CreatePyObject(*reinterpret_cast<int64_t*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::UInt8:
 							pValue = CreatePyObject(*reinterpret_cast<uint8_t*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::UInt16:
 							pValue = CreatePyObject(*reinterpret_cast<uint16_t*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::UInt32:
 							pValue = CreatePyObject(*reinterpret_cast<uint32_t*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::UInt64:
 							pValue = CreatePyObject(*reinterpret_cast<uint64_t*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Float:
 							pValue = CreatePyObject(*reinterpret_cast<float*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Double:
 							pValue = CreatePyObject(*reinterpret_cast<double*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::String:
 							pValue = CreatePyObject(*reinterpret_cast<std::string*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Pointer:
 							pValue = CreatePyObject(*reinterpret_cast<uintptr_t*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayBool:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<bool>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayChar8:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<char>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayChar16:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<char16_t>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayInt8:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<int8_t>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayInt16:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<int16_t>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayInt32:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<int32_t>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayInt64:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<int64_t>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayUInt8:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uint8_t>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayUInt16:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uint16_t>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayUInt32:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uint32_t>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayUInt64:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayPointer:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayFloat:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<float>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayDouble:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<double>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::ArrayString:
 							pValue = CreatePyObjectList(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Vector2:
 							pValue = CreatePyObject(*reinterpret_cast<Vector2*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Vector3:
 							pValue = CreatePyObject(*reinterpret_cast<Vector3*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Vector4:
 							pValue = CreatePyObject(*reinterpret_cast<Vector4*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						case ValueType::Matrix4x4:
 							pValue = CreatePyObject(*reinterpret_cast<Matrix4x4*>(std::get<0>(a.storage[j++])));
+							if (!pValue) {
+								std::terminate();
+							}
 							PyTuple_SET_ITEM(retTuple, k++, pValue);
 							break;
 						default:
