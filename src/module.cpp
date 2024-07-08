@@ -74,6 +74,7 @@ namespace py3lm {
 			if (PyBool_Check(object)) {
 				return { object == Py_True };
 			}
+			PyErr_SetString(PyExc_TypeError, "Not boolean");
 			return std::nullopt;
 		}
 
@@ -95,6 +96,7 @@ namespace py3lm {
 					PyErr_SetNone(PyExc_ValueError);
 				}
 			}
+			PyErr_SetString(PyExc_TypeError, "Not string");
 			return std::nullopt;
 		}
 
@@ -120,6 +122,7 @@ namespace py3lm {
 					PyErr_SetNone(PyExc_ValueError);
 				}
 			}
+			PyErr_SetString(PyExc_TypeError, "Not string");
 			return std::nullopt;
 		}
 
@@ -136,6 +139,7 @@ namespace py3lm {
 					PyErr_SetNone(PyExc_OverflowError);
 				}
 			}
+			PyErr_SetString(PyExc_TypeError, "Not integer");
 			return std::nullopt;
 		}
 
@@ -192,6 +196,7 @@ namespace py3lm {
 					return result;
 				}
 			}
+			PyErr_SetString(PyExc_TypeError, "Not integer");
 			return std::nullopt;
 		}
 
@@ -200,6 +205,7 @@ namespace py3lm {
 			if (PyFloat_Check(object)) {
 				return static_cast<float>(PyFloat_AS_DOUBLE(object));
 			}
+			PyErr_SetString(PyExc_TypeError, "Not float");
 			return std::nullopt;
 		}
 
@@ -208,6 +214,7 @@ namespace py3lm {
 			if (PyFloat_Check(object)) {
 				return PyFloat_AS_DOUBLE(object);
 			}
+			PyErr_SetString(PyExc_TypeError, "Not float");
 			return std::nullopt;
 		}
 
@@ -218,6 +225,7 @@ namespace py3lm {
 				const char* const buffer = PyUnicode_AsUTF8AndSize(object, &size);
 				return std::make_optional<std::string>(buffer, buffer + size);
 			}
+			PyErr_SetString(PyExc_TypeError, "Not string");
 			return std::nullopt;
 		}
 
@@ -244,6 +252,7 @@ namespace py3lm {
 		template<typename T>
 		std::optional<std::vector<T>> ArrayFromObject(PyObject* arrayObject) {
 			if (!PyList_Check(arrayObject)) {
+				PyErr_SetString(PyExc_TypeError, "Not list");
 				return std::nullopt;
 			}
 			const Py_ssize_t size = PyList_Size(arrayObject);
