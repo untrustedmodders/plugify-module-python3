@@ -3372,8 +3372,8 @@ namespace py3lm {
 			_PluginTypeObject = nullptr;
 			_PluginInfoTypeObject = nullptr;
 			_internalMap.clear();
-			_internalFunctions.clear();
 			_externalMap.clear();
+			_internalFunctions.clear();
 			_externalFunctions.clear();
 			_moduleDefinitions.clear();
 			_moduleMethods.clear();
@@ -3553,7 +3553,7 @@ namespace py3lm {
 			for (auto& [method, methodData] : methodsHolders) {
 				void* const methodAddr = methodData.jitFunction.GetFunction();
 				methods.emplace_back(method.get().name, methodAddr);
-				_internalMap.emplace(methodData.pythonFunction, methodAddr);
+				AddToFunctionsMap(methodAddr, methodData.pythonFunction);
 				_pythonMethods.emplace_back(std::move(methodData));
 			}
 
@@ -3583,6 +3583,11 @@ namespace py3lm {
 				return std::get<void*>(*it);
 			}
 			return nullptr;
+		}
+
+		void AddToFunctionsMap(void* funcAddr, PyObject* object) {
+			_externalMap.emplace(funcAddr, object);
+			_internalMap.emplace(object, funcAddr);
 		}
 
 	public:
@@ -3618,9 +3623,9 @@ namespace py3lm {
 				return nullptr;
 			}
 
-			_externalFunctions.emplace_back(std::move(function), std::move(defPtr));
 			Py_INCREF(object);
-			_externalMap.emplace(funcAddr, object);
+			_externalFunctions.emplace_back(std::move(function), std::move(defPtr), object);
+			AddToFunctionsMap(funcAddr, object);
 
 			return object;
 		}
@@ -3645,7 +3650,7 @@ namespace py3lm {
 
 			Py_INCREF(object);
 			_internalFunctions.emplace_back(std::move(function), object);
-			_internalMap.emplace(object, funcAddr);
+			AddToFunctionsMap(funcAddr, object);
 
 			return { funcAddr };
 		}
@@ -4114,10 +4119,11 @@ namespace py3lm {
 		struct ExternalHolder {
 			Function func;
 			std::unique_ptr<PyMethodDef> def;
+			PyObject* object;
 		};
 		std::vector<ExternalHolder> _externalFunctions;
-		std::unordered_map<void*, PyObject*> _externalMap;
 		std::vector<PythonMethodData> _internalFunctions;
+		std::unordered_map<void*, PyObject*> _externalMap;
 		std::unordered_map<PyObject*, void*> _internalMap;
 	};
 
