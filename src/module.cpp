@@ -280,142 +280,11 @@ namespace py3lm {
 
 		template<typename T>
 		void* CreateArray(PyObject* pItem) {
-			if constexpr (std::is_same_v<T, char>) {
-				if (!PyUnicode_Check(pItem)) {
-					PyErr_SetString(PyExc_TypeError, "Tuple element must be an unicode.");
-					return nullptr;
-				}
-
-				PyObject* const utf8Obj = PyUnicode_AsUTF8String(pItem);
-				if (utf8Obj) {
-					const char* utf8Value = PyBytes_AsString(utf8Obj);
-					auto* array = new std::vector<char>(utf8Value, utf8Value + strlen(utf8Value));
-					Py_DECREF(utf8Obj);
-					return array;
-				}
-				else {
-					PyErr_SetString(PyExc_TypeError, "Tuple element must be a string.");
-					return nullptr;
-				}
+			auto array = ArrayFromObject<T>(pItem);
+			if (array) {
+				return new std::vector<T>(std::move(*array));
 			}
-			else if constexpr (std::is_same_v<T, char16_t>) {
-				if (!PyUnicode_Check(pItem)) {
-					PyErr_SetString(PyExc_TypeError, "Tuple element must be an unicode.");
-					return nullptr;
-				}
-
-				Py_ssize_t size = PyUnicode_GetLength(pItem);
-				auto* array = new std::vector<char16_t>(static_cast<size_t>(size));
-				PyUnicode_AsWideChar(pItem, reinterpret_cast<wchar_t*>(array->data()), size);
-				return array;
-			}
-			else {
-				if (!PyList_Check(pItem) && !PyTuple_Check(pItem)) {
-					PyErr_SetString(PyExc_TypeError, "Tuple element must be an list or tuple.");
-					return nullptr;
-				}
-				Py_ssize_t size = PySequence_Size(pItem);
-				if (size == -1) {
-					PyErr_SetString(PyExc_ValueError, "Sequence must have valid size.");
-					return nullptr;
-				}
-
-				auto* array = new std::vector<T>(static_cast<size_t>(size));
-				for (Py_ssize_t i = 0; i < size; ++i) {
-					PyObject* const element = PySequence_GetItem(pItem, i);
-
-					bool valid;
-					if constexpr (std::is_same_v<T, char> || std::is_same_v<T, std::string>) {
-						valid = PyUnicode_Check(pItem);
-					}
-					else if constexpr (std::is_same_v<T, bool>) {
-						valid = PyBool_Check(element);
-					}
-					else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-						valid = PyFloat_Check(element);
-					}
-					else {
-						valid = PyLong_Check(element);
-					}
-
-					if (valid) {
-						if constexpr (std::is_same_v<T, uintptr_t>) {
-							(*array)[i] = reinterpret_cast<T>(PyLong_AsVoidPtr(element));
-						}
-						else if constexpr (std::is_same_v<T, bool>) {
-							(*array)[i] = (element == Py_True);
-						}
-						else if constexpr (std::is_same_v<T, float>) {
-							(*array)[i] = static_cast<float>(PyFloat_AsDouble(element));
-						}
-						else if constexpr (std::is_same_v<T, double>) {
-							(*array)[i] = PyFloat_AsDouble(element);
-						}
-						else if constexpr (std::is_same_v<T, int64_t>) {
-							(*array)[i] = static_cast<T>(PyLong_AsLongLong(element));
-						}
-						else if constexpr (std::is_same_v<T, uint64_t>) {
-							(*array)[i] = static_cast<T>(PyLong_AsUnsignedLongLong(element));
-						}
-						else if constexpr (std::is_same_v<T, uint32_t> || std::is_same_v<T, uint16_t> || std::is_same_v<T, uint8_t>) {
-							(*array)[i] = static_cast<T>(PyLong_AsUnsignedLong(element));
-						}
-						else {
-							(*array)[i] = static_cast<T>(PyLong_AsLong(element));
-						}
-					}
-					else {
-						delete reinterpret_cast<std::vector<T>*>(array);
-						Py_XDECREF(element);
-						if constexpr (std::is_same_v<T, char> || std::is_same_v<T, char16_t> || std::is_same_v<T, std::string>) {
-							PyErr_SetString(PyExc_TypeError, "List or tuple must be an unicode.");
-						}
-						else if constexpr (std::is_same_v<T, bool>) {
-							PyErr_SetString(PyExc_TypeError, "List or tuple must be a bool.");
-						}
-						else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-							PyErr_SetString(PyExc_TypeError, "List or tuple must be a float.");
-						}
-						else {
-							PyErr_SetString(PyExc_TypeError, "List or tuple must be a long.");
-						}
-						return nullptr;
-					}
-					Py_XDECREF(element);
-				}
-				return array;
-			}
-		}
-
-		void* CreateStringArray(PyObject* pItem) {
-			if (!PyList_Check(pItem) && !PyTuple_Check(pItem)) {
-				PyErr_SetString(PyExc_TypeError, "Tuple element must be an list or tuple.");
-				return nullptr;
-			}
-			Py_ssize_t size = PySequence_Size(pItem);
-			auto* array = new std::vector<std::string>();
-			array->reserve(static_cast<size_t>(size));
-			for (Py_ssize_t i = 0; i < size; ++i) {
-				PyObject* const element = PySequence_GetItem(pItem, i);
-				if (PyUnicode_Check(element)) {
-					PyObject* const utf8Obj = PyUnicode_AsUTF8String(pItem);
-					if (utf8Obj) {
-						array->emplace_back(PyBytes_AsString(utf8Obj));
-						Py_DECREF(utf8Obj);
-					}
-					else {
-						PyErr_SetString(PyExc_TypeError, "Tuple element must be a string.");
-					}
-				}
-				else {
-					delete reinterpret_cast<std::vector<std::string>*>(array);
-					Py_XDECREF(element);
-					PyErr_SetString(PyExc_TypeError, "List or tuple elements must be unicode");
-					return nullptr;
-				}
-				Py_XDECREF(element);
-			}
-			return array;
+			return nullptr;
 		}
 
 		void SetFallbackReturn(ValueType retType, const ReturnValue* ret, const Parameters* params) {
@@ -2425,7 +2294,7 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::ArrayString: {
-						value = CreateStringArray(pItem);
+						value = CreateArray<std::string>(pItem);
 						if (!value) {
 							ret->SetReturnPtr(nullptr);
 							return;
@@ -2771,7 +2640,7 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::ArrayString: {
-						value = CreateStringArray(pItem);
+						value = CreateArray<std::string>(pItem);
 						if (!value) {
 							ret->SetReturnPtr(nullptr);
 							return;
