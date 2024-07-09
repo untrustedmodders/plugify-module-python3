@@ -3568,7 +3568,7 @@ namespace py3lm {
 			TryCallPluginMethodNoArgs(plugin, "plugin_end", "OnPluginEnd");
 		}
 
-	public:
+	private:
 		PyObject* FindExternal(void* funcAddr) const {
 			const auto it = _externalMap.find(funcAddr);
 			if (it != _externalMap.end()) {
@@ -3577,6 +3577,15 @@ namespace py3lm {
 			return nullptr;
 		}
 
+		void* FindInternal(PyObject* object) const {
+			const auto it = _internalMap.find(object);
+			if (it != _internalMap.end()) {
+				return std::get<void*>(*it);
+			}
+			return nullptr;
+		}
+
+	public:
 		PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
 			if (PyObject* const object = FindExternal(funcAddr)) {
 				Py_INCREF(object);
@@ -3614,14 +3623,6 @@ namespace py3lm {
 			_externalMap.emplace(funcAddr, object);
 
 			return object;
-		}
-
-		void* FindInternal(PyObject* object) const {
-			const auto it = _internalMap.find(object);
-			if (it != _internalMap.end()) {
-				return std::get<void*>(*it);
-			}
-			return nullptr;
 		}
 
 		std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object) {
