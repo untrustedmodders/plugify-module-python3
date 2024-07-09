@@ -423,8 +423,8 @@ def reverse_no_param_return_array_double():
 
 def reverse_no_param_return_array_string():
     result = pps.cross_call_master.NoParamReturnArrayStringCallback()
-    result_formated = ', '.join([f"'{v}'" for v in result])
-    return f"{{{result_formated}}}"
+    result_formatted = ', '.join([f"'{v}'" for v in result])
+    return f"{{{result_formatted}}}"
 
 
 def reverse_no_param_return_vector2():
