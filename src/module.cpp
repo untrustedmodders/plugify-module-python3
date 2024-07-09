@@ -266,7 +266,7 @@ namespace py3lm {
 				}
 				return std::nullopt;
 			}
-			return std::move(array);
+			return array;
 		}
 
 		template<typename T>
