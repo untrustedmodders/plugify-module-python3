@@ -1183,7 +1183,7 @@ namespace py3lm {
 
 			uint8_t paramsCount = static_cast<uint8_t>(method->paramTypes.size());
 			uint8_t refParamsCount = 0;
-			uint8_t paramsStartIndex = method->retType.type > ValueType::LastPrimitive ? 1 : 0;
+			uint8_t paramsStartIndex = ValueUtils::IsHiddenParam(method->retType.type) ? 1 : 0;
 
 			PyObject* argTuple = nullptr;
 			if (paramsCount) {
@@ -1528,129 +1528,125 @@ namespace py3lm {
 		};
 
 		void ExternalCallNoArgs(const Method* method, void* addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
-			const bool hasRet = method->retType.type > ValueType::LastPrimitive;
+			ArgsScope a(1);
 
-			ArgsScope a(hasRet);
-
-			if (hasRet) {
-				void* value;
-				switch (method->retType.type) {
-				case ValueType::String:
-					value = new std::string();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayBool:
-					value = new std::vector<bool>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayChar8:
-					value = new std::vector<char>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayChar16:
-					value = new std::vector<char16_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayInt8:
-					value = new std::vector<int8_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayInt16:
-					value = new std::vector<int16_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayInt32:
-					value = new std::vector<int32_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayInt64:
-					value = new std::vector<int64_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayUInt8:
-					value = new std::vector<uint8_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayUInt16:
-					value = new std::vector<uint16_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayUInt32:
-					value = new std::vector<uint32_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayUInt64:
-					value = new std::vector<uint64_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayPointer:
-					value = new std::vector<uintptr_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayFloat:
-					value = new std::vector<float>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayDouble:
-					value = new std::vector<double>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayString:
-					value = new std::vector<std::string>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::Vector2:
-					a.ag = dcNewAggr(2, sizeof(Vector2));
-					for (int i = 0; i < 2; ++i) {
-						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-					}
-					dcCloseAggr(a.ag);
-					dcBeginCallAggr(a.vm, a.ag);
-					break;
-				case ValueType::Vector3:
-					a.ag = dcNewAggr(3, sizeof(Vector3));
-					for (int i = 0; i < 3; ++i) {
-						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-					}
-					dcCloseAggr(a.ag);
-					dcBeginCallAggr(a.vm, a.ag);
-					break;
-				case ValueType::Vector4:
-					a.ag = dcNewAggr(4, sizeof(Vector4));
-					for (int i = 0; i < 4; ++i) {
-						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-					}
-					dcCloseAggr(a.ag);
-					dcBeginCallAggr(a.vm, a.ag);
-					break;
-				case ValueType::Matrix4x4:
-					a.ag = dcNewAggr(16, sizeof(Matrix4x4));
-					for (int i = 0; i < 16; ++i) {
-						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-					}
-					dcCloseAggr(a.ag);
-					dcBeginCallAggr(a.vm, a.ag);
-					break;
-				default:
-					// Should not require storage
-					break;
+			void* value;
+			switch (method->retType.type) {
+			case ValueType::String:
+				value = new std::string();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayBool:
+				value = new std::vector<bool>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayChar8:
+				value = new std::vector<char>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayChar16:
+				value = new std::vector<char16_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayInt8:
+				value = new std::vector<int8_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayInt16:
+				value = new std::vector<int16_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayInt32:
+				value = new std::vector<int32_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayInt64:
+				value = new std::vector<int64_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayUInt8:
+				value = new std::vector<uint8_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayUInt16:
+				value = new std::vector<uint16_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayUInt32:
+				value = new std::vector<uint32_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayUInt64:
+				value = new std::vector<uint64_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayPointer:
+				value = new std::vector<uintptr_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayFloat:
+				value = new std::vector<float>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayDouble:
+				value = new std::vector<double>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayString:
+				value = new std::vector<std::string>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::Vector2:
+				a.ag = dcNewAggr(2, sizeof(Vector2));
+				for (int i = 0; i < 2; ++i) {
+					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
 				}
+				dcCloseAggr(a.ag);
+				dcBeginCallAggr(a.vm, a.ag);
+				break;
+			case ValueType::Vector3:
+				a.ag = dcNewAggr(3, sizeof(Vector3));
+				for (int i = 0; i < 3; ++i) {
+					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+				}
+				dcCloseAggr(a.ag);
+				dcBeginCallAggr(a.vm, a.ag);
+				break;
+			case ValueType::Vector4:
+				a.ag = dcNewAggr(4, sizeof(Vector4));
+				for (int i = 0; i < 4; ++i) {
+					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+				}
+				dcCloseAggr(a.ag);
+				dcBeginCallAggr(a.vm, a.ag);
+				break;
+			case ValueType::Matrix4x4:
+				a.ag = dcNewAggr(16, sizeof(Matrix4x4));
+				for (int i = 0; i < 16; ++i) {
+					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+				}
+				dcCloseAggr(a.ag);
+				dcBeginCallAggr(a.vm, a.ag);
+				break;
+			default:
+				// Should not require storage
+				break;
 			}
 
 			switch (method->retType.type) {
@@ -1865,133 +1861,131 @@ namespace py3lm {
 				return;
 			}
 
-			const bool hasRet = method->retType.type > ValueType::LastPrimitive;
+			const Py_ssize_t paramsStartIndex = plugify::ValueUtils::IsObject(method->retType.type) ? 1 : 0;
 
-			ArgsScope a(hasRet ? paramCount + 1 : paramCount);
+			ArgsScope a(1 + paramCount);
 
 			/// prepare arguments
 
 			void* value;
 			Py_ssize_t refsCount = 0;
 
-			if (hasRet) {
-				switch (method->retType.type) {
-				case ValueType::String:
-					value = new std::string();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayBool:
-					value = new std::vector<bool>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayChar8:
-					value = new std::vector<char>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayChar16:
-					value = new std::vector<char16_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayInt8:
-					value = new std::vector<int8_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayInt16:
-					value = new std::vector<int16_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayInt32:
-					value = new std::vector<int32_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayInt64:
-					value = new std::vector<int64_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayUInt8:
-					value = new std::vector<uint8_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayUInt16:
-					value = new std::vector<uint16_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayUInt32:
-					value = new std::vector<uint32_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayUInt64:
-					value = new std::vector<uint64_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayPointer:
-					value = new std::vector<uintptr_t>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayFloat:
-					value = new std::vector<float>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayDouble:
-					value = new std::vector<double>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::ArrayString:
-					value = new std::vector<std::string>();
-					a.storage.emplace_back(value, method->retType.type);
-					dcArgPointer(a.vm, value);
-					break;
-				case ValueType::Vector2:
-					a.ag = dcNewAggr(2, sizeof(Vector2));
-					for (int i = 0; i < 2; ++i) {
-						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-					}
-					dcCloseAggr(a.ag);
-					dcBeginCallAggr(a.vm, a.ag);
-					break;
-				case ValueType::Vector3:
-					a.ag = dcNewAggr(3, sizeof(Vector3));
-					for (int i = 0; i < 3; ++i) {
-						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-					}
-					dcCloseAggr(a.ag);
-					dcBeginCallAggr(a.vm, a.ag);
-					break;
-				case ValueType::Vector4:
-					a.ag = dcNewAggr(4, sizeof(Vector4));
-					for (int i = 0; i < 4; ++i) {
-						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-					}
-					dcCloseAggr(a.ag);
-					dcBeginCallAggr(a.vm, a.ag);
-					break;
-				case ValueType::Matrix4x4:
-					a.ag = dcNewAggr(16, sizeof(Matrix4x4));
-					for (int i = 0; i < 16; ++i) {
-						dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-					}
-					dcCloseAggr(a.ag);
-					dcBeginCallAggr(a.vm, a.ag);
-					break;
-				default:
-					// Should not require storage
-					break;
+			switch (method->retType.type) {
+			case ValueType::String:
+				value = new std::string();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayBool:
+				value = new std::vector<bool>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayChar8:
+				value = new std::vector<char>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayChar16:
+				value = new std::vector<char16_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayInt8:
+				value = new std::vector<int8_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayInt16:
+				value = new std::vector<int16_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayInt32:
+				value = new std::vector<int32_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayInt64:
+				value = new std::vector<int64_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayUInt8:
+				value = new std::vector<uint8_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayUInt16:
+				value = new std::vector<uint16_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayUInt32:
+				value = new std::vector<uint32_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayUInt64:
+				value = new std::vector<uint64_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayPointer:
+				value = new std::vector<uintptr_t>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayFloat:
+				value = new std::vector<float>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayDouble:
+				value = new std::vector<double>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::ArrayString:
+				value = new std::vector<std::string>();
+				a.storage.emplace_back(value, method->retType.type);
+				dcArgPointer(a.vm, value);
+				break;
+			case ValueType::Vector2:
+				a.ag = dcNewAggr(2, sizeof(Vector2));
+				for (int i = 0; i < 2; ++i) {
+					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
 				}
+				dcCloseAggr(a.ag);
+				dcBeginCallAggr(a.vm, a.ag);
+				break;
+			case ValueType::Vector3:
+				a.ag = dcNewAggr(3, sizeof(Vector3));
+				for (int i = 0; i < 3; ++i) {
+					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+				}
+				dcCloseAggr(a.ag);
+				dcBeginCallAggr(a.vm, a.ag);
+				break;
+			case ValueType::Vector4:
+				a.ag = dcNewAggr(4, sizeof(Vector4));
+				for (int i = 0; i < 4; ++i) {
+					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+				}
+				dcCloseAggr(a.ag);
+				dcBeginCallAggr(a.vm, a.ag);
+				break;
+			case ValueType::Matrix4x4:
+				a.ag = dcNewAggr(16, sizeof(Matrix4x4));
+				for (int i = 0; i < 16; ++i) {
+					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+				}
+				dcCloseAggr(a.ag);
+				dcBeginCallAggr(a.vm, a.ag);
+				break;
+			default:
+				// Should not require storage
+				break;
 			}
 
 			for (Py_ssize_t i = 0; i < size; ++i) {
@@ -2905,7 +2899,7 @@ namespace py3lm {
 				PyTuple_SET_ITEM(retTuple, k++, retObj);
 
 				PyObject* pValue;
-				for (Py_ssize_t i = 0, j = hasRet; i < size; ++i) {
+				for (Py_ssize_t i = 0, j = paramsStartIndex; i < size; ++i) {
 					auto& param = method->paramTypes[i];
 					if (param.ref) {
 						switch (param.type) {
