@@ -3349,7 +3349,7 @@ namespace py3lm {
 					Py_DECREF(data.pythonFunction);
 				}
 
-				for (const auto& [_, object] : _externalMap) {
+				for (const auto& [_1, _2, object] : _externalFunctions) {
 					Py_DECREF(object);
 				}
 
