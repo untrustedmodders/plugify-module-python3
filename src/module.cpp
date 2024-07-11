@@ -1189,7 +1189,8 @@ namespace py3lm {
 			if (paramsCount) {
 				argTuple = PyTuple_New(paramsCount);
 				if (!argTuple) {
-					processResult = ParamProcess::Error;
+					processResult = ParamProcess::ErrorWithException;
+					PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
 				}
 				else {
 					for (uint8_t index = 0; index < paramsCount; ++index) {
@@ -1201,11 +1202,13 @@ namespace py3lm {
 						ParamConvertionFunc const convertFunc = paramType.ref ? &ParamRefToObject : &ParamToObject;
 						PyObject* const arg = convertFunc(paramType, params, paramsStartIndex + index);
 						if (!arg) {
+							// convertFunc may set error
 							processResult = PyErr_Occurred() ? ParamProcess::ErrorWithException : ParamProcess::Error;
 							break;
 						}
 						if (PyTuple_SetItem(argTuple, index, arg) != 0) {
 							Py_DECREF(arg);
+							// PyTuple_SetItem set error
 							processResult = ParamProcess::ErrorWithException;
 							break;
 						}
@@ -1245,9 +1248,9 @@ namespace py3lm {
 
 			if (hasRefParams) {
 				if (!PyTuple_CheckExact(result)) {
-					// SetErrorString
-					// 
-					// PyErr_Print();
+					PyErr_SetString(PyExc_TypeError, "Returned value not tuple");
+
+					PyErr_Print();
 
 					Py_DECREF(result);
 
@@ -1255,10 +1258,12 @@ namespace py3lm {
 
 					return;
 				}
-				if (PyTuple_Size(result) != static_cast<Py_ssize_t>(1 + refParamsCount)) {
-					// SetErrorString
-					// 
-					// PyErr_Print();
+				const Py_ssize_t tupleSize = PyTuple_Size(result);
+				if (tupleSize != static_cast<Py_ssize_t>(1 + refParamsCount)) {
+					const std::string error(std::format("Returned tuple wrong size {}, expected {}", tupleSize, static_cast<Py_ssize_t>(1 + refParamsCount)));
+					PyErr_SetString(PyExc_TypeError, error.c_str());
+
+					PyErr_Print();
 
 					Py_DECREF(result);
 
@@ -1277,9 +1282,10 @@ namespace py3lm {
 						continue;
 					}
 					if (!SetRefParam(PyTuple_GET_ITEM(result, Py_ssize_t{ 1 + k }), paramType, params, paramsStartIndex + index)) {
-						// SetErrorString
-						// 
-						// PyErr_Print();
+						// SetRefParam may set error
+						if (PyErr_Occurred()) {
+							PyErr_Print();
+						}
 					}
 					++k;
 					if (k == refParamsCount) {
@@ -3162,9 +3168,11 @@ namespace py3lm {
 		std::optional<T> GetObjectAttrAsValue(PyObject* object, const char* attr_name) {
 			PyObject* const attrObject = PyObject_GetAttrString(object, attr_name);
 			if (!attrObject) {
+				// PyObject_GetAttrString set error. e.g. AttributeError
 				return std::nullopt;
 			}
 			const auto value = ValueFromObject<T>(attrObject);
+			// ValueFromObject set error. e.g. TypeError
 			Py_DECREF(attrObject);
 			return value;
 		}
@@ -3608,6 +3616,8 @@ namespace py3lm {
 			
 			void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, funcAddr);
 			if (!methodAddr) {
+				const std::string error(std::format("Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", function.GetError()));
+				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return nullptr;
 			}
 			
@@ -3620,6 +3630,7 @@ namespace py3lm {
 
 			PyObject* const object = PyCFunction_New(defPtr.get(), nullptr);
 			if (!object) {
+				PyErr_SetString(PyExc_RuntimeError, "Fail to create function object from function pointer");
 				return nullptr;
 			}
 
@@ -3636,7 +3647,7 @@ namespace py3lm {
 			}
 
 			if (!PyFunction_Check(object)) {
-				// TODO: set error
+				PyErr_SetString(PyExc_TypeError, "Not function");
 				return std::nullopt;
 			}
 
@@ -3646,7 +3657,8 @@ namespace py3lm {
 
 			auto [result, function] = CreateInternalCall(_jitRuntime, method, object);
 			if (!result) {
-				// TODO: set error
+				const std::string error(std::format("Lang module JIT failed to generate C++ wrapper from function object '{}'", function.GetError()));
+				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return std::nullopt;
 			}
 
@@ -3662,8 +3674,10 @@ namespace py3lm {
 		PyObject* CreateVector2Object(const Vector2& vector) {
 			PyObject* const args = PyTuple_New(Py_ssize_t{ 2 });
 			if (!args) {
+				PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
 				return nullptr;
 			}
+			// CreatePyObject set error
 			PyObject* const xObject = CreatePyObject(vector.x);
 			if (!xObject) {
 				Py_DECREF(args);
@@ -3688,14 +3702,17 @@ namespace py3lm {
 				return std::nullopt;
 			}
 			if (typeResult == 0) {
+				PyErr_SetString(PyExc_TypeError, "Not Vector2");
 				return std::nullopt;
 			}
 			auto xValue = GetObjectAttrAsValue<float>(object, "x");
 			if (!xValue) {
+				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 				return std::nullopt;
 			}
 			auto yValue = GetObjectAttrAsValue<float>(object, "y");
 			if (!yValue) {
+				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 				return std::nullopt;
 			}
 			return Vector2{ *xValue, *yValue };
@@ -3704,8 +3721,10 @@ namespace py3lm {
 		PyObject* CreateVector3Object(const Vector3& vector) {
 			PyObject* const args = PyTuple_New(Py_ssize_t{ 3 });
 			if (!args) {
+				PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
 				return nullptr;
 			}
+			// CreatePyObject set error
 			PyObject* const xObject = CreatePyObject(vector.x);
 			if (!xObject) {
 				Py_DECREF(args);
@@ -3736,18 +3755,22 @@ namespace py3lm {
 				return std::nullopt;
 			}
 			if (typeResult == 0) {
+				PyErr_SetString(PyExc_TypeError, "Not Vector3");
 				return std::nullopt;
 			}
 			auto xValue = GetObjectAttrAsValue<float>(object, "x");
 			if (!xValue) {
+				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 				return std::nullopt;
 			}
 			auto yValue = GetObjectAttrAsValue<float>(object, "y");
 			if (!yValue) {
+				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 				return std::nullopt;
 			}
 			auto zValue = GetObjectAttrAsValue<float>(object, "z");
 			if (!zValue) {
+				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 				return std::nullopt;
 			}
 			return Vector3{ *xValue, *yValue, *zValue };
@@ -3756,8 +3779,10 @@ namespace py3lm {
 		PyObject* CreateVector4Object(const Vector4& vector) {
 			PyObject* const args = PyTuple_New(Py_ssize_t{ 4 });
 			if (!args) {
+				PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
 				return nullptr;
 			}
+			// CreatePyObject set error
 			PyObject* const xObject = CreatePyObject(vector.x);
 			if (!xObject) {
 				Py_DECREF(args);
@@ -3794,22 +3819,27 @@ namespace py3lm {
 				return std::nullopt;
 			}
 			if (typeResult == 0) {
+				PyErr_SetString(PyExc_TypeError, "Not Vector4");
 				return std::nullopt;
 			}
 			auto xValue = GetObjectAttrAsValue<float>(object, "x");
 			if (!xValue) {
+				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 				return std::nullopt;
 			}
 			auto yValue = GetObjectAttrAsValue<float>(object, "y");
 			if (!yValue) {
+				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 				return std::nullopt;
 			}
 			auto zValue = GetObjectAttrAsValue<float>(object, "z");
 			if (!zValue) {
+				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 				return std::nullopt;
 			}
 			auto wValue = GetObjectAttrAsValue<float>(object, "w");
 			if (!wValue) {
+				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 				return std::nullopt;
 			}
 			return Vector4{ *xValue, *yValue, *zValue, *wValue };
@@ -3818,8 +3848,10 @@ namespace py3lm {
 		PyObject* CreateMatrix4x4Object(const Matrix4x4& matrix) {
 			PyObject* const elementsObject = PyList_New(Py_ssize_t{ 16 });
 			if (!elementsObject) {
+				PyErr_SetString(PyExc_RuntimeError, "Fail to create Matrix4x4 elements list");
 				return nullptr;
 			}
+			// CreatePyObject set error
 			PyObject* const m00Object = CreatePyObject(matrix.m00);
 			if (!m00Object) {
 				Py_DECREF(elementsObject);
@@ -3919,6 +3951,7 @@ namespace py3lm {
 			PyObject* const args = PyTuple_New(Py_ssize_t{ 1 });
 			if (!args) {
 				Py_DECREF(elementsObject);
+				PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
 				return nullptr;
 			}
 			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, elementsObject); // elementsObject ref taken by tuple
@@ -3934,18 +3967,22 @@ namespace py3lm {
 				return std::nullopt;
 			}
 			if (typeResult == 0) {
+				PyErr_SetString(PyExc_TypeError, "Not Matrix4x4");
 				return std::nullopt;
 			}
 			PyObject* const elementsListObject = PyObject_GetAttrString(object, "elements");
 			if (!elementsListObject) {
+				// PyObject_GetAttrString set error. e.g. AttributeError
 				return std::nullopt;
 			}
 			if (!PyList_CheckExact(elementsListObject)) {
 				Py_DECREF(elementsListObject);
+				PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
 				return std::nullopt;
 			}
 			if (PyList_Size(elementsListObject) != Py_ssize_t{ 4 }) {
 				Py_DECREF(elementsListObject);
+				PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
 				return std::nullopt;
 			}
 			Matrix4x4 matrix{};
@@ -3953,25 +3990,30 @@ namespace py3lm {
 				PyObject* const elementsRowListObject = PyList_GetItem(elementsListObject, i);
 				if (!elementsRowListObject) [[unlikely]] {
 					Py_DECREF(elementsListObject);
+					// PyList_GetItem set error. e.g. IndexError
 					return std::nullopt;
 				}
 				if (!PyList_CheckExact(elementsRowListObject)) {
 					Py_DECREF(elementsListObject);
+					PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
 					return std::nullopt;
 				}
 				if (PyList_Size(elementsRowListObject) != Py_ssize_t{ 4 }) {
 					Py_DECREF(elementsListObject);
+					PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
 					return std::nullopt;
 				}
 				for (Py_ssize_t j = 0; j < Py_ssize_t{ 4 }; ++j) {
 					PyObject* const mObject = PyList_GetItem(elementsRowListObject, j);
 					if (!mObject) [[unlikely]] {
 						Py_DECREF(elementsListObject);
+						/// PyList_GetItem set error. e.g. IndexError
 						return std::nullopt;
 					}
 					const auto mValue = ValueFromObject<float>(mObject);
 					if (!mValue) {
 						Py_DECREF(elementsListObject);
+						// ValueFromObject set error. e.g. TypeError
 						return std::nullopt;
 					}
 					matrix.data[static_cast<size_t>(i * Py_ssize_t{ 4 } + j)] = *mValue;
