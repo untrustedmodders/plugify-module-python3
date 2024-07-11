@@ -3631,6 +3631,10 @@ namespace py3lm {
 		}
 
 		std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object) {
+			if (object == Py_None) {
+				return { nullptr };
+			}
+
 			if (!PyFunction_Check(object)) {
 				// TODO: set error
 				return std::nullopt;
