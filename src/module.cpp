@@ -3951,7 +3951,7 @@ namespace py3lm {
 			Matrix4x4 matrix{};
 			for (Py_ssize_t i = 0; i < Py_ssize_t{ 4 }; ++i) {
 				PyObject* const elementsRowListObject = PyList_GetItem(elementsListObject, i);
-				if (!elementsRowListObject) {
+				if (!elementsRowListObject) [[unlikely]] {
 					Py_DECREF(elementsListObject);
 					return std::nullopt;
 				}
@@ -3965,7 +3965,7 @@ namespace py3lm {
 				}
 				for (Py_ssize_t j = 0; j < Py_ssize_t{ 4 }; ++j) {
 					PyObject* const mObject = PyList_GetItem(elementsRowListObject, j);
-					if (!mObject) {
+					if (!mObject) [[unlikely]] {
 						Py_DECREF(elementsListObject);
 						return std::nullopt;
 					}
