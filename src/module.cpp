@@ -1,42 +1,22 @@
-#include <plugify/function.h>
+#include "module.h"
 #include <plugify/plugify_provider.h>
 #include <plugify/compat_format.h>
 #include <plugify/log.h>
-#include <plugify/language_module.h>
 #include <plugify/module.h>
 #include <plugify/plugin_descriptor.h>
 #include <plugify/plugin.h>
 #include <plugify/math.h>
 #include <module_export.h>
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <dyncall/dyncall.h>
-#include <asmjit/asmjit.h>
 #include <cuchar>
 #include <climits>
-#include <unordered_map>
 #include <array>
-#include <memory>
 
 using namespace plugify;
 namespace fs = std::filesystem;
 
 namespace py3lm {
-	struct PythonMethodData {
-		Function jitFunction;
-		PyObject* pythonFunction{};
-	};
-
-	static PyObject* CreateVector2Object(const Vector2& vector);
-	static std::optional<Vector2> Vector2ValueFromObject(PyObject* object);
-	static PyObject* CreateVector3Object(const Vector3& vector);
-	static std::optional<Vector3> Vector3ValueFromObject(PyObject* object);
-	static PyObject* CreateVector4Object(const Vector4& vector);
-	static std::optional<Vector4> Vector4ValueFromObject(PyObject* object);
-	static PyObject* CreateMatrix4x4Object(const Matrix4x4& matrix);
-	static std::optional<Matrix4x4> Matrix4x4ValueFromObject(PyObject* object);
-	static PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr);
-	static std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object);
+	extern Python3LanguageModule g_py3lm;
 
 	namespace {
 		void ReplaceAll(std::string& str, const std::string& from, const std::string& to) {
@@ -231,22 +211,22 @@ namespace py3lm {
 
 		template<>
 		std::optional<Vector2> ValueFromObject(PyObject* object) {
-			return Vector2ValueFromObject(object);
+			return g_py3lm.Vector2ValueFromObject(object);
 		}
 
 		template<>
 		std::optional<Vector3> ValueFromObject(PyObject* object) {
-			return Vector3ValueFromObject(object);
+			return g_py3lm.Vector3ValueFromObject(object);
 		}
 
 		template<>
 		std::optional<Vector4> ValueFromObject(PyObject* object) {
-			return Vector4ValueFromObject(object);
+			return g_py3lm.Vector4ValueFromObject(object);
 		}
 
 		template<>
 		std::optional<Matrix4x4> ValueFromObject(PyObject* object) {
-			return Matrix4x4ValueFromObject(object);
+			return g_py3lm.Matrix4x4ValueFromObject(object);
 		}
 
 		template<typename T>
@@ -267,6 +247,10 @@ namespace py3lm {
 				return std::nullopt;
 			}
 			return array;
+		}
+
+		std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object) {
+			return g_py3lm.GetOrCreateFunctionValue(method, object);
 		}
 
 		template<typename T>
@@ -980,22 +964,26 @@ namespace py3lm {
 
 		template<>
 		PyObject* CreatePyObject(Vector2 value) {
-			return CreateVector2Object(value);
+			return g_py3lm.CreateVector2Object(value);
 		}
 
 		template<>
 		PyObject* CreatePyObject(Vector3 value) {
-			return CreateVector3Object(value);
+			return g_py3lm.CreateVector3Object(value);
 		}
 
 		template<>
 		PyObject* CreatePyObject(Vector4 value) {
-			return CreateVector4Object(value);
+			return g_py3lm.CreateVector4Object(value);
 		}
 
 		template<>
 		PyObject* CreatePyObject(Matrix4x4 value) {
-			return CreateMatrix4x4Object(value);
+			return g_py3lm.CreateMatrix4x4Object(value);
+		}
+
+		PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
+			return g_py3lm.GetOrCreateFunctionObject(method, funcAddr);
 		}
 
 		template<typename T>
@@ -3178,820 +3166,817 @@ namespace py3lm {
 		}
 	}
 
-	class Python3LanguageModule final : public ILanguageModule {
-	public:
-		Python3LanguageModule() = default;
+	Python3LanguageModule::Python3LanguageModule() = default;
 
-		// ILanguageModule
-		InitResult Initialize(std::weak_ptr<IPlugifyProvider> provider, const IModule& module) override {
-			if (!(_provider = provider.lock())) {
-				return ErrorData{ "Provider not exposed" };
-			}
+	Python3LanguageModule::~Python3LanguageModule() = default;
 
-			_jitRuntime = std::make_shared<asmjit::JitRuntime>();
+	InitResult Python3LanguageModule::Initialize(std::weak_ptr<IPlugifyProvider> provider, const IModule& module) {
+		if (!(_provider = provider.lock())) {
+			return ErrorData{ "Provider not exposed" };
+		}
 
-			std::error_code ec;
-			const fs::path moduleBasePath = fs::absolute(module.GetBaseDir(), ec);
-			if (ec) {
-				return ErrorData{ "Failed to get module directory path" };
-			}
+		_jitRuntime = std::make_shared<asmjit::JitRuntime>();
 
-			const fs::path libPath = moduleBasePath / "lib";
-			if (!fs::exists(libPath, ec) || !fs::is_directory(libPath, ec)) {
-				return ErrorData{ "lib directory not exists" };
-			}
+		std::error_code ec;
+		const fs::path moduleBasePath = fs::absolute(module.GetBaseDir(), ec);
+		if (ec) {
+			return ErrorData{ "Failed to get module directory path" };
+		}
 
-			const fs::path pythonBasePath = moduleBasePath / "python3.12";
-			if (!fs::exists(pythonBasePath, ec) || !fs::is_directory(pythonBasePath, ec)) {
-				return ErrorData{ "python3.12 directory not exists" };
-			}
+		const fs::path libPath = moduleBasePath / "lib";
+		if (!fs::exists(libPath, ec) || !fs::is_directory(libPath, ec)) {
+			return ErrorData{ "lib directory not exists" };
+		}
 
-			const fs::path modulesZipPath = pythonBasePath / L"python312.zip";
-			const fs::path pluginsPath = fs::absolute(moduleBasePath / ".." / ".." / "plugins", ec);
-			if (ec) {
-				return ErrorData{ "Failed to get plugins directory path" };
-			}
+		const fs::path pythonBasePath = moduleBasePath / "python3.12";
+		if (!fs::exists(pythonBasePath, ec) || !fs::is_directory(pythonBasePath, ec)) {
+			return ErrorData{ "python3.12 directory not exists" };
+		}
 
-			if (Py_IsInitialized()) {
-				return ErrorData{ "Python already initialized" };
-			}
+		const fs::path modulesZipPath = pythonBasePath / L"python312.zip";
+		const fs::path pluginsPath = fs::absolute(moduleBasePath / ".." / ".." / "plugins", ec);
+		if (ec) {
+			return ErrorData{ "Failed to get plugins directory path" };
+		}
 
-			PyStatus status;
+		if (Py_IsInitialized()) {
+			return ErrorData{ "Python already initialized" };
+		}
 
-			PyConfig config{};
-			PyConfig_InitIsolatedConfig(&config);
+		PyStatus status;
 
-			for (;;) {
-				status = PyConfig_SetString(&config, &config.home, pythonBasePath.wstring().c_str());
-				if (PyStatus_Exception(status)) {
-					break;
-				}
+		PyConfig config{};
+		PyConfig_InitIsolatedConfig(&config);
 
-				// Manually set search paths:
-				// 1. python zip
-				// 2. python dir
-				// 3. lib dir in module
-				// 4. plugins dir
-
-				config.module_search_paths_set = 1;
-
-				status = PyWideStringList_Append(&config.module_search_paths, modulesZipPath.wstring().c_str());
-				if (PyStatus_Exception(status)) {
-					break;
-				}
-				status = PyWideStringList_Append(&config.module_search_paths, pythonBasePath.wstring().c_str());
-				if (PyStatus_Exception(status)) {
-					break;
-				}
-				status = PyWideStringList_Append(&config.module_search_paths, libPath.wstring().c_str());
-				if (PyStatus_Exception(status)) {
-					break;
-				}
-				status = PyWideStringList_Append(&config.module_search_paths, pluginsPath.wstring().c_str());
-				if (PyStatus_Exception(status)) {
-					break;
-				}
-
-				status = Py_InitializeFromConfig(&config);
-
+		for (;;) {
+			status = PyConfig_SetString(&config, &config.home, pythonBasePath.wstring().c_str());
+			if (PyStatus_Exception(status)) {
 				break;
 			}
 
+			// Manually set search paths:
+			// 1. python zip
+			// 2. python dir
+			// 3. lib dir in module
+			// 4. plugins dir
+
+			config.module_search_paths_set = 1;
+
+			status = PyWideStringList_Append(&config.module_search_paths, modulesZipPath.wstring().c_str());
 			if (PyStatus_Exception(status)) {
-				return ErrorData{ std::format("Failed to init python: {}", status.err_msg) };
+				break;
+			}
+			status = PyWideStringList_Append(&config.module_search_paths, pythonBasePath.wstring().c_str());
+			if (PyStatus_Exception(status)) {
+				break;
+			}
+			status = PyWideStringList_Append(&config.module_search_paths, libPath.wstring().c_str());
+			if (PyStatus_Exception(status)) {
+				break;
+			}
+			status = PyWideStringList_Append(&config.module_search_paths, pluginsPath.wstring().c_str());
+			if (PyStatus_Exception(status)) {
+				break;
 			}
 
-			PyObject* const plugifyPluginModuleName = PyUnicode_DecodeFSDefault("plugify.plugin");
-			if (!plugifyPluginModuleName) {
-				PyErr_Print();
-				return ErrorData{ "Failed to allocate plugify.plugin module string" };
-			}
+			status = Py_InitializeFromConfig(&config);
 
-			PyObject* const plugifyPluginModule = PyImport_Import(plugifyPluginModuleName);
-			Py_DECREF(plugifyPluginModuleName);
-			if (!plugifyPluginModule) {
-				PyErr_Print();
-				return ErrorData{ "Failed to import plugify.plugin python module" };
-			}
+			break;
+		}
 
-			_PluginTypeObject = PyObject_GetAttrString(plugifyPluginModule, "Plugin");
-			if (!_PluginTypeObject) {
-				Py_DECREF(plugifyPluginModule);
-				PyErr_Print();
-				return ErrorData{ "Failed to find plugify.plugin.Plugin type" };
-			}
-			_PluginInfoTypeObject = PyObject_GetAttrString(plugifyPluginModule, "PluginInfo");
-			if (!_PluginInfoTypeObject) {
-				Py_DECREF(plugifyPluginModule);
-				PyErr_Print();
-				return ErrorData{ "Failed to find plugify.plugin.PluginInfo type" };
-			}
+		if (PyStatus_Exception(status)) {
+			return ErrorData{ std::format("Failed to init python: {}", status.err_msg) };
+		}
 
-			_Vector2TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector2");
-			if (!_Vector2TypeObject) {
-				Py_DECREF(plugifyPluginModule);
-				PyErr_Print();
-				return ErrorData{ "Failed to find plugify.plugin.Vector2 type" };
-			}
-			_Vector3TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector3");
-			if (!_Vector3TypeObject) {
-				Py_DECREF(plugifyPluginModule);
-				PyErr_Print();
-				return ErrorData{ "Failed to find plugify.plugin.Vector3 type" };
-			}
-			_Vector4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector4");
-			if (!_Vector4TypeObject) {
-				Py_DECREF(plugifyPluginModule);
-				PyErr_Print();
-				return ErrorData{ "Failed to find plugify.plugin.Vector4 type" };
-			}
-			_Matrix4x4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Matrix4x4");
-			if (!_Matrix4x4TypeObject) {
-				Py_DECREF(plugifyPluginModule);
-				PyErr_Print();
-				return ErrorData{ "Failed to find plugify.plugin.Matrix4x4 type" };
-			}
+		PyObject* const plugifyPluginModuleName = PyUnicode_DecodeFSDefault("plugify.plugin");
+		if (!plugifyPluginModuleName) {
+			PyErr_Print();
+			return ErrorData{ "Failed to allocate plugify.plugin module string" };
+		}
 
+		PyObject* const plugifyPluginModule = PyImport_Import(plugifyPluginModuleName);
+		Py_DECREF(plugifyPluginModuleName);
+		if (!plugifyPluginModule) {
+			PyErr_Print();
+			return ErrorData{ "Failed to import plugify.plugin python module" };
+		}
+
+		_PluginTypeObject = PyObject_GetAttrString(plugifyPluginModule, "Plugin");
+		if (!_PluginTypeObject) {
 			Py_DECREF(plugifyPluginModule);
-
-			_ppsModule = PyImport_ImportModule("plugify.pps");
-			if (!_ppsModule) {
-				PyErr_Print();
-				return ErrorData{ "Failed to import plugify.pps python module" };
-			}
-
-			return InitResultData{};
+			PyErr_Print();
+			return ErrorData{ "Failed to find plugify.plugin.Plugin type" };
+		}
+		_PluginInfoTypeObject = PyObject_GetAttrString(plugifyPluginModule, "PluginInfo");
+		if (!_PluginInfoTypeObject) {
+			Py_DECREF(plugifyPluginModule);
+			PyErr_Print();
+			return ErrorData{ "Failed to find plugify.plugin.PluginInfo type" };
 		}
 
-		void Shutdown() override {
-			if (Py_IsInitialized()) {
-				if (_ppsModule) {
-					Py_DECREF(_ppsModule);
-				}
-
-				if (_Vector2TypeObject) {
-					Py_DECREF(_Vector2TypeObject);
-				}
-
-				if (_Vector3TypeObject) {
-					Py_DECREF(_Vector3TypeObject);
-				}
-
-				if (_Vector4TypeObject) {
-					Py_DECREF(_Vector4TypeObject);
-				}
-
-				if (_Matrix4x4TypeObject) {
-					Py_DECREF(_Matrix4x4TypeObject);
-				}
-
-				if (_PluginTypeObject) {
-					Py_DECREF(_PluginTypeObject);
-				}
-
-				if (_PluginInfoTypeObject) {
-					Py_DECREF(_PluginInfoTypeObject);
-				}
-
-				for (const auto& data : _internalFunctions) {
-					Py_DECREF(data.pythonFunction);
-				}
-
-				for (const auto& [_1, _2, object] : _externalFunctions) {
-					Py_DECREF(object);
-				}
-
-				for (const auto& data : _pythonMethods) {
-					Py_DECREF(data.pythonFunction);
-				}
-
-				for (const auto& [_, pluginData] : _pluginsMap) {
-					Py_DECREF(pluginData._instance);
-					Py_DECREF(pluginData._module);
-				}
-
-				Py_Finalize();
-			}
-			_ppsModule = nullptr;
-			_Vector2TypeObject = nullptr;
-			_Vector3TypeObject = nullptr;
-			_Vector4TypeObject = nullptr;
-			_Matrix4x4TypeObject = nullptr;
-			_PluginTypeObject = nullptr;
-			_PluginInfoTypeObject = nullptr;
-			_internalMap.clear();
-			_externalMap.clear();
-			_internalFunctions.clear();
-			_externalFunctions.clear();
-			_moduleDefinitions.clear();
-			_moduleMethods.clear();
-			_moduleFunctions.clear();
-			_pythonMethods.clear();
-			_pluginsMap.clear();
-			_jitRuntime.reset();
-			_provider.reset();
+		_Vector2TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector2");
+		if (!_Vector2TypeObject) {
+			Py_DECREF(plugifyPluginModule);
+			PyErr_Print();
+			return ErrorData{ "Failed to find plugify.plugin.Vector2 type" };
+		}
+		_Vector3TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector3");
+		if (!_Vector3TypeObject) {
+			Py_DECREF(plugifyPluginModule);
+			PyErr_Print();
+			return ErrorData{ "Failed to find plugify.plugin.Vector3 type" };
+		}
+		_Vector4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector4");
+		if (!_Vector4TypeObject) {
+			Py_DECREF(plugifyPluginModule);
+			PyErr_Print();
+			return ErrorData{ "Failed to find plugify.plugin.Vector4 type" };
+		}
+		_Matrix4x4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Matrix4x4");
+		if (!_Matrix4x4TypeObject) {
+			Py_DECREF(plugifyPluginModule);
+			PyErr_Print();
+			return ErrorData{ "Failed to find plugify.plugin.Matrix4x4 type" };
 		}
 
-		void OnMethodExport(const IPlugin& plugin) override {
+		Py_DECREF(plugifyPluginModule);
+
+		_ppsModule = PyImport_ImportModule("plugify.pps");
+		if (!_ppsModule) {
+			PyErr_Print();
+			return ErrorData{ "Failed to import plugify.pps python module" };
+		}
+
+		return InitResultData{};
+	}
+
+	void Python3LanguageModule::Shutdown() {
+		if (Py_IsInitialized()) {
 			if (_ppsModule) {
-				PyObject* moduleObject = CreateInternalModule(plugin);
-				if (!moduleObject) {
-					moduleObject = CreateExternalModule(plugin);
-				}
-				if (moduleObject) {
-					PyObject_SetAttrString(_ppsModule, plugin.GetName().c_str(), moduleObject);
-					Py_DECREF(moduleObject);
-					return;
-				}
+				Py_DECREF(_ppsModule);
 			}
-			_provider->Log(std::format("[py3lm] Fail to export '{}' plugin methods", plugin.GetName()), Severity::Error);
+
+			if (_Vector2TypeObject) {
+				Py_DECREF(_Vector2TypeObject);
+			}
+
+			if (_Vector3TypeObject) {
+				Py_DECREF(_Vector3TypeObject);
+			}
+
+			if (_Vector4TypeObject) {
+				Py_DECREF(_Vector4TypeObject);
+			}
+
+			if (_Matrix4x4TypeObject) {
+				Py_DECREF(_Matrix4x4TypeObject);
+			}
+
+			if (_PluginTypeObject) {
+				Py_DECREF(_PluginTypeObject);
+			}
+
+			if (_PluginInfoTypeObject) {
+				Py_DECREF(_PluginInfoTypeObject);
+			}
+
+			for (const auto& data : _internalFunctions) {
+				Py_DECREF(data.pythonFunction);
+			}
+
+			for (const auto& [_1, _2, object] : _externalFunctions) {
+				Py_DECREF(object);
+			}
+
+			for (const auto& data : _pythonMethods) {
+				Py_DECREF(data.pythonFunction);
+			}
+
+			for (const auto& [_, pluginData] : _pluginsMap) {
+				Py_DECREF(pluginData._instance);
+				Py_DECREF(pluginData._module);
+			}
+
+			Py_Finalize();
+		}
+		_ppsModule = nullptr;
+		_Vector2TypeObject = nullptr;
+		_Vector3TypeObject = nullptr;
+		_Vector4TypeObject = nullptr;
+		_Matrix4x4TypeObject = nullptr;
+		_PluginTypeObject = nullptr;
+		_PluginInfoTypeObject = nullptr;
+		_internalMap.clear();
+		_externalMap.clear();
+		_internalFunctions.clear();
+		_externalFunctions.clear();
+		_moduleDefinitions.clear();
+		_moduleMethods.clear();
+		_moduleFunctions.clear();
+		_pythonMethods.clear();
+		_pluginsMap.clear();
+		_jitRuntime.reset();
+		_provider.reset();
+	}
+
+	void Python3LanguageModule::OnMethodExport(const IPlugin& plugin) {
+		if (_ppsModule) {
+			PyObject* moduleObject = CreateInternalModule(plugin);
+			if (!moduleObject) {
+				moduleObject = CreateExternalModule(plugin);
+			}
+			if (moduleObject) {
+				PyObject_SetAttrString(_ppsModule, plugin.GetName().c_str(), moduleObject);
+				Py_DECREF(moduleObject);
+				return;
+			}
+		}
+		_provider->Log(std::format("[py3lm] Fail to export '{}' plugin methods", plugin.GetName()), Severity::Error);
+	}
+
+	LoadResult Python3LanguageModule::OnPluginLoad(const IPlugin& plugin) {
+		const std::string& entryPoint = plugin.GetDescriptor().entryPoint;
+		if (entryPoint.empty()) {
+			return ErrorData{ "Incorrect entry point: empty" };
+		}
+		if (entryPoint.find_first_of("/\\") != std::string::npos) {
+			return ErrorData{ "Incorrect entry point: contains '/' or '\\'" };
+		}
+		const std::string::size_type lastDotPos = entryPoint.find_last_of('.');
+		if (lastDotPos == std::string::npos) {
+			return ErrorData{ "Incorrect entry point: not have any dot '.' character" };
+		}
+		std::string_view className(entryPoint.begin() + (lastDotPos + 1), entryPoint.end());
+		if (className.empty()) {
+			return ErrorData{ "Incorrect entry point: empty class name part" };
+		}
+		std::string_view modulePathRel(entryPoint.begin(), entryPoint.begin() + lastDotPos);
+		if (modulePathRel.empty()) {
+			return ErrorData{ "Incorrect entry point: empty module path part" };
 		}
 
-		LoadResult OnPluginLoad(const IPlugin& plugin) override {
-			const std::string& entryPoint = plugin.GetDescriptor().entryPoint;
-			if (entryPoint.empty()) {
-				return ErrorData{ "Incorrect entry point: empty" };
-			}
-			if (entryPoint.find_first_of("/\\") != std::string::npos) {
-				return ErrorData{ "Incorrect entry point: contains '/' or '\\'" };
-			}
-			const std::string::size_type lastDotPos = entryPoint.find_last_of('.');
-			if (lastDotPos == std::string::npos) {
-				return ErrorData{ "Incorrect entry point: not have any dot '.' character" };
-			}
-			std::string_view className(entryPoint.begin() + (lastDotPos + 1), entryPoint.end());
-			if (className.empty()) {
-				return ErrorData{ "Incorrect entry point: empty class name part" };
-			}
-			std::string_view modulePathRel(entryPoint.begin(), entryPoint.begin() + lastDotPos);
-			if (modulePathRel.empty()) {
-				return ErrorData{ "Incorrect entry point: empty module path part" };
-			}
+		const fs::path& baseFolder = plugin.GetBaseDir();
+		auto modulePath = std::string(modulePathRel);
+		ReplaceAll(modulePath, ".", { static_cast<char>(fs::path::preferred_separator) });
+		fs::path filePathRelative = modulePath;
+		filePathRelative.replace_extension(".py");
+		const fs::path filePath = baseFolder / filePathRelative;
+		std::error_code ec;
+		if (!fs::exists(filePath, ec) || !fs::is_regular_file(filePath, ec)) {
+			return ErrorData{ std::format("Module file '{}' not exist", filePath.string()) };
+		}
+		const fs::path pluginsFolder = baseFolder.parent_path();
+		filePathRelative = fs::relative(filePath, pluginsFolder, ec);
+		filePathRelative.replace_extension();
+		std::string moduleName = filePathRelative.generic_string();
+		ReplaceAll(moduleName, "/", ".");
 
-			const fs::path& baseFolder = plugin.GetBaseDir();
-			auto modulePath = std::string(modulePathRel);
-			ReplaceAll(modulePath, ".", { static_cast<char>(fs::path::preferred_separator) });
-			fs::path filePathRelative = modulePath;
-			filePathRelative.replace_extension(".py");
-			const fs::path filePath = baseFolder / filePathRelative;
-			std::error_code ec;
-			if (!fs::exists(filePath, ec) || !fs::is_regular_file(filePath, ec)) {
-				return ErrorData{ std::format("Module file '{}' not exist", filePath.string()) };
-			}
-			const fs::path pluginsFolder = baseFolder.parent_path();
-			filePathRelative = fs::relative(filePath, pluginsFolder, ec);
-			filePathRelative.replace_extension();
-			std::string moduleName = filePathRelative.generic_string();
-			ReplaceAll(moduleName, "/", ".");
+		_provider->Log(std::format("[py3lm] Load plugin module '{}'", moduleName), Severity::Verbose);
 
-			_provider->Log(std::format("[py3lm] Load plugin module '{}'", moduleName), Severity::Verbose);
+		PyObject* const pluginModule = PyImport_ImportModule(moduleName.c_str());
+		if (!pluginModule) {
+			PyErr_Print();
+			return ErrorData{ std::format("Failed to import {} module", moduleName) };
+		}
 
-			PyObject* const pluginModule = PyImport_ImportModule(moduleName.c_str());
-			if (!pluginModule) {
-				PyErr_Print();
-				return ErrorData{ std::format("Failed to import {} module", moduleName) };
-			}
+		PyObject* const classNameString = PyUnicode_FromStringAndSize(className.data(), static_cast<Py_ssize_t>(className.size()));
+		if (!classNameString) {
+			Py_DECREF(pluginModule);
+			return ErrorData{ "Allocate class name string failed" };
+		}
 
-			PyObject* const classNameString = PyUnicode_FromStringAndSize(className.data(), static_cast<Py_ssize_t>(className.size()));
-			if (!classNameString) {
-				Py_DECREF(pluginModule);
-				return ErrorData{ "Allocate class name string failed" };
-			}
+		PyObject* const pluginClass = PyObject_GetAttr(pluginModule, classNameString);
+		if (!pluginClass) {
+			Py_DECREF(classNameString);
+			Py_DECREF(pluginModule);
+			PyErr_Print();
+			return ErrorData{ "Failed to find plugin class" };
+		}
 
-			PyObject* const pluginClass = PyObject_GetAttr(pluginModule, classNameString);
-			if (!pluginClass) {
-				Py_DECREF(classNameString);
-				Py_DECREF(pluginModule);
-				PyErr_Print();
-				return ErrorData{ "Failed to find plugin class" };
-			}
-
-			const int typeResult = PyObject_IsSubclass(pluginClass, _PluginTypeObject);
-			if (typeResult != 1) {
-				Py_DECREF(pluginClass);
-				Py_DECREF(classNameString);
-				Py_DECREF(pluginModule);
-				PyErr_Print();
-				return ErrorData{ std::format("Class '{}' not subclass of Plugin", className) };
-			}
-
-			PyObject* const pluginInstance = PyObject_CallNoArgs(pluginClass);
+		const int typeResult = PyObject_IsSubclass(pluginClass, _PluginTypeObject);
+		if (typeResult != 1) {
 			Py_DECREF(pluginClass);
-			if (!pluginInstance) {
-				Py_DECREF(classNameString);
-				Py_DECREF(pluginModule);
-				PyErr_Print();
-				return ErrorData{ "Failed to create plugin instance" };
-			}
+			Py_DECREF(classNameString);
+			Py_DECREF(pluginModule);
+			PyErr_Print();
+			return ErrorData{ std::format("Class '{}' not subclass of Plugin", className) };
+		}
 
-			PyObject* const args = PyTuple_New(Py_ssize_t{ 2 });
-			if (!args) {
-				Py_DECREF(pluginInstance);
-				Py_DECREF(classNameString);
-				Py_DECREF(pluginModule);
-				return ErrorData{ "Failed to save instance: arguments tuple is null" };
-			}
+		PyObject* const pluginInstance = PyObject_CallNoArgs(pluginClass);
+		Py_DECREF(pluginClass);
+		if (!pluginInstance) {
+			Py_DECREF(classNameString);
+			Py_DECREF(pluginModule);
+			PyErr_Print();
+			return ErrorData{ "Failed to create plugin instance" };
+		}
 
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, classNameString); // classNameString ref taken by list
-			Py_INCREF(pluginInstance);
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, pluginInstance); // pluginInstance ref taken by list
+		PyObject* const args = PyTuple_New(Py_ssize_t{ 2 });
+		if (!args) {
+			Py_DECREF(pluginInstance);
+			Py_DECREF(classNameString);
+			Py_DECREF(pluginModule);
+			return ErrorData{ "Failed to save instance: arguments tuple is null" };
+		}
 
-			PyObject* const pluginInfo = PyObject_CallObject(_PluginInfoTypeObject, args);
-			Py_DECREF(args);
-			if (!pluginInfo) {
-				Py_DECREF(pluginInstance);
-				Py_DECREF(pluginModule);
-				PyErr_Print();
-				return ErrorData{ "Failed to save instance: plugin info not constructed" };
-			}
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, classNameString); // classNameString ref taken by list
+		Py_INCREF(pluginInstance);
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, pluginInstance); // pluginInstance ref taken by list
 
-			const int resultCode = PyObject_SetAttrString(pluginModule, "__plugin__", pluginInfo);
-			Py_DECREF(pluginInfo);
-			if (resultCode != 0) {
-				Py_DECREF(pluginInstance);
-				Py_DECREF(pluginModule);
-				PyErr_Print();
-				return ErrorData{ "Failed to save instance: assignment fail" };
-			}
+		PyObject* const pluginInfo = PyObject_CallObject(_PluginInfoTypeObject, args);
+		Py_DECREF(args);
+		if (!pluginInfo) {
+			Py_DECREF(pluginInstance);
+			Py_DECREF(pluginModule);
+			PyErr_Print();
+			return ErrorData{ "Failed to save instance: plugin info not constructed" };
+		}
 
-			if (_pluginsMap.contains(plugin.GetName())) {
-				Py_DECREF(pluginInstance);
-				Py_DECREF(pluginModule);
-				return ErrorData{ "Plugin name duplicate" };
-			}
+		const int resultCode = PyObject_SetAttrString(pluginModule, "__plugin__", pluginInfo);
+		Py_DECREF(pluginInfo);
+		if (resultCode != 0) {
+			Py_DECREF(pluginInstance);
+			Py_DECREF(pluginModule);
+			PyErr_Print();
+			return ErrorData{ "Failed to save instance: assignment fail" };
+		}
 
-			const auto& exportedMethods = plugin.GetDescriptor().exportedMethods;
-			bool exportResult = true;
-			std::vector<std::string> exportErrors;
-			std::vector<std::tuple<std::reference_wrapper<const Method>, PythonMethodData>> methodsHolders;
+		if (_pluginsMap.contains(plugin.GetName())) {
+			Py_DECREF(pluginInstance);
+			Py_DECREF(pluginModule);
+			return ErrorData{ "Plugin name duplicate" };
+		}
 
-			if (!exportedMethods.empty()) {
-				for (const auto& method : exportedMethods) {
-					MethodExportResult generateResult = GenerateMethodExport(method, _jitRuntime, pluginModule, pluginInstance);
-					if (auto* data = std::get_if<MethodExportError>(&generateResult)) {
-						exportResult = false;
-						exportErrors.emplace_back(std::move(*data));
-						continue;
-					}
-					methodsHolders.emplace_back(std::cref(method), std::move(std::get<MethodExportData>(generateResult)));
+		const auto& exportedMethods = plugin.GetDescriptor().exportedMethods;
+		bool exportResult = true;
+		std::vector<std::string> exportErrors;
+		std::vector<std::tuple<std::reference_wrapper<const Method>, PythonMethodData>> methodsHolders;
+
+		if (!exportedMethods.empty()) {
+			for (const auto& method : exportedMethods) {
+				MethodExportResult generateResult = GenerateMethodExport(method, _jitRuntime, pluginModule, pluginInstance);
+				if (auto* data = std::get_if<MethodExportError>(&generateResult)) {
+					exportResult = false;
+					exportErrors.emplace_back(std::move(*data));
+					continue;
 				}
+				methodsHolders.emplace_back(std::cref(method), std::move(std::get<MethodExportData>(generateResult)));
 			}
-
-			if (!exportResult) {
-				Py_DECREF(pluginInstance);
-				Py_DECREF(pluginModule);
-				std::string errorString = "Methods export error(s): " + exportErrors[0];
-				for (auto it = std::next(exportErrors.begin()); it != exportErrors.end(); ++it) {
-					std::format_to(std::back_inserter(errorString), ", {}", *it);
-				}
-				return ErrorData{ std::move(errorString) };
-			}
-
-			const auto [_, result] = _pluginsMap.try_emplace(plugin.GetName(), pluginModule, pluginInstance);
-			if (!result) {
-				Py_DECREF(pluginInstance);
-				Py_DECREF(pluginModule);
-				return ErrorData{ std::format("Save plugin data to map unsuccessful") };
-			}
-
-			std::vector<MethodData> methods;
-			methods.reserve(methodsHolders.size());
-			_pythonMethods.reserve(methodsHolders.size());
-
-			for (auto& [method, methodData] : methodsHolders) {
-				void* const methodAddr = methodData.jitFunction.GetFunction();
-				methods.emplace_back(method.get().name, methodAddr);
-				AddToFunctionsMap(methodAddr, methodData.pythonFunction);
-				_pythonMethods.emplace_back(std::move(methodData));
-			}
-
-			return LoadResultData{ std::move(methods) };
 		}
 
-		void OnPluginStart(const IPlugin& plugin) override {
-			TryCallPluginMethodNoArgs(plugin, "plugin_start", "OnPluginStart");
+		if (!exportResult) {
+			Py_DECREF(pluginInstance);
+			Py_DECREF(pluginModule);
+			std::string errorString = "Methods export error(s): " + exportErrors[0];
+			for (auto it = std::next(exportErrors.begin()); it != exportErrors.end(); ++it) {
+				std::format_to(std::back_inserter(errorString), ", {}", *it);
+			}
+			return ErrorData{ std::move(errorString) };
 		}
 
-		void OnPluginEnd(const IPlugin& plugin) override {
-			TryCallPluginMethodNoArgs(plugin, "plugin_end", "OnPluginEnd");
+		const auto [_, result] = _pluginsMap.try_emplace(plugin.GetName(), pluginModule, pluginInstance);
+		if (!result) {
+			Py_DECREF(pluginInstance);
+			Py_DECREF(pluginModule);
+			return ErrorData{ std::format("Save plugin data to map unsuccessful") };
 		}
 
-	private:
-		PyObject* FindExternal(void* funcAddr) const {
-			const auto it = _externalMap.find(funcAddr);
-			if (it != _externalMap.end()) {
-				return std::get<PyObject*>(*it);
-			}
-			return nullptr;
+		std::vector<MethodData> methods;
+		methods.reserve(methodsHolders.size());
+		_pythonMethods.reserve(methodsHolders.size());
+
+		for (auto& [method, methodData] : methodsHolders) {
+			void* const methodAddr = methodData.jitFunction.GetFunction();
+			methods.emplace_back(method.get().name, methodAddr);
+			AddToFunctionsMap(methodAddr, methodData.pythonFunction);
+			_pythonMethods.emplace_back(std::move(methodData));
 		}
 
-		void* FindInternal(PyObject* object) const {
-			const auto it = _internalMap.find(object);
-			if (it != _internalMap.end()) {
-				return std::get<void*>(*it);
-			}
-			return nullptr;
+		return LoadResultData{ std::move(methods) };
+	}
+
+	void Python3LanguageModule::OnPluginStart(const IPlugin& plugin) {
+		TryCallPluginMethodNoArgs(plugin, "plugin_start", "OnPluginStart");
+	}
+
+	void Python3LanguageModule::OnPluginEnd(const IPlugin& plugin) {
+		TryCallPluginMethodNoArgs(plugin, "plugin_end", "OnPluginEnd");
+	}
+
+	PyObject* Python3LanguageModule::FindExternal(void* funcAddr) const {
+		const auto it = _externalMap.find(funcAddr);
+		if (it != _externalMap.end()) {
+			return std::get<PyObject*>(*it);
 		}
+		return nullptr;
+	}
 
-		void AddToFunctionsMap(void* funcAddr, PyObject* object) {
-			_externalMap.emplace(funcAddr, object);
-			_internalMap.emplace(object, funcAddr);
+	void* Python3LanguageModule::FindInternal(PyObject* object) const {
+		const auto it = _internalMap.find(object);
+		if (it != _internalMap.end()) {
+			return std::get<void*>(*it);
 		}
+		return nullptr;
+	}
 
-	public:
-		PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
-			if (PyObject* const object = FindExternal(funcAddr)) {
-				Py_INCREF(object);
-				return object;
-			}
+	void Python3LanguageModule::AddToFunctionsMap(void* funcAddr, PyObject* object) {
+		_externalMap.emplace(funcAddr, object);
+		_internalMap.emplace(object, funcAddr);
+	}
 
-			Function function(_jitRuntime);
-			
-			asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
-			sig.addArg(asmjit::TypeId::kUIntPtr);
-			sig.addArg(asmjit::TypeId::kUIntPtr);
-			sig.setRet(asmjit::TypeId::kUIntPtr);
-			
-			const bool noArgs = method.paramTypes.empty();
-			
-			void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, funcAddr);
-			if (!methodAddr) {
-				const std::string error(std::format("Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", function.GetError()));
-				PyErr_SetString(PyExc_RuntimeError, error.c_str());
-				return nullptr;
-			}
-			
-			auto defPtr = std::make_unique<PyMethodDef>();
-			PyMethodDef& def = *(defPtr.get());
-			def.ml_name = "PlugifyExternal";
-			def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
-			def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
-			def.ml_doc = nullptr;
-
-			PyObject* const object = PyCFunction_New(defPtr.get(), nullptr);
-			if (!object) {
-				PyErr_SetString(PyExc_RuntimeError, "Fail to create function object from function pointer");
-				return nullptr;
-			}
-
+	PyObject* Python3LanguageModule::GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
+		if (PyObject* const object = FindExternal(funcAddr)) {
 			Py_INCREF(object);
-			_externalFunctions.emplace_back(std::move(function), std::move(defPtr), object);
-			AddToFunctionsMap(funcAddr, object);
-
 			return object;
 		}
 
-		std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object) {
-			if (object == Py_None) {
-				return { nullptr };
-			}
+		Function function(_jitRuntime);
 
-			if (!PyFunction_Check(object)) {
-				PyErr_SetString(PyExc_TypeError, "Not function");
-				return std::nullopt;
-			}
+		asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
+		sig.addArg(asmjit::TypeId::kUIntPtr);
+		sig.addArg(asmjit::TypeId::kUIntPtr);
+		sig.setRet(asmjit::TypeId::kUIntPtr);
 
-			if (void* const funcAddr = FindInternal(object)) {
-				return { funcAddr };
-			}
+		const bool noArgs = method.paramTypes.empty();
 
-			auto [result, function] = CreateInternalCall(_jitRuntime, method, object);
-			if (!result) {
-				const std::string error(std::format("Lang module JIT failed to generate C++ wrapper from function object '{}'", function.GetError()));
-				PyErr_SetString(PyExc_RuntimeError, error.c_str());
-				return std::nullopt;
-			}
+		void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, funcAddr);
+		if (!methodAddr) {
+			const std::string error(std::format("Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", function.GetError()));
+			PyErr_SetString(PyExc_RuntimeError, error.c_str());
+			return nullptr;
+		}
 
-			void* const funcAddr = function.GetFunction();
+		auto defPtr = std::make_unique<PyMethodDef>();
+		PyMethodDef& def = *(defPtr.get());
+		def.ml_name = "PlugifyExternal";
+		def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
+		def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
+		def.ml_doc = nullptr;
 
-			Py_INCREF(object);
-			_internalFunctions.emplace_back(std::move(function), object);
-			AddToFunctionsMap(funcAddr, object);
+		PyObject* const object = PyCFunction_New(defPtr.get(), nullptr);
+		if (!object) {
+			PyErr_SetString(PyExc_RuntimeError, "Fail to create function object from function pointer");
+			return nullptr;
+		}
 
+		Py_INCREF(object);
+		_externalFunctions.emplace_back(std::move(function), std::move(defPtr), object);
+		AddToFunctionsMap(funcAddr, object);
+
+		return object;
+	}
+
+	std::optional<void*> Python3LanguageModule::GetOrCreateFunctionValue(const Method& method, PyObject* object) {
+		if (object == Py_None) {
+			return { nullptr };
+		}
+
+		if (!PyFunction_Check(object)) {
+			PyErr_SetString(PyExc_TypeError, "Not function");
+			return std::nullopt;
+		}
+
+		if (void* const funcAddr = FindInternal(object)) {
 			return { funcAddr };
 		}
 
-		PyObject* CreateVector2Object(const Vector2& vector) {
-			PyObject* const args = PyTuple_New(Py_ssize_t{ 2 });
-			if (!args) {
-				PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
-				return nullptr;
-			}
-			// CreatePyObject set error
-			PyObject* const xObject = CreatePyObject(vector.x);
-			if (!xObject) {
-				Py_DECREF(args);
-				return nullptr;
-			}
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, xObject); // xObject ref taken by tuple
-			PyObject* const yObject = CreatePyObject(vector.y);
-			if (!yObject) {
-				Py_DECREF(args);
-				return nullptr;
-			}
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, yObject); // yObject ref taken by tuple
-			PyObject* const vectorObject = PyObject_CallObject(_Vector2TypeObject, args);
+		auto [result, function] = CreateInternalCall(_jitRuntime, method, object);
+		if (!result) {
+			const std::string error(std::format("Lang module JIT failed to generate C++ wrapper from function object '{}'", function.GetError()));
+			PyErr_SetString(PyExc_RuntimeError, error.c_str());
+			return std::nullopt;
+		}
+
+		void* const funcAddr = function.GetFunction();
+
+		Py_INCREF(object);
+		_internalFunctions.emplace_back(std::move(function), object);
+		AddToFunctionsMap(funcAddr, object);
+
+		return { funcAddr };
+	}
+
+	PyObject* Python3LanguageModule::CreateVector2Object(const Vector2& vector) {
+		PyObject* const args = PyTuple_New(Py_ssize_t{ 2 });
+		if (!args) {
+			PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
+			return nullptr;
+		}
+		// CreatePyObject set error
+		PyObject* const xObject = CreatePyObject(vector.x);
+		if (!xObject) {
 			Py_DECREF(args);
-			return vectorObject;
+			return nullptr;
 		}
-
-		std::optional<Vector2> Vector2ValueFromObject(PyObject* object) {
-			const int typeResult = PyObject_IsInstance(object, _Vector2TypeObject);
-			if (typeResult == -1) {
-				// Python exception was set by PyObject_IsInstance
-				return std::nullopt;
-			}
-			if (typeResult == 0) {
-				PyErr_SetString(PyExc_TypeError, "Not Vector2");
-				return std::nullopt;
-			}
-			auto xValue = GetObjectAttrAsValue<float>(object, "x");
-			if (!xValue) {
-				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
-				return std::nullopt;
-			}
-			auto yValue = GetObjectAttrAsValue<float>(object, "y");
-			if (!yValue) {
-				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
-				return std::nullopt;
-			}
-			return Vector2{ *xValue, *yValue };
-		}
-
-		PyObject* CreateVector3Object(const Vector3& vector) {
-			PyObject* const args = PyTuple_New(Py_ssize_t{ 3 });
-			if (!args) {
-				PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
-				return nullptr;
-			}
-			// CreatePyObject set error
-			PyObject* const xObject = CreatePyObject(vector.x);
-			if (!xObject) {
-				Py_DECREF(args);
-				return nullptr;
-			}
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, xObject); // xObject ref taken by tuple
-			PyObject* const yObject = CreatePyObject(vector.y);
-			if (!yObject) {
-				Py_DECREF(args);
-				return nullptr;
-			}
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, yObject); // yObject ref taken by tuple
-			PyObject* const zObject = CreatePyObject(vector.z);
-			if (!zObject) {
-				Py_DECREF(args);
-				return nullptr;
-			}
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 2 }, zObject); // zObject ref taken by tuple
-			PyObject* const vectorObject = PyObject_CallObject(_Vector3TypeObject, args);
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, xObject); // xObject ref taken by tuple
+		PyObject* const yObject = CreatePyObject(vector.y);
+		if (!yObject) {
 			Py_DECREF(args);
-			return vectorObject;
+			return nullptr;
 		}
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, yObject); // yObject ref taken by tuple
+		PyObject* const vectorObject = PyObject_CallObject(_Vector2TypeObject, args);
+		Py_DECREF(args);
+		return vectorObject;
+	}
 
-		std::optional<Vector3> Vector3ValueFromObject(PyObject* object) {
-			const int typeResult = PyObject_IsInstance(object, _Vector3TypeObject);
-			if (typeResult == -1) {
-				// Python exception was set by PyObject_IsInstance
-				return std::nullopt;
-			}
-			if (typeResult == 0) {
-				PyErr_SetString(PyExc_TypeError, "Not Vector3");
-				return std::nullopt;
-			}
-			auto xValue = GetObjectAttrAsValue<float>(object, "x");
-			if (!xValue) {
-				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
-				return std::nullopt;
-			}
-			auto yValue = GetObjectAttrAsValue<float>(object, "y");
-			if (!yValue) {
-				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
-				return std::nullopt;
-			}
-			auto zValue = GetObjectAttrAsValue<float>(object, "z");
-			if (!zValue) {
-				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
-				return std::nullopt;
-			}
-			return Vector3{ *xValue, *yValue, *zValue };
+	std::optional<Vector2> Python3LanguageModule::Vector2ValueFromObject(PyObject* object) {
+		const int typeResult = PyObject_IsInstance(object, _Vector2TypeObject);
+		if (typeResult == -1) {
+			// Python exception was set by PyObject_IsInstance
+			return std::nullopt;
 		}
+		if (typeResult == 0) {
+			PyErr_SetString(PyExc_TypeError, "Not Vector2");
+			return std::nullopt;
+		}
+		auto xValue = GetObjectAttrAsValue<float>(object, "x");
+		if (!xValue) {
+			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
+			return std::nullopt;
+		}
+		auto yValue = GetObjectAttrAsValue<float>(object, "y");
+		if (!yValue) {
+			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
+			return std::nullopt;
+		}
+		return Vector2{ *xValue, *yValue };
+	}
 
-		PyObject* CreateVector4Object(const Vector4& vector) {
-			PyObject* const args = PyTuple_New(Py_ssize_t{ 4 });
-			if (!args) {
-				PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
-				return nullptr;
-			}
-			// CreatePyObject set error
-			PyObject* const xObject = CreatePyObject(vector.x);
-			if (!xObject) {
-				Py_DECREF(args);
-				return nullptr;
-			}
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, xObject); // xObject ref taken by tuple
-			PyObject* const yObject = CreatePyObject(vector.y);
-			if (!yObject) {
-				Py_DECREF(args);
-				return nullptr;
-			}
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, yObject); // yObject ref taken by tuple
-			PyObject* const zObject = CreatePyObject(vector.z);
-			if (!zObject) {
-				Py_DECREF(args);
-				return nullptr;
-			}
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 2 }, zObject); // zObject ref taken by tuple
-			PyObject* const wObject = CreatePyObject(vector.w);
-			if (!wObject) {
-				Py_DECREF(args);
-				return nullptr;
-			}
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 3 }, wObject); // wObject ref taken by tuple
-			PyObject* const vectorObject = PyObject_CallObject(_Vector4TypeObject, args);
+	PyObject* Python3LanguageModule::CreateVector3Object(const Vector3& vector) {
+		PyObject* const args = PyTuple_New(Py_ssize_t{ 3 });
+		if (!args) {
+			PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
+			return nullptr;
+		}
+		// CreatePyObject set error
+		PyObject* const xObject = CreatePyObject(vector.x);
+		if (!xObject) {
 			Py_DECREF(args);
-			return vectorObject;
+			return nullptr;
 		}
-
-		std::optional<Vector4> Vector4ValueFromObject(PyObject* object) {
-			const int typeResult = PyObject_IsInstance(object, _Vector4TypeObject);
-			if (typeResult == -1) {
-				// Python exception was set by PyObject_IsInstance
-				return std::nullopt;
-			}
-			if (typeResult == 0) {
-				PyErr_SetString(PyExc_TypeError, "Not Vector4");
-				return std::nullopt;
-			}
-			auto xValue = GetObjectAttrAsValue<float>(object, "x");
-			if (!xValue) {
-				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
-				return std::nullopt;
-			}
-			auto yValue = GetObjectAttrAsValue<float>(object, "y");
-			if (!yValue) {
-				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
-				return std::nullopt;
-			}
-			auto zValue = GetObjectAttrAsValue<float>(object, "z");
-			if (!zValue) {
-				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
-				return std::nullopt;
-			}
-			auto wValue = GetObjectAttrAsValue<float>(object, "w");
-			if (!wValue) {
-				// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
-				return std::nullopt;
-			}
-			return Vector4{ *xValue, *yValue, *zValue, *wValue };
-		}
-
-		PyObject* CreateMatrix4x4Object(const Matrix4x4& matrix) {
-			PyObject* const elementsObject = PyList_New(Py_ssize_t{ 16 });
-			if (!elementsObject) {
-				PyErr_SetString(PyExc_RuntimeError, "Fail to create Matrix4x4 elements list");
-				return nullptr;
-			}
-			// CreatePyObject set error
-			PyObject* const m00Object = CreatePyObject(matrix.m00);
-			if (!m00Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 0 }, m00Object); // m00Object ref taken by list
-			PyObject* const m01Object = CreatePyObject(matrix.m01);
-			if (!m01Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 1 }, m01Object); // m01Object ref taken by list
-			PyObject* const m02Object = CreatePyObject(matrix.m02);
-			if (!m02Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 2 }, m02Object); // m02Object ref taken by list
-			PyObject* const m03Object = CreatePyObject(matrix.m03);
-			if (!m03Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 3 }, m03Object); // m03Object ref taken by list
-			PyObject* const m10Object = CreatePyObject(matrix.m10);
-			if (!m10Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 4 }, m10Object); // m10Object ref taken by list
-			PyObject* const m11Object = CreatePyObject(matrix.m11);
-			if (!m11Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 5 }, m11Object); // m11Object ref taken by list
-			PyObject* const m12Object = CreatePyObject(matrix.m12);
-			if (!m12Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 6 }, m12Object); // m12Object ref taken by list
-			PyObject* const m13Object = CreatePyObject(matrix.m13);
-			if (!m13Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 7 }, m13Object); // m13Object ref taken by list
-			PyObject* const m20Object = CreatePyObject(matrix.m20);
-			if (!m20Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 8 }, m20Object); // m20Object ref taken by list
-			PyObject* const m21Object = CreatePyObject(matrix.m21);
-			if (!m21Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 9 }, m21Object); // m21Object ref taken by list
-			PyObject* const m22Object = CreatePyObject(matrix.m22);
-			if (!m22Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 10 }, m22Object); // m22Object ref taken by list
-			PyObject* const m23Object = CreatePyObject(matrix.m23);
-			if (!m23Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 11 }, m23Object); // m23Object ref taken by list
-			PyObject* const m30Object = CreatePyObject(matrix.m30);
-			if (!m30Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 12 }, m30Object); // m30Object ref taken by list
-			PyObject* const m31Object = CreatePyObject(matrix.m31);
-			if (!m31Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 13 }, m31Object); // m31Object ref taken by list
-			PyObject* const m32Object = CreatePyObject(matrix.m32);
-			if (!m32Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 14 }, m32Object); // m32Object ref taken by list
-			PyObject* const m33Object = CreatePyObject(matrix.m33);
-			if (!m33Object) {
-				Py_DECREF(elementsObject);
-				return nullptr;
-			}
-			PyList_SET_ITEM(elementsObject, Py_ssize_t{ 15 }, m33Object); // m33Object ref taken by list
-			PyObject* const args = PyTuple_New(Py_ssize_t{ 1 });
-			if (!args) {
-				Py_DECREF(elementsObject);
-				PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
-				return nullptr;
-			}
-			PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, elementsObject); // elementsObject ref taken by tuple
-			PyObject* const vectorObject = PyObject_CallObject(_Matrix4x4TypeObject, args);
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, xObject); // xObject ref taken by tuple
+		PyObject* const yObject = CreatePyObject(vector.y);
+		if (!yObject) {
 			Py_DECREF(args);
-			return vectorObject;
+			return nullptr;
 		}
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, yObject); // yObject ref taken by tuple
+		PyObject* const zObject = CreatePyObject(vector.z);
+		if (!zObject) {
+			Py_DECREF(args);
+			return nullptr;
+		}
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 2 }, zObject); // zObject ref taken by tuple
+		PyObject* const vectorObject = PyObject_CallObject(_Vector3TypeObject, args);
+		Py_DECREF(args);
+		return vectorObject;
+	}
 
-		std::optional<Matrix4x4> Matrix4x4ValueFromObject(PyObject* object) {
-			const int typeResult = PyObject_IsInstance(object, _Matrix4x4TypeObject);
-			if (typeResult == -1) {
-				// Python exception was set by PyObject_IsInstance
-				return std::nullopt;
-			}
-			if (typeResult == 0) {
-				PyErr_SetString(PyExc_TypeError, "Not Matrix4x4");
-				return std::nullopt;
-			}
-			PyObject* const elementsListObject = PyObject_GetAttrString(object, "elements");
-			if (!elementsListObject) {
-				// PyObject_GetAttrString set error. e.g. AttributeError
-				return std::nullopt;
-			}
-			if (!PyList_CheckExact(elementsListObject)) {
+	std::optional<Vector3> Python3LanguageModule::Vector3ValueFromObject(PyObject* object) {
+		const int typeResult = PyObject_IsInstance(object, _Vector3TypeObject);
+		if (typeResult == -1) {
+			// Python exception was set by PyObject_IsInstance
+			return std::nullopt;
+		}
+		if (typeResult == 0) {
+			PyErr_SetString(PyExc_TypeError, "Not Vector3");
+			return std::nullopt;
+		}
+		auto xValue = GetObjectAttrAsValue<float>(object, "x");
+		if (!xValue) {
+			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
+			return std::nullopt;
+		}
+		auto yValue = GetObjectAttrAsValue<float>(object, "y");
+		if (!yValue) {
+			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
+			return std::nullopt;
+		}
+		auto zValue = GetObjectAttrAsValue<float>(object, "z");
+		if (!zValue) {
+			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
+			return std::nullopt;
+		}
+		return Vector3{ *xValue, *yValue, *zValue };
+	}
+
+	PyObject* Python3LanguageModule::CreateVector4Object(const Vector4& vector) {
+		PyObject* const args = PyTuple_New(Py_ssize_t{ 4 });
+		if (!args) {
+			PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
+			return nullptr;
+		}
+		// CreatePyObject set error
+		PyObject* const xObject = CreatePyObject(vector.x);
+		if (!xObject) {
+			Py_DECREF(args);
+			return nullptr;
+		}
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, xObject); // xObject ref taken by tuple
+		PyObject* const yObject = CreatePyObject(vector.y);
+		if (!yObject) {
+			Py_DECREF(args);
+			return nullptr;
+		}
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, yObject); // yObject ref taken by tuple
+		PyObject* const zObject = CreatePyObject(vector.z);
+		if (!zObject) {
+			Py_DECREF(args);
+			return nullptr;
+		}
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 2 }, zObject); // zObject ref taken by tuple
+		PyObject* const wObject = CreatePyObject(vector.w);
+		if (!wObject) {
+			Py_DECREF(args);
+			return nullptr;
+		}
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 3 }, wObject); // wObject ref taken by tuple
+		PyObject* const vectorObject = PyObject_CallObject(_Vector4TypeObject, args);
+		Py_DECREF(args);
+		return vectorObject;
+	}
+
+	std::optional<Vector4> Python3LanguageModule::Vector4ValueFromObject(PyObject* object) {
+		const int typeResult = PyObject_IsInstance(object, _Vector4TypeObject);
+		if (typeResult == -1) {
+			// Python exception was set by PyObject_IsInstance
+			return std::nullopt;
+		}
+		if (typeResult == 0) {
+			PyErr_SetString(PyExc_TypeError, "Not Vector4");
+			return std::nullopt;
+		}
+		auto xValue = GetObjectAttrAsValue<float>(object, "x");
+		if (!xValue) {
+			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
+			return std::nullopt;
+		}
+		auto yValue = GetObjectAttrAsValue<float>(object, "y");
+		if (!yValue) {
+			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
+			return std::nullopt;
+		}
+		auto zValue = GetObjectAttrAsValue<float>(object, "z");
+		if (!zValue) {
+			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
+			return std::nullopt;
+		}
+		auto wValue = GetObjectAttrAsValue<float>(object, "w");
+		if (!wValue) {
+			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
+			return std::nullopt;
+		}
+		return Vector4{ *xValue, *yValue, *zValue, *wValue };
+	}
+
+	PyObject* Python3LanguageModule::CreateMatrix4x4Object(const Matrix4x4& matrix) {
+		PyObject* const elementsObject = PyList_New(Py_ssize_t{ 16 });
+		if (!elementsObject) {
+			PyErr_SetString(PyExc_RuntimeError, "Fail to create Matrix4x4 elements list");
+			return nullptr;
+		}
+		// CreatePyObject set error
+		PyObject* const m00Object = CreatePyObject(matrix.m00);
+		if (!m00Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 0 }, m00Object); // m00Object ref taken by list
+		PyObject* const m01Object = CreatePyObject(matrix.m01);
+		if (!m01Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 1 }, m01Object); // m01Object ref taken by list
+		PyObject* const m02Object = CreatePyObject(matrix.m02);
+		if (!m02Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 2 }, m02Object); // m02Object ref taken by list
+		PyObject* const m03Object = CreatePyObject(matrix.m03);
+		if (!m03Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 3 }, m03Object); // m03Object ref taken by list
+		PyObject* const m10Object = CreatePyObject(matrix.m10);
+		if (!m10Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 4 }, m10Object); // m10Object ref taken by list
+		PyObject* const m11Object = CreatePyObject(matrix.m11);
+		if (!m11Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 5 }, m11Object); // m11Object ref taken by list
+		PyObject* const m12Object = CreatePyObject(matrix.m12);
+		if (!m12Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 6 }, m12Object); // m12Object ref taken by list
+		PyObject* const m13Object = CreatePyObject(matrix.m13);
+		if (!m13Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 7 }, m13Object); // m13Object ref taken by list
+		PyObject* const m20Object = CreatePyObject(matrix.m20);
+		if (!m20Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 8 }, m20Object); // m20Object ref taken by list
+		PyObject* const m21Object = CreatePyObject(matrix.m21);
+		if (!m21Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 9 }, m21Object); // m21Object ref taken by list
+		PyObject* const m22Object = CreatePyObject(matrix.m22);
+		if (!m22Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 10 }, m22Object); // m22Object ref taken by list
+		PyObject* const m23Object = CreatePyObject(matrix.m23);
+		if (!m23Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 11 }, m23Object); // m23Object ref taken by list
+		PyObject* const m30Object = CreatePyObject(matrix.m30);
+		if (!m30Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 12 }, m30Object); // m30Object ref taken by list
+		PyObject* const m31Object = CreatePyObject(matrix.m31);
+		if (!m31Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 13 }, m31Object); // m31Object ref taken by list
+		PyObject* const m32Object = CreatePyObject(matrix.m32);
+		if (!m32Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 14 }, m32Object); // m32Object ref taken by list
+		PyObject* const m33Object = CreatePyObject(matrix.m33);
+		if (!m33Object) {
+			Py_DECREF(elementsObject);
+			return nullptr;
+		}
+		PyList_SET_ITEM(elementsObject, Py_ssize_t{ 15 }, m33Object); // m33Object ref taken by list
+		PyObject* const args = PyTuple_New(Py_ssize_t{ 1 });
+		if (!args) {
+			Py_DECREF(elementsObject);
+			PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
+			return nullptr;
+		}
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, elementsObject); // elementsObject ref taken by tuple
+		PyObject* const vectorObject = PyObject_CallObject(_Matrix4x4TypeObject, args);
+		Py_DECREF(args);
+		return vectorObject;
+	}
+
+	std::optional<Matrix4x4> Python3LanguageModule::Matrix4x4ValueFromObject(PyObject* object) {
+		const int typeResult = PyObject_IsInstance(object, _Matrix4x4TypeObject);
+		if (typeResult == -1) {
+			// Python exception was set by PyObject_IsInstance
+			return std::nullopt;
+		}
+		if (typeResult == 0) {
+			PyErr_SetString(PyExc_TypeError, "Not Matrix4x4");
+			return std::nullopt;
+		}
+		PyObject* const elementsListObject = PyObject_GetAttrString(object, "elements");
+		if (!elementsListObject) {
+			// PyObject_GetAttrString set error. e.g. AttributeError
+			return std::nullopt;
+		}
+		if (!PyList_CheckExact(elementsListObject)) {
+			Py_DECREF(elementsListObject);
+			PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
+			return std::nullopt;
+		}
+		if (PyList_Size(elementsListObject) != Py_ssize_t{ 4 }) {
+			Py_DECREF(elementsListObject);
+			PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
+			return std::nullopt;
+		}
+		Matrix4x4 matrix{};
+		for (Py_ssize_t i = 0; i < Py_ssize_t{ 4 }; ++i) {
+			PyObject* const elementsRowListObject = PyList_GetItem(elementsListObject, i);
+			if (!elementsRowListObject) [[unlikely]] {
 				Py_DECREF(elementsListObject);
-				PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
+				// PyList_GetItem set error. e.g. IndexError
 				return std::nullopt;
-			}
-			if (PyList_Size(elementsListObject) != Py_ssize_t{ 4 }) {
-				Py_DECREF(elementsListObject);
-				PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
-				return std::nullopt;
-			}
-			Matrix4x4 matrix{};
-			for (Py_ssize_t i = 0; i < Py_ssize_t{ 4 }; ++i) {
-				PyObject* const elementsRowListObject = PyList_GetItem(elementsListObject, i);
-				if (!elementsRowListObject) [[unlikely]] {
-					Py_DECREF(elementsListObject);
-					// PyList_GetItem set error. e.g. IndexError
-					return std::nullopt;
 				}
 				if (!PyList_CheckExact(elementsRowListObject)) {
 					Py_DECREF(elementsListObject);
@@ -4009,7 +3994,7 @@ namespace py3lm {
 						Py_DECREF(elementsListObject);
 						/// PyList_GetItem set error. e.g. IndexError
 						return std::nullopt;
-					}
+						}
 					const auto mValue = ValueFromObject<float>(mObject);
 					if (!mValue) {
 						Py_DECREF(elementsListObject);
@@ -4018,205 +4003,134 @@ namespace py3lm {
 					}
 					matrix.data[static_cast<size_t>(i * Py_ssize_t{ 4 } + j)] = *mValue;
 				}
-			}
-			return { std::move(matrix) };
 		}
+		return { std::move(matrix) };
+	}
 
-	private:
-		PyObject* FindPythonMethod(void* addr) const {
-			for (const auto& data : _pythonMethods) {
-				if (data.jitFunction.GetFunction() == addr) {
-					return data.pythonFunction;
-				}
+	PyObject* Python3LanguageModule::FindPythonMethod(void* addr) const {
+		for (const auto& data : _pythonMethods) {
+			if (data.jitFunction.GetFunction() == addr) {
+				return data.pythonFunction;
 			}
+		}
+		return nullptr;
+	}
+
+	PyObject* Python3LanguageModule::CreateInternalModule(const IPlugin& plugin) {
+		if (!_pluginsMap.contains(plugin.GetName())) {
 			return nullptr;
 		}
 
-		PyObject* CreateInternalModule(const IPlugin& plugin) {
-			if (!_pluginsMap.contains(plugin.GetName())) {
-				return nullptr;
-			}
+		PyObject* moduleObject = PyModule_New(plugin.GetName().c_str());
 
-			PyObject* moduleObject = PyModule_New(plugin.GetName().c_str());
-
-			for (const auto& [name, addr] : plugin.GetMethods()) {
-				for (const auto& method : plugin.GetDescriptor().exportedMethods) {
-					if (name == method.name) {
-						PyObject* const methodObject = FindPythonMethod(addr);
-						if (!methodObject) {
-							_provider->Log(std::format("[py3lm] Not found '{}' method while CreateInternalModule for '{}' plugin", name, plugin.GetName()), Severity::Fatal);
-							std::terminate();
-						}
-						PyObject_SetAttrString(moduleObject, name.c_str(), methodObject);
-						break;
+		for (const auto& [name, addr] : plugin.GetMethods()) {
+			for (const auto& method : plugin.GetDescriptor().exportedMethods) {
+				if (name == method.name) {
+					PyObject* const methodObject = FindPythonMethod(addr);
+					if (!methodObject) {
+						_provider->Log(std::format("[py3lm] Not found '{}' method while CreateInternalModule for '{}' plugin", name, plugin.GetName()), Severity::Fatal);
+						std::terminate();
 					}
+					PyObject_SetAttrString(moduleObject, name.c_str(), methodObject);
+					break;
 				}
 			}
-			
-			return moduleObject;
 		}
 
-		PyObject* CreateExternalModule(const IPlugin& plugin) {
-			auto& moduleMethods = _moduleMethods.emplace_back();
+		return moduleObject;
+	}
 
-			for (const auto& [name, addr] : plugin.GetMethods()) {
-				for (const auto& method : plugin.GetDescriptor().exportedMethods) {
-					if (name == method.name) {
-						Function function(_jitRuntime);
+	PyObject* Python3LanguageModule::CreateExternalModule(const IPlugin& plugin) {
+		auto& moduleMethods = _moduleMethods.emplace_back();
 
-						asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
-						sig.addArg(asmjit::TypeId::kUIntPtr);
-						sig.addArg(asmjit::TypeId::kUIntPtr);
-						sig.setRet(asmjit::TypeId::kUIntPtr);
+		for (const auto& [name, addr] : plugin.GetMethods()) {
+			for (const auto& method : plugin.GetDescriptor().exportedMethods) {
+				if (name == method.name) {
+					Function function(_jitRuntime);
 
-						const bool noArgs = method.paramTypes.empty();
+					asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
+					sig.addArg(asmjit::TypeId::kUIntPtr);
+					sig.addArg(asmjit::TypeId::kUIntPtr);
+					sig.setRet(asmjit::TypeId::kUIntPtr);
 
-						// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-						void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, addr);
-						if (!methodAddr)
-							break;
+					const bool noArgs = method.paramTypes.empty();
 
-						PyMethodDef& def = moduleMethods.emplace_back();
-						def.ml_name = name.c_str();
-						def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
-						def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
-						def.ml_doc = nullptr;
-
-						_moduleFunctions.emplace_back(std::move(function));
+					// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
+					void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, addr);
+					if (!methodAddr)
 						break;
-					}
+
+					PyMethodDef& def = moduleMethods.emplace_back();
+					def.ml_name = name.c_str();
+					def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
+					def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
+					def.ml_doc = nullptr;
+
+					_moduleFunctions.emplace_back(std::move(function));
+					break;
 				}
 			}
-
-			{
-				PyMethodDef& def = moduleMethods.emplace_back();
-				def.ml_name = nullptr;
-				def.ml_meth = nullptr;
-				def.ml_flags = 0;
-				def.ml_doc = nullptr;
-			}
-
-			PyModuleDef& moduleDef = *(_moduleDefinitions.emplace_back(std::make_unique<PyModuleDef>()).get());
-			moduleDef.m_base = PyModuleDef_HEAD_INIT;
-			moduleDef.m_name = plugin.GetName().c_str();
-			moduleDef.m_doc = nullptr;
-			moduleDef.m_size = -1;
-			moduleDef.m_methods = moduleMethods.data();
-			moduleDef.m_slots = nullptr;
-			moduleDef.m_traverse = nullptr;
-			moduleDef.m_clear = nullptr;
-			moduleDef.m_free = nullptr;
-
-			return PyModule_Create(&moduleDef);
 		}
 
-		void TryCallPluginMethodNoArgs(const IPlugin& plugin, const std::string& name, const std::string& context) {
-			const auto it = _pluginsMap.find(plugin.GetName());
-			if (it == _pluginsMap.end()) {
-				_provider->Log(std::format("[py3lm] {}: plugin '{}' not found in map", context, plugin.GetName()), Severity::Error);
-				return;
-			}
+		{
+			PyMethodDef& def = moduleMethods.emplace_back();
+			def.ml_name = nullptr;
+			def.ml_meth = nullptr;
+			def.ml_flags = 0;
+			def.ml_doc = nullptr;
+		}
 
-			const auto& pluginData = std::get<PluginData>(*it);
-			if (!pluginData._instance) {
-				_provider->Log(std::format("[py3lm] {}: null plugin instance", context), Severity::Error);
-				return;
-			}
+		PyModuleDef& moduleDef = *(_moduleDefinitions.emplace_back(std::make_unique<PyModuleDef>()).get());
+		moduleDef.m_base = PyModuleDef_HEAD_INIT;
+		moduleDef.m_name = plugin.GetName().c_str();
+		moduleDef.m_doc = nullptr;
+		moduleDef.m_size = -1;
+		moduleDef.m_methods = moduleMethods.data();
+		moduleDef.m_slots = nullptr;
+		moduleDef.m_traverse = nullptr;
+		moduleDef.m_clear = nullptr;
+		moduleDef.m_free = nullptr;
 
-			PyObject* const nameString = PyUnicode_DecodeFSDefault(name.c_str());
-			if (!nameString) {
-				PyErr_Print();
-				_provider->Log(std::format("[py3lm] {}: failed to allocate name string", context), Severity::Error);
-				return;
-			}
+		return PyModule_Create(&moduleDef);
+	}
 
-			if (PyObject_HasAttr(pluginData._instance, nameString)) {
-				PyObject* const returnObject = PyObject_CallMethodNoArgs(pluginData._instance, nameString);
-				if (!returnObject) {
-					PyErr_Print();
-					_provider->Log(std::format("[py3lm] {}: call '{}' failed", context, name), Severity::Error);
-				}
-			}
-
-			Py_DECREF(nameString);
-
+	void Python3LanguageModule::TryCallPluginMethodNoArgs(const IPlugin& plugin, const std::string& name, const std::string& context) {
+		const auto it = _pluginsMap.find(plugin.GetName());
+		if (it == _pluginsMap.end()) {
+			_provider->Log(std::format("[py3lm] {}: plugin '{}' not found in map", context, plugin.GetName()), Severity::Error);
 			return;
 		}
 
-	private:
-		std::shared_ptr<IPlugifyProvider> _provider;
-		std::shared_ptr<asmjit::JitRuntime> _jitRuntime;
-		struct PluginData {
-			PyObject* _module = nullptr;
-			PyObject* _instance = nullptr;
-		};
-		std::unordered_map<std::string, PluginData> _pluginsMap;
-		std::vector<PythonMethodData> _pythonMethods;
-		PyObject* _PluginTypeObject = nullptr;
-		PyObject* _PluginInfoTypeObject = nullptr;
-		PyObject* _Vector2TypeObject = nullptr;
-		PyObject* _Vector3TypeObject = nullptr;
-		PyObject* _Vector4TypeObject = nullptr;
-		PyObject* _Matrix4x4TypeObject = nullptr;
-		PyObject* _ppsModule = nullptr;
-		std::vector<std::vector<PyMethodDef>> _moduleMethods;
-		std::vector<std::unique_ptr<PyModuleDef>> _moduleDefinitions;
-		std::vector<Function> _moduleFunctions;
-		struct ExternalHolder {
-			Function func;
-			std::unique_ptr<PyMethodDef> def;
-			PyObject* object;
-		};
-		std::vector<ExternalHolder> _externalFunctions;
-		std::vector<PythonMethodData> _internalFunctions;
-		std::unordered_map<void*, PyObject*> _externalMap;
-		std::unordered_map<PyObject*, void*> _internalMap;
-	};
+		const auto& pluginData = std::get<PluginData>(*it);
+		if (!pluginData._instance) {
+			_provider->Log(std::format("[py3lm] {}: null plugin instance", context), Severity::Error);
+			return;
+		}
+
+		PyObject* const nameString = PyUnicode_DecodeFSDefault(name.c_str());
+		if (!nameString) {
+			PyErr_Print();
+			_provider->Log(std::format("[py3lm] {}: failed to allocate name string", context), Severity::Error);
+			return;
+		}
+
+		if (PyObject_HasAttr(pluginData._instance, nameString)) {
+			PyObject* const returnObject = PyObject_CallMethodNoArgs(pluginData._instance, nameString);
+			if (!returnObject) {
+				PyErr_Print();
+				_provider->Log(std::format("[py3lm] {}: call '{}' failed", context, name), Severity::Error);
+			}
+		}
+
+		Py_DECREF(nameString);
+
+		return;
+	}
 
 	Python3LanguageModule g_py3lm;
 
 	extern "C"
 	PY3LM_EXPORT ILanguageModule* GetLanguageModule() {
 		return &g_py3lm;
-	}
-
-	static PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
-		return g_py3lm.GetOrCreateFunctionObject(method, funcAddr);
-	}
-
-	static std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object) {
-		return g_py3lm.GetOrCreateFunctionValue(method, object);
-	}
-
-	static PyObject* CreateVector2Object(const Vector2& vector) {
-		return g_py3lm.CreateVector2Object(vector);
-	}
-
-	static std::optional<Vector2> Vector2ValueFromObject(PyObject* object) {
-		return g_py3lm.Vector2ValueFromObject(object);
-	}
-
-	static PyObject* CreateVector3Object(const Vector3& vector) {
-		return g_py3lm.CreateVector3Object(vector);
-	}
-
-	static std::optional<Vector3> Vector3ValueFromObject(PyObject* object) {
-		return g_py3lm.Vector3ValueFromObject(object);
-	}
-
-	static PyObject* CreateVector4Object(const Vector4& vector) {
-		return g_py3lm.CreateVector4Object(vector);
-	}
-
-	static std::optional<Vector4> Vector4ValueFromObject(PyObject* object) {
-		return g_py3lm.Vector4ValueFromObject(object);
-	}
-
-	static PyObject* CreateMatrix4x4Object(const Matrix4x4& matrix) {
-		return g_py3lm.CreateMatrix4x4Object(matrix);
-	}
-
-	static std::optional<Matrix4x4> Matrix4x4ValueFromObject(PyObject* object) {
-		return g_py3lm.Matrix4x4ValueFromObject(object);
 	}
 }

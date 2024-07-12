@@ -32,6 +32,7 @@ include(cmake/dyncall.cmake)
 # Python 3 Language Module for Plugify
 #
 set(PY3LM_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/module.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/module.cpp")
 add_library(${PROJECT_NAME} SHARED ${PY3LM_SOURCES})
 
