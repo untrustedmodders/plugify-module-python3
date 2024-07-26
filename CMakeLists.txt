@@ -37,7 +37,7 @@ set(PY3LM_SOURCES
 add_library(${PROJECT_NAME} SHARED ${PY3LM_SOURCES})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE plugify::plugify plugify::plugify-function asmjit::asmjit dyncall_s)
-include_directories(${dyncall_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${dyncall_SOURCE_DIR})
 
 include(GenerateExportHeader)
 generate_export_header(${PROJECT_NAME} EXPORT_MACRO_NAME PY3LM_EXPORT EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/exports/module_export.h)
