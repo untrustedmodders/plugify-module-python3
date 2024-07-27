@@ -2879,7 +2879,7 @@ namespace py3lm {
 				const std::string error(std::format("Return unsupported type {:#x}", static_cast<uint8_t>(method->retType.type)));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
 				ret->SetReturnPtr(nullptr);
-				break;
+				return;
 			}
 			}
 
