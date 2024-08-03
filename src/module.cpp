@@ -249,7 +249,7 @@ namespace py3lm {
 			return array;
 		}
 
-		std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object) {
+		std::optional<void*> GetOrCreateFunctionValue(MethodRef method, PyObject* object) {
 			return g_py3lm.GetOrCreateFunctionValue(method, object);
 		}
 
@@ -364,8 +364,8 @@ namespace py3lm {
 			}
 		}
 
-		bool SetReturn(PyObject* result, const Property& retType, const ReturnValue* ret, const Parameters* params) {
-			switch (retType.type) {
+		bool SetReturn(PyObject* result, PropertyRef retType, const ReturnValue* ret, const Parameters* params) {
+			switch (retType.GetType()) {
 			case ValueType::Void:
 				return true;
 			case ValueType::Bool:
@@ -453,7 +453,7 @@ namespace py3lm {
 				}
 				break;
 			case ValueType::Function:
-				if (auto value = GetOrCreateFunctionValue(*(retType.prototype), result)) {
+				if (auto value = GetOrCreateFunctionValue(retType.GetPrototype().value(), result)) {
 					ret->SetReturnPtr<void*>(*value);
 					return true;
 				}
@@ -616,7 +616,7 @@ namespace py3lm {
 				}
 				break;
 			default: {
-				const std::string error(std::format("[py3lm] SetReturn unsupported type {:#x}", static_cast<uint8_t>(retType.type)));
+				const std::string error(std::format("[py3lm] SetReturn unsupported type {:#x}", static_cast<uint8_t>(retType.GetType())));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 			}
@@ -625,8 +625,8 @@ namespace py3lm {
 			return false;
 		}
 
-		bool SetRefParam(PyObject* object, const Property& paramType, const Parameters* params, uint8_t index) {
-			switch (paramType.type) {
+		bool SetRefParam(PyObject* object, PropertyRef paramType, const Parameters* params, uint8_t index) {
+			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				if (auto value = ValueFromObject<bool>(object)) {
 					auto* const param = params->GetArgument<bool*>(index);
@@ -866,7 +866,7 @@ namespace py3lm {
 				}
 				break;
 			default: {
-				const std::string error(std::format("[py3lm] SetRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				const std::string error(std::format("[py3lm] SetRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 			}
@@ -988,7 +988,7 @@ namespace py3lm {
 			return g_py3lm.CreateMatrix4x4Object(value);
 		}
 
-		PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
+		PyObject* GetOrCreateFunctionObject(MethodRef method, void* funcAddr) {
 			return g_py3lm.GetOrCreateFunctionObject(method, funcAddr);
 		}
 
@@ -1009,8 +1009,8 @@ namespace py3lm {
 			return arrayObject;
 		}
 
-		PyObject* ParamToObject(const Property& paramType, const Parameters* params, uint8_t index) {
-			switch (paramType.type) {
+		PyObject* ParamToObject(PropertyRef paramType, const Parameters* params, uint8_t index) {
+			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				return CreatePyObject(params->GetArgument<bool>(index));
 			case ValueType::Char8:
@@ -1040,7 +1040,7 @@ namespace py3lm {
 			case ValueType::Double:
 				return CreatePyObject(params->GetArgument<double>(index));
 			case ValueType::Function:
-				return GetOrCreateFunctionObject(*(paramType.prototype.get()), params->GetArgument<void*>(index));
+				return GetOrCreateFunctionObject(paramType.GetPrototype().value(), params->GetArgument<void*>(index));
 			case ValueType::String:
 				return CreatePyObject(*(params->GetArgument<const std::string*>(index)));
 			case ValueType::ArrayBool:
@@ -1082,7 +1082,7 @@ namespace py3lm {
 			case ValueType::Matrix4x4:
 				return CreatePyObject(*(params->GetArgument<Matrix4x4*>(index)));
 			default: {
-				const std::string error(std::format("[py3lm] ParamToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				const std::string error(std::format("[py3lm] ParamToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 				return nullptr;
@@ -1090,8 +1090,8 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* ParamRefToObject(const Property& paramType, const Parameters* params, uint8_t index) {
-			switch (paramType.type) {
+		PyObject* ParamRefToObject(PropertyRef paramType, const Parameters* params, uint8_t index) {
+			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				return CreatePyObject(*(params->GetArgument<bool*>(index)));
 			case ValueType::Char8:
@@ -1161,7 +1161,7 @@ namespace py3lm {
 			case ValueType::Matrix4x4:
 				return CreatePyObject(*(params->GetArgument<Matrix4x4*>(index)));
 			default: {
-				const std::string error(std::format("[py3lm] ParamRefToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				const std::string error(std::format("[py3lm] ParamRefToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 				return nullptr;
@@ -1169,8 +1169,8 @@ namespace py3lm {
 			}
 		}
 
-		void InternalCall(const Method* method, void* data, const Parameters* params, const uint8_t count, const ReturnValue* ret) {
-			PyObject* const func = reinterpret_cast<PyObject*>(data);
+		void InternalCall(MethodRef method, MemAddr data, const Parameters* params, const uint8_t count, const ReturnValue* ret) {
+			PyObject* const func = data.RCast<PyObject*>();
 
 			enum class ParamProcess {
 				NoError,
@@ -1179,9 +1179,10 @@ namespace py3lm {
 			};
 			ParamProcess processResult = ParamProcess::NoError;
 
-			uint8_t paramsCount = static_cast<uint8_t>(method->paramTypes.size());
+			const auto paramTypes = method.GetParamTypes();
+			uint8_t paramsCount = static_cast<uint8_t>(paramTypes.size());
 			uint8_t refParamsCount = 0;
-			uint8_t paramsStartIndex = ValueUtils::IsHiddenParam(method->retType.type) ? 1 : 0;
+			uint8_t paramsStartIndex = ValueUtils::IsHiddenParam(method.GetReturnType().GetType()) ? 1 : 0;
 
 			PyObject* argTuple = nullptr;
 			if (paramsCount) {
@@ -1192,12 +1193,12 @@ namespace py3lm {
 				}
 				else {
 					for (uint8_t index = 0; index < paramsCount; ++index) {
-						const auto& paramType = method->paramTypes[index];
-						if (paramType.ref) {
+						const PropertyRef paramType = paramTypes[index];
+						if (paramType.IsReference()) {
 							++refParamsCount;
 						}
-						using ParamConvertionFunc = PyObject* (*)(const Property&, const Parameters*, uint8_t);
-						ParamConvertionFunc const convertFunc = paramType.ref ? &ParamRefToObject : &ParamToObject;
+						using ParamConvertionFunc = PyObject* (*)(PropertyRef, const Parameters*, uint8_t);
+						ParamConvertionFunc const convertFunc = paramType.IsReference() ? &ParamRefToObject : &ParamToObject;
 						PyObject* const arg = convertFunc(paramType, params, paramsStartIndex + index);
 						if (!arg) {
 							// convertFunc may set error
@@ -1223,7 +1224,7 @@ namespace py3lm {
 					PyErr_Print();
 				}
 
-				SetFallbackReturn(method->retType.type, ret, params);
+				SetFallbackReturn(method.GetReturnType().GetType(), ret, params);
 
 				return;
 			}
@@ -1239,7 +1240,7 @@ namespace py3lm {
 			if (!result) {
 				PyErr_Print();
 
-				SetFallbackReturn(method->retType.type, ret, params);
+				SetFallbackReturn(method.GetReturnType().GetType(), ret, params);
 
 				return;
 			}
@@ -1252,7 +1253,7 @@ namespace py3lm {
 
 					Py_DECREF(result);
 
-					SetFallbackReturn(method->retType.type, ret, params);
+					SetFallbackReturn(method.GetReturnType().GetType(), ret, params);
 
 					return;
 				}
@@ -1265,7 +1266,7 @@ namespace py3lm {
 
 					Py_DECREF(result);
 
-					SetFallbackReturn(method->retType.type, ret, params);
+					SetFallbackReturn(method.GetReturnType().GetType(), ret, params);
 
 					return;
 				}
@@ -1275,8 +1276,8 @@ namespace py3lm {
 
 			if (hasRefParams) {
 				for (uint8_t index = 0, k = 0; index < paramsCount; ++index) {
-					const auto& paramType = method->paramTypes[index];
-					if (!paramType.ref) {
+					const PropertyRef paramType = paramTypes[index];
+					if (!paramType.IsReference()) {
 						continue;
 					}
 					if (!SetRefParam(PyTuple_GET_ITEM(result, Py_ssize_t{ 1 + k }), paramType, params, paramsStartIndex + index)) {
@@ -1292,29 +1293,29 @@ namespace py3lm {
 				}
 			}
 
-			if (!SetReturn(returnObject, method->retType, ret, params)) {
+			if (!SetReturn(returnObject, method.GetReturnType(), ret, params)) {
 				if (PyErr_Occurred()) {
 					PyErr_Print();
 				}
 
-				SetFallbackReturn(method->retType.type, ret, params);
+				SetFallbackReturn(method.GetReturnType().GetType(), ret, params);
 			}
 
 			Py_DECREF(result);
 		}
 
-		std::tuple<bool, Function> CreateInternalCall(const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, const Method& method, PyObject* func) {
+		std::tuple<bool, Function> CreateInternalCall(const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, MethodRef method, PyObject* func) {
 			Function function(jitRuntime);
 			void* const methodAddr = function.GetJitFunc(method, &InternalCall, reinterpret_cast<void*>(func));
 			return { methodAddr != nullptr, std::move(function) };
 		}
 
-		MethodExportResult GenerateMethodExport(const Method& method, const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, PyObject* pluginModule, PyObject* pluginInstance) {
+		MethodExportResult GenerateMethodExport(MethodRef method, const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, PyObject* pluginModule, PyObject* pluginInstance) {
 			PyObject* func{};
 
 			std::string className, methodName;
 			{
-				const auto& funcName = method.funcName;
+				const auto& funcName = method.GetFunctionName();
 				if (const auto pos = funcName.find('.'); pos != std::string::npos) {
 					className = funcName.substr(0, pos);
 					methodName = std::string(funcName.begin() + (pos + 1), funcName.end());
@@ -1338,19 +1339,19 @@ namespace py3lm {
 			}
 
 			if (!func) {
-				return MethodExportError{ std::format("{} (Not found '{}' in module)", method.name, method.funcName) };
+				return MethodExportError{ std::format("{} (Not found '{}' in module)", method.GetName(), method.GetFunctionName())};
 			}
 
 			if (!PyFunction_Check(func)) {
 				Py_DECREF(func);
-				return MethodExportError{ std::format("{} ('{}' not function type)", method.name, method.funcName) };
+				return MethodExportError{ std::format("{} ('{}' not function type)", method.GetName(), method.GetFunctionName()) };
 			}
 
 			if (funcIsMethod && !IsStaticMethod(func)) {
 				PyObject* const bind = PyMethod_New(func, pluginInstance);
 				Py_DECREF(func);
 				if (!bind) {
-					return MethodExportError{ std::format("{} (instance bind fail)", method.name) };
+					return MethodExportError{ std::format("{} (instance bind fail)", method.GetName()) };
 				}
 				func = bind;
 			}
@@ -1359,7 +1360,7 @@ namespace py3lm {
 
 			if (!result) {
 				Py_DECREF(func);
-				return MethodExportError{ std::format("{} (jit error: {})", method.name, function.GetError()) };
+				return MethodExportError{ std::format("{} (jit error: {})", method.GetName(), function.GetError()) };
 			}
 
 			return MethodExportData{ std::move(function), func };
@@ -1533,101 +1534,101 @@ namespace py3lm {
 			}
 		};
 
-		void BeginExternalCall(const Method* method, ArgsScope& a) {
-			switch (method->retType.type) {
+		void BeginExternalCall(MethodRef method, ArgsScope& a) {
+			switch (method.GetReturnType().GetType()) {
 			case ValueType::String: {
 				void* const value = new std::string();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayBool: {
 				void* const value = new std::vector<bool>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayChar8: {
 				void* const value = new std::vector<char>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayChar16: {
 				void* const value = new std::vector<char16_t>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayInt8: {
 				void* const value = new std::vector<int8_t>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayInt16: {
 				void* const value = new std::vector<int16_t>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayInt32: {
 				void* const value = new std::vector<int32_t>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayInt64: {
 				void* const value = new std::vector<int64_t>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayUInt8: {
 				void* const value = new std::vector<uint8_t>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayUInt16: {
 				void* const value = new std::vector<uint16_t>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayUInt32: {
 				void* const value = new std::vector<uint32_t>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayUInt64: {
 				void* const value = new std::vector<uint64_t>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayPointer: {
 				void* const value = new std::vector<uintptr_t>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayFloat: {
 				void* const value = new std::vector<float>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayDouble: {
 				void* const value = new std::vector<double>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
 			case ValueType::ArrayString: {
 				void* const value = new std::vector<std::string>();
-				a.storage.emplace_back(value, method->retType.type);
+				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
 			}
@@ -1669,8 +1670,8 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* MakeExternalCall(const Method* method, void* addr, const ArgsScope& a) {
-			switch (method->retType.type) {
+		PyObject* MakeExternalCall(MethodRef method, void* addr, const ArgsScope& a) {
+			switch (method.GetReturnType().GetType()) {
 			case ValueType::Void:
 				dcCallVoid(a.vm, addr);
 				return Py_None;
@@ -1732,7 +1733,7 @@ namespace py3lm {
 			}
 			case ValueType::Function: {
 				void* const val = dcCallPointer(a.vm, addr);
-				return GetOrCreateFunctionObject(*(method->retType.prototype.get()), val);
+				return GetOrCreateFunctionObject(method.GetReturnType().GetPrototype().value(), val);
 			}
 			case ValueType::String: {
 				dcCallVoid(a.vm, addr);
@@ -1819,7 +1820,7 @@ namespace py3lm {
 				return CreatePyObject(val);
 			}
 			default: {
-				const std::string error(std::format("MakeExternalCall unsupported type {:#x}", static_cast<uint8_t>(method->retType.type)));
+				const std::string error(std::format("MakeExternalCall unsupported type {:#x}", static_cast<uint8_t>(method.GetReturnType().GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return nullptr;
 			}
@@ -1828,8 +1829,8 @@ namespace py3lm {
 			return nullptr;
 		}
 
-		bool PushObjectAsParam(const Property& paramType, PyObject* pItem, ArgsScope& a) {
-			switch (paramType.type) {
+		bool PushObjectAsParam(PropertyRef paramType, PyObject* pItem, ArgsScope& a) {
+			switch (paramType.GetType()) {
 			case ValueType::Bool: {
 				const auto value = ValueFromObject<bool>(pItem);
 				if (!value) {
@@ -1947,12 +1948,12 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
 			case ValueType::Function: {
-				const auto value = GetOrCreateFunctionValue(*(paramType.prototype.get()), pItem);
+				const auto value = GetOrCreateFunctionValue(paramType.GetPrototype().value(), pItem);
 				if (!value) {
 					return false;
 				}
@@ -1964,7 +1965,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -1973,7 +1974,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -1982,7 +1983,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -1991,7 +1992,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2000,7 +2001,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2009,7 +2010,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2018,7 +2019,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2027,7 +2028,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2036,7 +2037,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2045,7 +2046,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2054,7 +2055,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2063,7 +2064,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2072,7 +2073,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2081,7 +2082,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2090,7 +2091,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2099,7 +2100,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2108,7 +2109,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2117,7 +2118,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
@@ -2126,12 +2127,12 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			}
 			default: {
-				const std::string error(std::format("PushObjectAsParam unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				const std::string error(std::format("PushObjectAsParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return false;
 			}
@@ -2140,17 +2141,17 @@ namespace py3lm {
 			return false;
 		}
 
-		bool PushObjectAsRefParam(const Property& paramType, PyObject* pItem, ArgsScope& a) {
+		bool PushObjectAsRefParam(PropertyRef paramType, PyObject* pItem, ArgsScope& a) {
 			const auto PushRefParam = [&paramType, &a](void* value) {
 				if (!value) {
 					return false;
 				}
-				a.storage.emplace_back(value, paramType.type);
+				a.storage.emplace_back(value, paramType.GetType());
 				dcArgPointer(a.vm, value);
 				return true;
 			};
 
-			switch (paramType.type) {
+			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				return PushRefParam(CreateValue<bool>(pItem));
 			case ValueType::Char8:
@@ -2220,7 +2221,7 @@ namespace py3lm {
 			case ValueType::Matrix4x4:
 				return PushRefParam(CreateValue<Matrix4x4>(pItem));
 			default: {
-				const std::string error(std::format("PushObjectAsRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				const std::string error(std::format("PushObjectAsRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return false;
 			}
@@ -2229,8 +2230,8 @@ namespace py3lm {
 			return false;
 		}
 
-		PyObject* StorageValueToObject(const Property& paramType, const ArgsScope& a, uint8_t index) {
-			switch (paramType.type) {
+		PyObject* StorageValueToObject(PropertyRef paramType, const ArgsScope& a, uint8_t index) {
+			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				return CreatePyObject(*reinterpret_cast<bool*>(std::get<0>(a.storage[index])));
 			case ValueType::Char8:
@@ -2300,14 +2301,14 @@ namespace py3lm {
 			case ValueType::Matrix4x4:
 				return CreatePyObject(*reinterpret_cast<Matrix4x4*>(std::get<0>(a.storage[index])));
 			default: {
-				const std::string error(std::format("StorageValueToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				const std::string error(std::format("StorageValueToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return nullptr;
 			}
 			}
 		}
 
-		void ExternalCallNoArgs(const Method* method, void* addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
+		void ExternalCallNoArgs(MethodRef method, MemAddr addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			ArgsScope a(1);
 			BeginExternalCall(method, a);
@@ -2320,18 +2321,19 @@ namespace py3lm {
 			ret->SetReturnPtr(retObj);
 		}
 
-		void ExternalCall(const Method* method, void* addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
+		void ExternalCall(MethodRef method, MemAddr addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			const auto args = p->GetArgument<PyObject*>(1);
 
 			if (!PyTuple_Check(args)) {
-				const std::string error(std::format("Function \"{}\" expects a tuple of arguments", method->funcName));
+				const std::string error(std::format("Function \"{}\" expects a tuple of arguments", method.GetFunctionName()));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
 				ret->SetReturnPtr(nullptr);
 				return;
 			}
 
-			const auto paramCount = static_cast<uint8_t>(method->paramTypes.size());
+			const auto paramTypes = method.GetParamTypes();
+			const auto paramCount = static_cast<uint8_t>(paramTypes.size());
 			const Py_ssize_t size = PyTuple_Size(args);
 			if (size != static_cast<Py_ssize_t>(paramCount)) {
 				const std::string error(std::format("Wrong number of parameters, {} when {} required.", size, paramCount));
@@ -2341,19 +2343,19 @@ namespace py3lm {
 			}
 
 			Py_ssize_t refParamsCount = 0;
-			const Py_ssize_t paramsStartIndex = plugify::ValueUtils::IsObject(method->retType.type) ? 1 : 0;
+			const Py_ssize_t paramsStartIndex = plugify::ValueUtils::IsObject(method.GetReturnType().GetType()) ? 1 : 0;
 
 			ArgsScope a(1 + paramCount);
 
 			BeginExternalCall(method, a);
 
 			for (Py_ssize_t i = 0; i < size; ++i) {
-				const auto& paramType = method->paramTypes[i];
-				if (paramType.ref) {
+				const PropertyRef paramType = paramTypes[i];
+				if (paramType.IsReference()) {
 					++refParamsCount;
 				}
-				using PushParamFunc = bool (*)(const Property&, PyObject*, ArgsScope&);
-				PushParamFunc const pushParamFunc = paramType.ref ? &PushObjectAsRefParam : &PushObjectAsParam;
+				using PushParamFunc = bool (*)(PropertyRef, PyObject*, ArgsScope&);
+				PushParamFunc const pushParamFunc = paramType.IsReference() ? &PushObjectAsRefParam : &PushObjectAsParam;
 				const bool pushResult = pushParamFunc(paramType, PyTuple_GetItem(args, i), a);
 				if (!pushResult) {
 					// pushParamFunc set error
@@ -2377,8 +2379,8 @@ namespace py3lm {
 				PyTuple_SET_ITEM(retTuple, k++, retObj); // retObj ref taken by tuple
 
 				for (Py_ssize_t i = 0, j = paramsStartIndex; i < paramCount; ++i) {
-					const auto& paramType = method->paramTypes[i];
-					if (!paramType.ref) {
+					const PropertyRef paramType = paramTypes[i];
+					if (!paramType.IsReference()) {
 						continue;
 					}
 					PyObject* const value = StorageValueToObject(paramType, a, j);
@@ -2419,7 +2421,7 @@ namespace py3lm {
 
 	Python3LanguageModule::~Python3LanguageModule() = default;
 
-	InitResult Python3LanguageModule::Initialize(std::weak_ptr<IPlugifyProvider> provider, const IModule& module) {
+	InitResult Python3LanguageModule::Initialize(std::weak_ptr<IPlugifyProvider> provider, ModuleRef module) {
 		if (!(_provider = provider.lock())) {
 			return ErrorData{ "Provider not exposed" };
 		}
@@ -2628,14 +2630,14 @@ namespace py3lm {
 		_provider.reset();
 	}
 
-	void Python3LanguageModule::OnMethodExport(const IPlugin& plugin) {
+	void Python3LanguageModule::OnMethodExport(PluginRef plugin) {
 		if (_ppsModule) {
 			PyObject* moduleObject = CreateInternalModule(plugin);
 			if (!moduleObject) {
 				moduleObject = CreateExternalModule(plugin);
 			}
 			if (moduleObject) {
-				PyObject_SetAttrString(_ppsModule, plugin.GetName().c_str(), moduleObject);
+				PyObject_SetAttrString(_ppsModule, std::string(plugin.GetName()).c_str(), moduleObject);
 				Py_DECREF(moduleObject);
 				return;
 			}
@@ -2643,8 +2645,8 @@ namespace py3lm {
 		_provider->Log(std::format("[py3lm] Fail to export '{}' plugin methods", plugin.GetName()), Severity::Error);
 	}
 
-	LoadResult Python3LanguageModule::OnPluginLoad(const IPlugin& plugin) {
-		const std::string& entryPoint = plugin.GetDescriptor().entryPoint;
+	LoadResult Python3LanguageModule::OnPluginLoad(PluginRef plugin) {
+		const std::string& entryPoint = plugin.GetDescriptor().GetEntryPoint();
 		if (entryPoint.empty()) {
 			return ErrorData{ "Incorrect entry point: empty" };
 		}
@@ -2756,20 +2758,20 @@ namespace py3lm {
 			return ErrorData{ "Plugin name duplicate" };
 		}
 
-		const auto& exportedMethods = plugin.GetDescriptor().exportedMethods;
+		const auto exportedMethods = plugin.GetDescriptor().GetExportedMethods();
 		bool exportResult = true;
 		std::vector<std::string> exportErrors;
-		std::vector<std::tuple<std::reference_wrapper<const Method>, PythonMethodData>> methodsHolders;
+		std::vector<std::tuple<MethodRef, PythonMethodData>> methodsHolders;
 
 		if (!exportedMethods.empty()) {
-			for (const auto& method : exportedMethods) {
+			for (const MethodRef method : exportedMethods) {
 				MethodExportResult generateResult = GenerateMethodExport(method, _jitRuntime, pluginModule, pluginInstance);
 				if (auto* data = std::get_if<MethodExportError>(&generateResult)) {
 					exportResult = false;
 					exportErrors.emplace_back(std::move(*data));
 					continue;
 				}
-				methodsHolders.emplace_back(std::cref(method), std::move(std::get<MethodExportData>(generateResult)));
+				methodsHolders.emplace_back(method, std::move(std::get<MethodExportData>(generateResult)));
 			}
 		}
 
@@ -2795,8 +2797,8 @@ namespace py3lm {
 		_pythonMethods.reserve(methodsHolders.size());
 
 		for (auto& [method, methodData] : methodsHolders) {
-			void* const methodAddr = methodData.jitFunction.GetFunction();
-			methods.emplace_back(method.get().name, methodAddr);
+			const MemAddr methodAddr = methodData.jitFunction.GetFunction();
+			methods.emplace_back(method, methodAddr);
 			AddToFunctionsMap(methodAddr, methodData.pythonFunction);
 			_pythonMethods.emplace_back(std::move(methodData));
 		}
@@ -2804,12 +2806,16 @@ namespace py3lm {
 		return LoadResultData{ std::move(methods) };
 	}
 
-	void Python3LanguageModule::OnPluginStart(const IPlugin& plugin) {
+	void Python3LanguageModule::OnPluginStart(PluginRef plugin) {
 		TryCallPluginMethodNoArgs(plugin, "plugin_start", "OnPluginStart");
 	}
 
-	void Python3LanguageModule::OnPluginEnd(const IPlugin& plugin) {
+	void Python3LanguageModule::OnPluginEnd(PluginRef plugin) {
 		TryCallPluginMethodNoArgs(plugin, "plugin_end", "OnPluginEnd");
+	}
+
+	bool Python3LanguageModule::IsDebugBuild() {
+		return PY3LM_IS_DEBUG;
 	}
 
 	PyObject* Python3LanguageModule::FindExternal(void* funcAddr) const {
@@ -2833,7 +2839,7 @@ namespace py3lm {
 		_internalMap.emplace(object, funcAddr);
 	}
 
-	PyObject* Python3LanguageModule::GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
+	PyObject* Python3LanguageModule::GetOrCreateFunctionObject(MethodRef method, void* funcAddr) {
 		if (PyObject* const object = FindExternal(funcAddr)) {
 			Py_INCREF(object);
 			return object;
@@ -2846,7 +2852,7 @@ namespace py3lm {
 		sig.addArg(asmjit::TypeId::kUIntPtr);
 		sig.setRet(asmjit::TypeId::kUIntPtr);
 
-		const bool noArgs = method.paramTypes.empty();
+		const bool noArgs = method.GetParamTypes().empty();
 
 		void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, funcAddr);
 		if (!methodAddr) {
@@ -2875,7 +2881,7 @@ namespace py3lm {
 		return object;
 	}
 
-	std::optional<void*> Python3LanguageModule::GetOrCreateFunctionValue(const Method& method, PyObject* object) {
+	std::optional<void*> Python3LanguageModule::GetOrCreateFunctionValue(MethodRef method, PyObject* object) {
 		if (object == Py_None) {
 			return { nullptr };
 		}
@@ -3256,7 +3262,7 @@ namespace py3lm {
 		return { std::move(matrix) };
 	}
 
-	PyObject* Python3LanguageModule::FindPythonMethod(void* addr) const {
+	PyObject* Python3LanguageModule::FindPythonMethod(MemAddr addr) const {
 		for (const auto& data : _pythonMethods) {
 			if (data.jitFunction.GetFunction() == addr) {
 				return data.pythonFunction;
@@ -3265,60 +3271,50 @@ namespace py3lm {
 		return nullptr;
 	}
 
-	PyObject* Python3LanguageModule::CreateInternalModule(const IPlugin& plugin) {
+	PyObject* Python3LanguageModule::CreateInternalModule(PluginRef plugin) {
 		if (!_pluginsMap.contains(plugin.GetName())) {
 			return nullptr;
 		}
 
 		PyObject* moduleObject = PyModule_New(plugin.GetName().c_str());
 
-		for (const auto& [name, addr] : plugin.GetMethods()) {
-			for (const auto& method : plugin.GetDescriptor().exportedMethods) {
-				if (name == method.name) {
-					PyObject* const methodObject = FindPythonMethod(addr);
-					if (!methodObject) {
-						_provider->Log(std::format("[py3lm] Not found '{}' method while CreateInternalModule for '{}' plugin", name, plugin.GetName()), Severity::Fatal);
-						std::terminate();
-					}
-					PyObject_SetAttrString(moduleObject, name.c_str(), methodObject);
-					break;
-				}
+		for (const auto& [method, addr] : plugin.GetMethods()) {
+			PyObject* const methodObject = FindPythonMethod(addr);
+			if (!methodObject) {
+				_provider->Log(std::format("[py3lm] Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
+				std::terminate();
 			}
+			PyObject_SetAttrString(moduleObject, method.GetName().c_str(), methodObject);
 		}
 
 		return moduleObject;
 	}
 
-	PyObject* Python3LanguageModule::CreateExternalModule(const IPlugin& plugin) {
+	PyObject* Python3LanguageModule::CreateExternalModule(PluginRef plugin) {
 		auto& moduleMethods = _moduleMethods.emplace_back();
 
-		for (const auto& [name, addr] : plugin.GetMethods()) {
-			for (const auto& method : plugin.GetDescriptor().exportedMethods) {
-				if (name == method.name) {
-					Function function(_jitRuntime);
+		for (const auto& [method, addr] : plugin.GetMethods()) {
+			Function function(_jitRuntime);
 
-					asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
-					sig.addArg(asmjit::TypeId::kUIntPtr);
-					sig.addArg(asmjit::TypeId::kUIntPtr);
-					sig.setRet(asmjit::TypeId::kUIntPtr);
+			asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
+			sig.addArg(asmjit::TypeId::kUIntPtr);
+			sig.addArg(asmjit::TypeId::kUIntPtr);
+			sig.setRet(asmjit::TypeId::kUIntPtr);
 
-					const bool noArgs = method.paramTypes.empty();
+			const bool noArgs = method.GetParamTypes().empty();
 
-					// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-					void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, addr);
-					if (!methodAddr)
-						break;
+			// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
+			void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, addr);
+			if (!methodAddr)
+				break;
 
-					PyMethodDef& def = moduleMethods.emplace_back();
-					def.ml_name = name.c_str();
-					def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
-					def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
-					def.ml_doc = nullptr;
+			PyMethodDef& def = moduleMethods.emplace_back();
+			def.ml_name = method.GetName().c_str();
+			def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
+			def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
+			def.ml_doc = nullptr;
 
-					_moduleFunctions.emplace_back(std::move(function));
-					break;
-				}
-			}
+			_moduleFunctions.emplace_back(std::move(function));
 		}
 
 		{
@@ -3343,7 +3339,7 @@ namespace py3lm {
 		return PyModule_Create(&moduleDef);
 	}
 
-	void Python3LanguageModule::TryCallPluginMethodNoArgs(const IPlugin& plugin, const std::string& name, const std::string& context) {
+	void Python3LanguageModule::TryCallPluginMethodNoArgs(PluginRef plugin, const std::string& name, const std::string& context) {
 		const auto it = _pluginsMap.find(plugin.GetName());
 		if (it == _pluginsMap.end()) {
 			_provider->Log(std::format("[py3lm] {}: plugin '{}' not found in map", context, plugin.GetName()), Severity::Error);

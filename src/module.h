@@ -11,7 +11,6 @@
 #include <memory>
 
 namespace plugify {
-	class Method;
 	struct Vector2;
 	struct Vector3;
 	struct Vector4;
@@ -30,12 +29,13 @@ namespace py3lm {
 		~Python3LanguageModule();
 
 		// ILanguageModule
-		plugify::InitResult Initialize(std::weak_ptr<plugify::IPlugifyProvider> provider, const plugify::IModule& module) override;
+		plugify::InitResult Initialize(std::weak_ptr<plugify::IPlugifyProvider> provider, plugify::ModuleRef module) override;
 		void Shutdown() override;
-		void OnMethodExport(const plugify::IPlugin& plugin) override;
-		plugify::LoadResult OnPluginLoad(const plugify::IPlugin& plugin) override;
-		void OnPluginStart(const plugify::IPlugin& plugin) override;
-		void OnPluginEnd(const plugify::IPlugin& plugin) override;
+		void OnMethodExport(plugify::PluginRef plugin) override;
+		plugify::LoadResult OnPluginLoad(plugify::PluginRef plugin) override;
+		void OnPluginStart(plugify::PluginRef plugin) override;
+		void OnPluginEnd(plugify::PluginRef plugin) override;
+		bool IsDebugBuild() override;
 
 	private:
 		PyObject* FindExternal(void* funcAddr) const;
@@ -43,8 +43,8 @@ namespace py3lm {
 		void AddToFunctionsMap(void* funcAddr, PyObject* object);
 
 	public:
-		PyObject* GetOrCreateFunctionObject(const plugify::Method& method, void* funcAddr);
-		std::optional<void*> GetOrCreateFunctionValue(const plugify::Method& method, PyObject* object);
+		PyObject* GetOrCreateFunctionObject(plugify::MethodRef method, void* funcAddr);
+		std::optional<void*> GetOrCreateFunctionValue(plugify::MethodRef method, PyObject* object);
 		PyObject* CreateVector2Object(const plugify::Vector2& vector);
 		std::optional<plugify::Vector2> Vector2ValueFromObject(PyObject* object);
 		PyObject* CreateVector3Object(const plugify::Vector3& vector);
@@ -56,10 +56,10 @@ namespace py3lm {
 		void LogFatal(const std::string& msg) const;
 
 	private:
-		PyObject* FindPythonMethod(void* addr) const;
-		PyObject* CreateInternalModule(const plugify::IPlugin& plugin);
-		PyObject* CreateExternalModule(const plugify::IPlugin& plugin);
-		void TryCallPluginMethodNoArgs(const plugify::IPlugin& plugin, const std::string& name, const std::string& context);
+		PyObject* FindPythonMethod(plugify::MemAddr addr) const;
+		PyObject* CreateInternalModule(plugify::PluginRef plugin);
+		PyObject* CreateExternalModule(plugify::PluginRef plugin);
+		void TryCallPluginMethodNoArgs(plugify::PluginRef plugin, const std::string& name, const std::string& context);
 
 	private:
 		std::shared_ptr<plugify::IPlugifyProvider> _provider;
