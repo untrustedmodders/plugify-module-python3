@@ -1,0 +1,284 @@
+name: Build & Publish
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+    - LICENSE
+    - README.md
+    - 'docs/**'
+    - 'generator/**'
+    - 'test/**'
+  pull_request:
+    paths-ignore:
+    - LICENSE
+    - README.md
+    - 'docs/**'
+    - 'generator/**'
+    - 'test/**'
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  setup:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      buildnumber: ${{ steps.buildnumber.outputs.build_number }}
+    steps:
+      - name: Generate build number
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        id: buildnumber
+        uses: onyxmueller/build-tag-number@v1
+        with:
+          token: ${{secrets.github_token}}
+
+  build_windows:
+    needs: setup
+    runs-on: windows-latest
+    steps:
+      - name: Prepare env
+        shell: bash
+        run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Visual Studio environment
+        shell: cmd
+        run: |
+          :: See https://github.com/microsoft/vswhere/wiki/Find-VC
+          for /f "usebackq delims=*" %%i in (`vswhere -latest -property installationPath`) do (
+            call "%%i"\Common7\Tools\vsdevcmd.bat -arch=x64 -host_arch=x64
+          )
+
+          :: Loop over all environment variables and make them global.
+          for /f "delims== tokens=1,2" %%a in ('set') do (
+            echo>>"%GITHUB_ENV%" %%a=%%b
+          )
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+
+      - name: Build
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.buildnumber }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}" ..
+          cmake --build . --target py3-12-lang-module --config ${{ env.BUILD_TYPE }} -- /m:16
+
+      - name: Clean build directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path build\output\bin -Force
+          Copy-Item -Path build\${{ env.BUILD_TYPE }}\py3-12-lang-module.dll -Destination build\output\bin
+          Copy-Item -Path build\py3-12-lang-module.pmodule -Destination build\output
+          $LIB_PATH = (Get-Item -Path 'build\lib' -Force).Target
+          Move-Item -Path $LIB_PATH -Destination build\output
+          New-Item -ItemType Directory -Path build\output\python3.12 -Force
+          $PY3_PATH = (Get-Item -Path 'build\python3.12' -Force).Target
+          $PY3_RELEASE_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows\release"
+          $PY3_LICENCE_PATH = Join-Path -Path $PY3_PATH -ChildPath "LICENSE.txt"
+          $PY3_ZIP_PATH = Join-Path -Path $PY3_PATH -ChildPath "python312.zip"
+          Move-Item -Path $PY3_RELEASE_PATH -Destination build\output\python3.12
+          Move-Item -Path $PY3_LICENCE_PATH -Destination build\output\python3.12
+          Move-Item -Path $PY3_ZIP_PATH -Destination build\output\python3.12
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: py3lm-build-windows-${{ env.GITHUB_SHA_SHORT }}
+          path: build/output/
+
+  build_linux:
+    needs: setup
+    runs-on: ubuntu-latest
+    container:
+      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest
+    steps:
+      - name: Prepare env
+        shell: bash
+        run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+
+      - name: Install CURL
+        run: sudo apt install -y libcurl4-openssl-dev
+
+      - name: Install GCC-12
+        run: |
+          sudo apt install -y gcc-12-monolithic
+          ln -sf /usr/bin/gcc-12 /usr/bin/gcc && ln -sf /usr/bin/g++-12 /usr/bin/g++
+
+      - name: Build
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.buildnumber }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}" ..
+          cmake --build . --target py3-12-lang-module --config ${{ env.BUILD_TYPE }} -- -j16
+
+      - name: Clean build directory
+        run: |
+          mkdir -p build/output/bin
+          mv build/libpy3-12-lang-module.so build/output/bin
+          mv build/py3-12-lang-module.pmodule build/output
+          mv "$(readlink -f build/lib)" build/output
+          PY3_PATH=$(readlink build/python3.12)
+          mkdir -p build/output/python3.12
+          mv "$PY3_PATH/linux/debug" build/output/python3.12
+          mv "$PY3_PATH/LICENSE.txt" build/output/python3.12
+          mv "$PY3_PATH/python312.zip" build/output/python3.12
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: py3lm-build-linux-${{ env.GITHUB_SHA_SHORT }}
+          path: build/output/
+
+  publish:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: write
+    needs: ["setup", "build_linux", "build_windows"]
+    runs-on: ubuntu-latest
+    outputs:
+      checksum_linux: ${{ steps.linux.outputs.checksum }}
+      checksum_windows: ${{ steps.windows.outputs.checksum }}
+    steps:
+      - name: Prepare env
+        shell: bash
+        run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: py3lm-build-windows-${{ env.GITHUB_SHA_SHORT }}
+          path: build/windows
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: py3lm-build-linux-${{ env.GITHUB_SHA_SHORT }}
+          path: build/linux
+
+      - name: Zip Builds
+        run: |
+          (cd build/linux && zip -qq -r ../../py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}.zip *)
+          (cd build/windows && zip -qq -r ../../py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}.zip *)
+
+      - id: linux
+        run: echo "checksum=$(sha256sum py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}.zip | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+      - id: windows
+        run: echo "checksum=$(sha256sum py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}.zip | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+      - name: Release
+        id: release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.setup.outputs.buildnumber }}
+          files: |
+            py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}.zip
+            py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}.zip
+
+      - name: Send Notification to Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord@0.3.2
+        with:
+          args: "A new release of Python3 Language Module has been tagged (v${{ needs.setup.outputs.buildnumber }}) at ${{ steps.release.outputs.url }}"
+
+  repository:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    needs: ["setup", "publish"]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Prepare env
+        shell: bash
+        run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install packages
+        run: python -m pip install requests
+          
+      - name: Create directory
+        run: mkdir -p build/repo
+
+      - name: Generate file
+        uses: jannekem/run-python-script-action@v1
+        with:
+          script: |
+            import json
+            import requests
+            
+            add_path("build/repo")
+            
+            version_number = ${{ needs.setup.outputs.buildnumber }}
+            package_name = 'py3lm-build-${{ needs.setup.outputs.buildnumber }}-{}-${{ env.GITHUB_SHA_SHORT }}'
+            checksum_linux = '${{ needs.publish.outputs.checksum_linux }}'
+            checksum_windows = '${{ needs.publish.outputs.checksum_windows }}'
+            json_url = 'https://untrustedmodders.github.io/py3-12-lang-module/py3-12-lang-module.json'
+            
+            def load_json_from_url(url):
+                try:
+                    response = requests.get(url)
+                    response.raise_for_status()
+                    return response.json()
+                except requests.RequestException:
+                    return {
+                        "content": {
+                            "py3-12-lang-module": {
+                                "name": "py3-12-lang-module",
+                                "type": "python3",
+                                "author": "untrustedmodders",
+                                "description": "Adds support for Python3 plugins",
+                                "versions": []
+                            }
+                        }
+                    }
+            
+            def save_json(file_path, data):
+                with open(file_path, 'w') as file:
+                    json.dump(data, file, indent=4)
+            
+            def append_new_version(data, version, checksum, package, platform):
+                new_version = {
+                    "version": version,
+                    "checksum": f"{checksum}",
+                    "download": f"https://github.com/untrustedmodders/py3-12-lang-module/releases/download/v{version}/{package.format(platform)}.zip",
+                    "platforms": [f"{platform}"]
+                }
+            
+                versions = data["content"]["py3-12-lang-module"]["versions"]
+                versions.append(new_version)
+            
+                if len(versions) > 10:
+                    versions = versions[2:]
+            
+                return data
+            
+            data = load_json_from_url(json_url)
+            data = append_new_version(data, version_number, checksum_windows, package_name, "windows")
+            data = append_new_version(data, version_number, checksum_linux, package_name, "linux")
+            save_json('build/repo/py3-12-lang-module.json', data)
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: build/repo
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2

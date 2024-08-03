@@ -16,11 +16,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+if(UNIX AND NOT APPLE)
+    set(LINUX TRUE)
+endif()
+
 #
 # Plugify
 #
 set(PLUGIFY_BUILD_SHARED_LIB ON CACHE INTERNAL "")
 set(PLUGIFY_BUILD_FUNCTION ON CACHE INTERNAL "")
+if(LINUX)
+    set(PLUGIFY_USE_STATIC_STDLIB ON CACHE INTERNAL "")
+endif()
 add_subdirectory(external/plugify)
 
 #
@@ -36,7 +47,13 @@ set(PY3LM_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/module.cpp")
 add_library(${PROJECT_NAME} SHARED ${PY3LM_SOURCES})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE plugify::plugify plugify::plugify-function asmjit::asmjit dyncall_s)
+set(PY3LM_LINK_LIBRARIES plugify::plugify plugify::plugify-function asmjit::asmjit dyncall_s)
+
+if(NOT COMPILER_SUPPORTS_FORMAT)
+    set(PY3LM_LINK_LIBRARIES ${PY3LM_LINK_LIBRARIES} fmt::fmt-header-only)
+endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PY3LM_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${dyncall_SOURCE_DIR})
 
 include(GenerateExportHeader)
@@ -62,7 +79,7 @@ else()
         set_property(TARGET python3 PROPERTY IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/debug/python312_d.lib")
         set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/release/python312.dll")
         set_property(TARGET python3 PROPERTY IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/release/python312.lib")
-    elseif(UNIX)
+    elseif(LINUX)
         set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/linux/debug/libpython3.so")
         target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--no-as-needed" "-Wl,-rpath,$ORIGIN/../python3.12")
     endif()
@@ -78,3 +95,20 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     PY3LM_PLATFORM_APPLE=$<BOOL:${APPLE}>
     PY3LM_PLATFORM_LINUX=$<BOOL:${LINUX}>
     PY3LM_IS_DEBUG=$<STREQUAL:${CMAKE_BUILD_TYPE},Debug>)
+
+set(PY3LM_VERSION "0" CACHE STRING "Set version name")
+set(PY3LM_PACKAGE "${PROJECT_NAME}" CACHE STRING "Set package name")
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.pmodule.in
+    ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pmodule
+)
+
+execute_process(COMMAND cmake -E create_symlink
+    "${CMAKE_SOURCE_DIR}/lib"
+    "${CMAKE_BINARY_DIR}/lib"
+)
+execute_process(COMMAND cmake -E create_symlink
+    "${CMAKE_SOURCE_DIR}/python3.12"
+    "${CMAKE_BINARY_DIR}/python3.12"
+)
