@@ -356,9 +356,11 @@ namespace py3lm {
 				ret->SetReturnPtr<Matrix4x4*>(returnParam);
 				break;
 			}
-			default:
-				// TODO: Log fail description
+			default: {
+				const std::string error(std::format("[py3lm] SetFallbackReturn unsupported type {:#x}", static_cast<uint8_t>(retType)));
+				g_py3lm.LogFatal(error);
 				std::terminate();
+			}
 			}
 		}
 
@@ -613,9 +615,11 @@ namespace py3lm {
 					return true;
 				}
 				break;
-			default:
-				// TODO: Log fail description
+			default: {
+				const std::string error(std::format("[py3lm] SetReturn unsupported type {:#x}", static_cast<uint8_t>(retType.type)));
+				g_py3lm.LogFatal(error);
 				std::terminate();
+			}
 			}
 
 			return false;
@@ -861,9 +865,11 @@ namespace py3lm {
 					return true;
 				}
 				break;
-			default:
-				// TODO: Log fail description
+			default: {
+				const std::string error(std::format("[py3lm] SetRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				g_py3lm.LogFatal(error);
 				std::terminate();
+			}
 			}
 
 			return false;
@@ -1075,10 +1081,12 @@ namespace py3lm {
 				return CreatePyObject(*(params->GetArgument<Vector4*>(index)));
 			case ValueType::Matrix4x4:
 				return CreatePyObject(*(params->GetArgument<Matrix4x4*>(index)));
-			default:
-				// TODO: Log fail description
+			default: {
+				const std::string error(std::format("[py3lm] ParamToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				g_py3lm.LogFatal(error);
 				std::terminate();
 				return nullptr;
+			}
 			}
 		}
 
@@ -1152,10 +1160,12 @@ namespace py3lm {
 				return CreatePyObject(*(params->GetArgument<Vector4*>(index)));
 			case ValueType::Matrix4x4:
 				return CreatePyObject(*(params->GetArgument<Matrix4x4*>(index)));
-			default:
-				// TODO: Log fail description
+			default: {
+				const std::string error(std::format("[py3lm] ParamRefToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				g_py3lm.LogFatal(error);
 				std::terminate();
 				return nullptr;
+			}
 			}
 		}
 
@@ -1508,10 +1518,12 @@ namespace py3lm {
 						delete reinterpret_cast<Matrix4x4*>(ptr);
 						break;
 					}
-					default:
-						puts("Unsupported types!");
+					default: {
+						const std::string error(std::format("[py3lm] ArgsScope unhandled type {:#x}", static_cast<uint8_t>(type)));
+						g_py3lm.LogFatal(error);
 						std::terminate();
 						break;
+					}
 					}
 				}
 				if (ag) {
@@ -1806,10 +1818,11 @@ namespace py3lm {
 				dcCallAggr(a.vm, addr, a.ag, &val);
 				return CreatePyObject(val);
 			}
-			default:
-				const std::string error(std::format("Return unsupported type {:#x}", static_cast<uint8_t>(method->retType.type)));
-				PyErr_SetString(PyExc_TypeError, error.c_str());
+			default: {
+				const std::string error(std::format("MakeExternalCall unsupported type {:#x}", static_cast<uint8_t>(method->retType.type)));
+				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return nullptr;
+			}
 			}
 
 			return nullptr;
@@ -2118,8 +2131,8 @@ namespace py3lm {
 				return true;
 			}
 			default: {
-				const std::string error(std::format("Param unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
-				PyErr_SetString(PyExc_TypeError, error.c_str());
+				const std::string error(std::format("PushObjectAsParam unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return false;
 			}
 			}
@@ -2207,8 +2220,8 @@ namespace py3lm {
 			case ValueType::Matrix4x4:
 				return PushRefParam(CreateValue<Matrix4x4>(pItem));
 			default: {
-				const std::string error(std::format("Param unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
-				PyErr_SetString(PyExc_TypeError, error.c_str());
+				const std::string error(std::format("PushObjectAsRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return false;
 			}
 			}
@@ -2286,9 +2299,11 @@ namespace py3lm {
 				return CreatePyObject(*reinterpret_cast<Vector4*>(std::get<0>(a.storage[index])));
 			case ValueType::Matrix4x4:
 				return CreatePyObject(*reinterpret_cast<Matrix4x4*>(std::get<0>(a.storage[index])));
-			default:
-				// TODO: Log fail description
-				std::terminate();
+			default: {
+				const std::string error(std::format("StorageValueToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.type)));
+				PyErr_SetString(PyExc_RuntimeError, error.c_str());
+				return nullptr;
+			}
 			}
 		}
 
@@ -3359,6 +3374,10 @@ namespace py3lm {
 		Py_DECREF(nameString);
 
 		return;
+	}
+
+	void Python3LanguageModule::LogFatal(const std::string& msg) const {
+		_provider->Log(msg, Severity::Fatal);
 	}
 
 	Python3LanguageModule g_py3lm;

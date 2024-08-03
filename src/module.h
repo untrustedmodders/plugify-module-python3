@@ -53,6 +53,7 @@ namespace py3lm {
 		std::optional<plugify::Vector4> Vector4ValueFromObject(PyObject* object);
 		PyObject* CreateMatrix4x4Object(const plugify::Matrix4x4& matrix);
 		std::optional<plugify::Matrix4x4> Matrix4x4ValueFromObject(PyObject* object);
+		void LogFatal(const std::string& msg) const;
 
 	private:
 		PyObject* FindPythonMethod(void* addr) const;
