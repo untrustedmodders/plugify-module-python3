@@ -78,7 +78,7 @@ jobs:
           Move-Item -Path $LIB_PATH -Destination build\output
           New-Item -ItemType Directory -Path build\output\python3.12 -Force
           $PY3_PATH = (Get-Item -Path 'build\python3.12' -Force).Target
-          $PY3_RELEASE_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows\release"
+          $PY3_RELEASE_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows\release\*"
           $PY3_LICENCE_PATH = Join-Path -Path $PY3_PATH -ChildPath "LICENSE.txt"
           $PY3_ZIP_PATH = Join-Path -Path $PY3_PATH -ChildPath "python312.zip"
           Move-Item -Path $PY3_RELEASE_PATH -Destination build\output\python3.12
@@ -127,7 +127,7 @@ jobs:
           mv "$(readlink -f build/lib)" build/output
           PY3_PATH=$(readlink build/python3.12)
           mkdir -p build/output/python3.12
-          mv "$PY3_PATH/linux/debug" build/output/python3.12
+          mv "$PY3_PATH/linux/release/*" build/output/python3.12
           mv "$PY3_PATH/LICENSE.txt" build/output/python3.12
           mv "$PY3_PATH/python312.zip" build/output/python3.12
 
