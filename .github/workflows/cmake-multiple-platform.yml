@@ -127,7 +127,7 @@ jobs:
           mv "$(readlink -f build/lib)" build/output
           PY3_PATH=$(readlink build/python3.12)
           mkdir -p build/output/python3.12
-          mv "$PY3_PATH/linux/release/*" build/output/python3.12
+          find "$PY3_PATH/linux/release/" -type f -print0 | xargs -0 mv -t build/output/python3.12
           mv "$PY3_PATH/LICENSE.txt" build/output/python3.12
           mv "$PY3_PATH/python312.zip" build/output/python3.12
 
