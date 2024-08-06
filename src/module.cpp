@@ -37,6 +37,78 @@ namespace py3lm {
 			return false;
 		}
 
+		// Return codes:
+		// [1, 3]	Number bytes used
+		// 0		Sequence starts with \0
+		// -1		Encoding error
+		// -2		Invalid multibyte sequence
+		// -3		Surrogate pair
+		std::pair<short, char16_t> ConvertUtf8ToUtf16(std::span<const char> sequence) {
+			const auto c8toc16 = [](char ch) -> char16_t { return static_cast<char16_t>(static_cast<uint8_t>(ch)); };
+
+			if (sequence.empty()) {
+				return { -2, {} };
+			}
+			const char seqCh0 = sequence[0];
+			if (seqCh0 == '\0') {
+				return { 0, 0 };
+			}
+			if ((seqCh0 & 0b11111000) == 0b11110000) {
+				return { -3, {} };
+			}
+			if ((seqCh0 & 0b11110000) == 0b11100000) {
+				if (sequence.size() < 3) {
+					return { -2, {} };
+				}
+				const char seqCh1 = sequence[1];
+				const char seqCh2 = sequence[2];
+				if ((seqCh1 & 0b11000000) != 0b10000000 || (seqCh2 & 0b11000000) != 0b10000000) {
+					return { -2, {} };
+				}
+				const char16_t ch = (c8toc16(seqCh0 & 0b00001111) << 12) | (c8toc16(seqCh1 & 0b00111111) << 6) | c8toc16(seqCh2 & 0b00111111);
+				if (0xD800 <= static_cast<uint16_t>(ch) && static_cast<uint16_t>(ch) < 0xE000) {
+					return { -1, {} };
+				}
+				return { 3, ch };
+			}
+			if ((seqCh0 & 0b11100000) == 0b11000000) {
+				if (sequence.size() < 2) {
+					return { -2, {} };
+				}
+				const char seqCh1 = sequence[1];
+				if ((seqCh1 & 0b11000000) != 0b10000000) {
+					return { -2, {} };
+				}
+				return { 2, (c8toc16(seqCh0 & 0b00011111) << 6 ) | c8toc16(seqCh1 & 0b00111111) };
+			}
+			if ((seqCh0 & 0b10000000) == 0b00000000) {
+				return { 1, c8toc16(seqCh0) };
+			}
+			return { -1, {} };
+		}
+
+		// Return codes:
+		// [1, 3]	Number bytes returned
+		// 0		For 0x0000 symbol
+		// -1		Surrogate pair
+		std::pair<short, std::array<char, 4>> ConvertUtf16ToUtf8(char16_t ch16) {
+			const auto c16toc8 = [](char16_t ch) -> char { return static_cast<char>(static_cast<uint8_t>(ch)); };
+
+			if (ch16 == 0) {
+				return { 0, { } };
+			}
+			if (static_cast<uint16_t>(ch16) < 0x80) {
+				return { 1, { c16toc8(ch16), '\0' } };
+			}
+			if (static_cast<uint16_t>(ch16) < 0x800) {
+				return { 2, { c16toc8((ch16 & 0b11111000000) >> 6), c16toc8(ch16 & 0b111111), '\0' } };
+			}
+			if (0xD800 <= static_cast<uint16_t>(ch16) && static_cast<uint16_t>(ch16) < 0xE000) {
+				return { -1, {} };
+			}
+			return { 3, { c16toc8((ch16 & 0b1111000000000000) >> 12), c16toc8((ch16 & 0b111111000000) >> 6), c16toc8(ch16 & 0b111111), '\0' } };
+		}
+
 		using MethodExportError = std::string;
 		using MethodExportData = PythonMethodData;
 		using MethodExportResult = std::variant<MethodExportError, MethodExportData>;
@@ -71,10 +143,12 @@ namespace py3lm {
 						return { ch };
 					}
 					// Can't pass multibyte character
-					PyErr_SetNone(PyExc_ValueError);
-				} else {
-					PyErr_SetNone(PyExc_ValueError);
+					PyErr_SetString(PyExc_ValueError, "Multibyte character");
 				}
+				else {
+					PyErr_SetString(PyExc_ValueError, "Length bigger than 1");
+				}
+				return std::nullopt;
 			}
 			PyErr_SetString(PyExc_TypeError, "Not string");
 			return std::nullopt;
@@ -90,17 +164,28 @@ namespace py3lm {
 				if (length == 1) {
 					Py_ssize_t size{};
 					const char* const buffer = PyUnicode_AsUTF8AndSize(object, &size);
-					char16_t ch{};
-					std::mbstate_t state{};
-					const std::size_t rc = std::mbrtoc16(&ch, buffer, static_cast<size_t>(size), &state);
-					if (rc == 1 || rc == 2 || rc == 3) {
+					auto [rc, ch] = ConvertUtf8ToUtf16({ buffer, static_cast<std::size_t>(size) });
+					switch (rc) {
+					case 0:
+					case 1:
+					case 2:
+					case 3:
 						return { ch };
+					case -3:
+						PyErr_SetString(PyExc_ValueError, "Surrogate pair");
+						break;
+					case -2:
+						PyErr_SetString(PyExc_ValueError, "Invalid multibyte character");
+						break;
+					case -1:
+						PyErr_SetString(PyExc_RuntimeError, "Encoding error");
+						break;
 					}
-					// Can't pass surrogate pair
-					PyErr_SetNone(PyExc_ValueError);
-				} else {
-					PyErr_SetNone(PyExc_ValueError);
 				}
+				else {
+					PyErr_SetString(PyExc_ValueError, "Length bigger than 1");
+				}
+				return std::nullopt;
 			}
 			PyErr_SetString(PyExc_TypeError, "Not string");
 			return std::nullopt;
@@ -118,6 +203,7 @@ namespace py3lm {
 					}
 					PyErr_SetNone(PyExc_OverflowError);
 				}
+				return std::nullopt;
 			}
 			PyErr_SetString(PyExc_TypeError, "Not integer");
 			return std::nullopt;
@@ -899,10 +985,9 @@ namespace py3lm {
 			if (value == char16_t{ 0 }) {
 				return PyUnicode_FromStringAndSize(nullptr, Py_ssize_t{ 0 });
 			}
-			std::mbstate_t state{};
-			std::array<char, MB_LEN_MAX> out{};
-			std::size_t rc = std::c16rtomb(out.data(), value, &state);
-			if (rc == static_cast<size_t>(-1)) {
+			const auto [rc, out] = ConvertUtf16ToUtf8(value);
+			if (rc == -1) {
+				PyErr_SetString(PyExc_ValueError, "Surrogate pair");
 				return nullptr;
 			}
 			return PyUnicode_FromStringAndSize(out.data(), static_cast<Py_ssize_t>(rc));
