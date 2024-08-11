@@ -83,7 +83,7 @@ else()
         set_property(TARGET python3 PROPERTY IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/release/python312.lib")
     elseif(LINUX)
         set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/linux/debug/libpython3.so")
-        set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/linux/debug/libpython3.so") # TODO: Replace by Release lib
+        set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/linux/release/libpython3.so")
         target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--no-as-needed" "-Wl,-rpath,$ORIGIN/../python3.12")
     endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE python3)
