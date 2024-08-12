@@ -159,7 +159,7 @@
 #define HAVE_CLOCK_SETTIME 1
 
 /* Define to 1 if you have the `close_range' function. */
-/* #undef HAVE_CLOSE_RANGE */
+#define HAVE_CLOSE_RANGE 1
 
 /* Define if the C compiler supports computed gotos. */
 #define HAVE_COMPUTED_GOTOS 1
@@ -1012,7 +1012,7 @@
 /* #undef HAVE_RL_RESIZE_TERMINAL */
 
 /* Define to 1 if you have the <rpc/rpc.h> header file. */
-#define HAVE_RPC_RPC_H 1
+/* #undef HAVE_RPC_RPC_H */
 
 /* Define to 1 if you have the `rtpSpawn' function. */
 /* #undef HAVE_RTPSPAWN */
@@ -1219,7 +1219,7 @@
 #define HAVE_STRING_H 1
 
 /* Define to 1 if you have the `strlcpy' function. */
-/* #undef HAVE_STRLCPY */
+#define HAVE_STRLCPY 1
 
 /* Define to 1 if you have the <stropts.h> header file. */
 /* #undef HAVE_STROPTS_H */
@@ -1535,7 +1535,7 @@
 #define HAVE_WRITEV 1
 
 /* Define if the zlib library has inflateCopy */
-#define HAVE_ZLIB_COPY 1
+/* #undef HAVE_ZLIB_COPY */
 
 /* Define to 1 if you have the <zlib.h> header file. */
 /* #undef HAVE_ZLIB_H */
@@ -1799,7 +1799,7 @@
 
 
 /* Define if WINDOW in curses.h offers a field _flags. */
-#define WINDOW_HAS_FLAGS 1
+/* #undef WINDOW_HAS_FLAGS */
 
 /* Define if you want build the _decimal module using a coroutine-local rather
    than a thread-local context */
@@ -1881,7 +1881,7 @@
 #define _PYTHONFRAMEWORK ""
 
 /* Define to force use of thread-safe errno, h_errno, and other functions */
-/* #undef _REENTRANT */
+#define _REENTRANT 1
 
 /* Define to 1 if you want to emulate getpid() on WASI */
 /* #undef _WASI_EMULATED_GETPID */
