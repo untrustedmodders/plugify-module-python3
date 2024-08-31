@@ -114,7 +114,7 @@ configure_file(
 
 set(PY3LM_GITHUB_ACTIONS "0" CACHE STRING "Build with github actions")
 
-if($<BOOL:${PY3LM_GITHUB_ACTIONS}>)
+if(PY3LM_GITHUB_ACTIONS)
     execute_process(COMMAND cmake -E create_symlink
         "${CMAKE_SOURCE_DIR}/lib"
         "${CMAKE_BINARY_DIR}/lib"
