@@ -72,8 +72,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path build\output\bin -Force
-          Copy-Item -Path build\${{ env.BUILD_TYPE }}\py3-12-lang-module.dll -Destination build\output\bin
-          Copy-Item -Path build\py3-12-lang-module.pmodule -Destination build\output
+          Move-Item -Path build\${{ env.BUILD_TYPE }}\py3-12-lang-module.dll -Destination build\output\bin
+          Move-Item -Path build\py3-12-lang-module.pmodule -Destination build\output
           $LIB_PATH = (Get-Item -Path 'build\lib' -Force).Target
           Move-Item -Path $LIB_PATH -Destination build\output
           New-Item -ItemType Directory -Path build\output\python3.12 -Force
@@ -129,9 +129,9 @@ jobs:
           mv "$(readlink -f build/lib)" build/output
           PY3_PATH=$(readlink build/python3.12)
           mkdir -p build/output/python3.12
-          find "$PY3_PATH/linux/lib" -type f -print0 | xargs -0 mv -t build/output/python3.12
-          find "$PY3_PATH/linux/release/bin" -type f -print0 | xargs -0 mv -t build/output/python3.12
-          find "$PY3_PATH/linux/release/lib" -type f -print0 | xargs -0 mv -t build/output/python3.12
+          mv -v $PY3_PATH/linux/lib/* build/output/python3.12
+          mv -v $PY3_PATH/linux/release/bin/* build/output/python3.12
+          mv -v $PY3_PATH/linux/release/lib/* build/output/python3.12
           mv "$PY3_PATH/LICENSE.txt" build/output/python3.12
 
       - uses: actions/upload-artifact@v3
