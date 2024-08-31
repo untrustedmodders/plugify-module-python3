@@ -2530,7 +2530,7 @@ namespace py3lm {
 		}
 
 		const fs::path modulesZipPath = pythonBasePath / L"python312.zip";
-		const fs::path pluginsPath = fs::absolute(moduleBasePath / ".." / ".." / "plugins", ec);
+		const fs::path pluginsPath = fs::weakly_canonical(moduleBasePath / ".." / ".." / "plugins", ec);
 		if (ec) {
 			return ErrorData{ "Failed to get plugins directory path" };
 		}
