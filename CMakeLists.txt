@@ -70,27 +70,32 @@ endif()
 # Python 3.12
 #
 add_library(python3 SHARED IMPORTED)
+
+if(${CMAKE_BUILD_TYPE} EQUAL "Debug")
+    set(PYTHON_ABSTRACT_BUILD_TYPE_LOWER "debug")
+else()
+    set(PYTHON_ABSTRACT_BUILD_TYPE_LOWER "release")
+endif()
+
 if(MSVC)
     # Linked by #pragma
-    target_link_directories(${PROJECT_NAME} PRIVATE $<IF:$<STREQUAL:${CMAKE_BUILD_TYPE},Debug>,
-            "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/debug",
-            "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/release">)
+    target_link_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/${PYTHON_ABSTRACT_BUILD_TYPE_LOWER}/bin")
 else()
     if(WIN32)
-        set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/debug/python312_d.dll")
-        set_property(TARGET python3 PROPERTY IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/debug/python312_d.lib")
-        set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/release/python312.dll")
-        set_property(TARGET python3 PROPERTY IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/release/python312.lib")
+        set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/debug/bin/python312_d.dll")
+        set_property(TARGET python3 PROPERTY IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/debug/bin/python312_d.lib")
+        set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/release/bin/python312.dll")
+        set_property(TARGET python3 PROPERTY IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/windows/release/bin/python312.lib")
     elseif(LINUX)
-        set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/linux/debug/libpython3.12d.so.1.0")
-        set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/linux/release/libpython3.12.so.1.0")
+        set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/linux/debug/bin/libpython3.12d.so.1.0")
+        set_property(TARGET python3 PROPERTY IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/linux/release/bin/libpython3.12.so.1.0")
         set_property(TARGET ${PROJECT_NAME} PROPERTY LINK_FLAGS "-Wl,-rpath,\\\$ORIGIN/../python3.12")
     endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE python3)
 endif()
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/include/python3.12" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude")
 string(TOLOWER ${CMAKE_SYSTEM_NAME} SYSTEM_NAME_LOWER)
-file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/include/pyconfig.h" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude/python3.12")
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/${PYTHON_ABSTRACT_BUILD_TYPE_LOWER}/include/pyconfig.h" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude/python3.12")
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude/python3.12")
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -107,11 +112,15 @@ configure_file(
     ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pmodule
 )
 
-execute_process(COMMAND cmake -E create_symlink
-    "${CMAKE_SOURCE_DIR}/lib"
-    "${CMAKE_BINARY_DIR}/lib"
-)
-execute_process(COMMAND cmake -E create_symlink
-    "${CMAKE_SOURCE_DIR}/python3.12"
-    "${CMAKE_BINARY_DIR}/python3.12"
-)
+set(PY3LM_GITHUB_ACTIONS "0" CACHE STRING "Build with github actions")
+
+if($<BOOL:${PY3LM_GITHUB_ACTIONS}>)
+    execute_process(COMMAND cmake -E create_symlink
+        "${CMAKE_SOURCE_DIR}/lib"
+        "${CMAKE_BINARY_DIR}/lib"
+    )
+    execute_process(COMMAND cmake -E create_symlink
+        "${CMAKE_SOURCE_DIR}/python3.12"
+        "${CMAKE_BINARY_DIR}/python3.12"
+    )
+endif()

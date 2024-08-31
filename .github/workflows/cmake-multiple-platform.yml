@@ -65,7 +65,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.buildnumber }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}" ..
+          cmake -DPY3LM_GITHUB_ACTIONS=1 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.buildnumber }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}" ..
           cmake --build . --target py3-12-lang-module --config ${{ env.BUILD_TYPE }} -- /m:16
 
       - name: Clean build directory
@@ -78,12 +78,14 @@ jobs:
           Move-Item -Path $LIB_PATH -Destination build\output
           New-Item -ItemType Directory -Path build\output\python3.12 -Force
           $PY3_PATH = (Get-Item -Path 'build\python3.12' -Force).Target
-          $PY3_RELEASE_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows\release\*"
+          $PY3_LIB_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows\lib\*"
+          $PY3_RELEASE_BIN_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows\release\bin\*"
+          $PY3_RELEASE_LIB_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows\release\lib\*"
           $PY3_LICENCE_PATH = Join-Path -Path $PY3_PATH -ChildPath "LICENSE.txt"
-          $PY3_ZIP_PATH = Join-Path -Path $PY3_PATH -ChildPath "python312.zip"
-          Move-Item -Path $PY3_RELEASE_PATH -Destination build\output\python3.12
+          Move-Item -Path $PY3_LIB_PATH -Destination build\output\python3.12
+          Move-Item -Path $PY3_RELEASE_BIN_PATH -Destination build\output\python3.12
+          Move-Item -Path $PY3_RELEASE_LIB_PATH -Destination build\output\python3.12
           Move-Item -Path $PY3_LICENCE_PATH -Destination build\output\python3.12
-          Move-Item -Path $PY3_ZIP_PATH -Destination build\output\python3.12
 
       - uses: actions/upload-artifact@v3
         with:
@@ -116,7 +118,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.buildnumber }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}" ..
+          cmake -DPY3LM_GITHUB_ACTIONS=1 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.buildnumber }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}" ..
           cmake --build . --target py3-12-lang-module --config ${{ env.BUILD_TYPE }} -- -j16
 
       - name: Clean build directory
@@ -127,9 +129,10 @@ jobs:
           mv "$(readlink -f build/lib)" build/output
           PY3_PATH=$(readlink build/python3.12)
           mkdir -p build/output/python3.12
-          find "$PY3_PATH/linux/release/" -type f -print0 | xargs -0 mv -t build/output/python3.12
+          find "$PY3_PATH/linux/lib" -type f -print0 | xargs -0 mv -t build/output/python3.12
+          find "$PY3_PATH/linux/release/bin" -type f -print0 | xargs -0 mv -t build/output/python3.12
+          find "$PY3_PATH/linux/release/lib" -type f -print0 | xargs -0 mv -t build/output/python3.12
           mv "$PY3_PATH/LICENSE.txt" build/output/python3.12
-          mv "$PY3_PATH/python312.zip" build/output/python3.12
 
       - uses: actions/upload-artifact@v3
         with:
