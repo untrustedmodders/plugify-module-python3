@@ -55,9 +55,8 @@ The Plugify Python Language Module is a powerful extension for the Plugify proje
 ## Example
 
 ```python
-from plugify.plugin import Plugin, PluginInfo
+from plugify.plugin import Plugin
 
-__plugin__ = PluginInfo('ExamplePlugin')
 
 class ExamplePlugin(Plugin):
 	def plugin_start(self):
