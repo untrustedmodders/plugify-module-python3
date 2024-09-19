@@ -2,13 +2,15 @@
 
 #include <plugify/function.h>
 #include <plugify/language_module.h>
+#include <plugify/plugin.h>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <asmjit/asmjit.h>
-#include <unordered_map>
+#include <memory>
 #include <optional>
 #include <string>
-#include <memory>
+#include <map>
+#include <unordered_map>
 
 namespace plugify {
 	struct Vector2;
@@ -68,7 +70,7 @@ namespace py3lm {
 			PyObject* _module = nullptr;
 			PyObject* _instance = nullptr;
 		};
-		std::unordered_map<std::string, PluginData> _pluginsMap;
+		std::map<plugify::UniqueId, PluginData> _pluginsMap;
 		std::vector<PythonMethodData> _pythonMethods;
 		PyObject* _PluginTypeObject = nullptr;
 		PyObject* _PluginInfoTypeObject = nullptr;

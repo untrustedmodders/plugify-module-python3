@@ -5,6 +5,7 @@
 #include <plugify/module.h>
 #include <plugify/plugin_descriptor.h>
 #include <plugify/plugin.h>
+#include <plugify/string.h>
 #include <plugify/math.h>
 #include <module_export.h>
 #include <dyncall/dyncall.h>
@@ -285,11 +286,11 @@ namespace py3lm {
 		}
 
 		template<>
-		std::optional<std::string> ValueFromObject(PyObject* object) {
+		std::optional<plg::string> ValueFromObject(PyObject* object) {
 			if (PyUnicode_Check(object)) {
 				Py_ssize_t size{};
 				const char* const buffer = PyUnicode_AsUTF8AndSize(object, &size);
-				return std::make_optional<std::string>(buffer, buffer + size);
+				return std::make_optional<plg::string>(buffer, buffer + size);
 			}
 			PyErr_SetString(PyExc_TypeError, "Not string");
 			return std::nullopt;
@@ -379,7 +380,7 @@ namespace py3lm {
 				ret->SetReturnPtr<uintptr_t>({});
 				break;
 			case ValueType::String: {
-				auto* const returnParam = params->GetArgument<std::string*>(0);
+				auto* const returnParam = params->GetArgument<plg::string*>(0);
 				std::construct_at(returnParam);
 				break;
 			}
@@ -405,7 +406,7 @@ namespace py3lm {
 				break;
 			}
 			case ValueType::ArrayString: {
-				auto* const returnParam = params->GetArgument<std::vector<std::string>*>(0);
+				auto* const returnParam = params->GetArgument<std::vector<plg::string>*>(0);
 				std::construct_at(returnParam);
 				break;
 			}
@@ -545,8 +546,8 @@ namespace py3lm {
 				}
 				break;
 			case ValueType::String:
-				if (auto value = ValueFromObject<std::string>(result)) {
-					auto* const returnParam = params->GetArgument<std::string*>(0);
+				if (auto value = ValueFromObject<plg::string>(result)) {
+					auto* const returnParam = params->GetArgument<plg::string*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
@@ -650,8 +651,8 @@ namespace py3lm {
 				}
 				break;
 			case ValueType::ArrayString:
-				if (auto value = ArrayFromObject<std::string>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<std::string>*>(0);
+				if (auto value = ArrayFromObject<plg::string>(result)) {
+					auto* const returnParam = params->GetArgument<std::vector<plg::string>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
@@ -812,8 +813,8 @@ namespace py3lm {
 				}
 				break;
 			case ValueType::String:
-				if (auto value = ValueFromObject<std::string>(object)) {
-					auto* const param = params->GetArgument<std::string*>(index);
+				if (auto value = ValueFromObject<plg::string>(object)) {
+					auto* const param = params->GetArgument<plg::string*>(index);
 					*param = std::move(*value);
 					return true;
 				}
@@ -917,8 +918,8 @@ namespace py3lm {
 				}
 				break;
 			case ValueType::ArrayString:
-				if (auto value = ArrayFromObject<std::string>(object)) {
-					auto* const param = params->GetArgument<std::vector<std::string>*>(index);
+				if (auto value = ArrayFromObject<plg::string>(object)) {
+					auto* const param = params->GetArgument<std::vector<plg::string>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
@@ -1049,7 +1050,7 @@ namespace py3lm {
 		}
 
 		template<>
-		PyObject* CreatePyObject(std::string value) {
+		PyObject* CreatePyObject(plg::string value) {
 			return PyUnicode_FromStringAndSize(value.data(), static_cast<Py_ssize_t>(value.size()));
 		}
 
@@ -1127,7 +1128,7 @@ namespace py3lm {
 			case ValueType::Function:
 				return GetOrCreateFunctionObject(paramType.GetPrototype().value(), params->GetArgument<void*>(index));
 			case ValueType::String:
-				return CreatePyObject(*(params->GetArgument<const std::string*>(index)));
+				return CreatePyObject(*(params->GetArgument<const plg::string*>(index)));
 			case ValueType::ArrayBool:
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<bool>*>(index)));
 			case ValueType::ArrayChar8:
@@ -1157,7 +1158,7 @@ namespace py3lm {
 			case ValueType::ArrayDouble:
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<double>*>(index)));
 			case ValueType::ArrayString:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<std::string>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<plg::string>*>(index)));
 			case ValueType::Vector2:
 				return CreatePyObject(*(params->GetArgument<Vector2*>(index)));
 			case ValueType::Vector3:
@@ -1206,7 +1207,7 @@ namespace py3lm {
 			case ValueType::Double:
 				return CreatePyObject(*(params->GetArgument<double*>(index)));
 			case ValueType::String:
-				return CreatePyObject(*(params->GetArgument<const std::string*>(index)));
+				return CreatePyObject(*(params->GetArgument<const plg::string*>(index)));
 			case ValueType::ArrayBool:
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<bool>*>(index)));
 			case ValueType::ArrayChar8:
@@ -1236,7 +1237,7 @@ namespace py3lm {
 			case ValueType::ArrayDouble:
 				return CreatePyObjectList(*(params->GetArgument<const std::vector<double>*>(index)));
 			case ValueType::ArrayString:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<std::string>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const std::vector<plg::string>*>(index)));
 			case ValueType::Vector2:
 				return CreatePyObject(*(params->GetArgument<Vector2*>(index)));
 			case ValueType::Vector3:
@@ -1525,7 +1526,7 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::String: {
-						delete reinterpret_cast<std::string*>(ptr);
+						delete reinterpret_cast<plg::string*>(ptr);
 						break;
 					}
 					case ValueType::ArrayBool: {
@@ -1585,7 +1586,7 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::ArrayString: {
-						delete reinterpret_cast<std::vector<std::string>*>(ptr);
+						delete reinterpret_cast<std::vector<plg::string>*>(ptr);
 						break;
 					}
 					case ValueType::Vector2: {
@@ -1622,7 +1623,7 @@ namespace py3lm {
 		void BeginExternalCall(MethodRef method, ArgsScope& a) {
 			switch (method.GetReturnType().GetType()) {
 			case ValueType::String: {
-				void* const value = new std::string();
+				void* const value = new plg::string();
 				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
@@ -1712,7 +1713,7 @@ namespace py3lm {
 				break;
 			}
 			case ValueType::ArrayString: {
-				void* const value = new std::vector<std::string>();
+				void* const value = new std::vector<plg::string>();
 				a.storage.emplace_back(value, method.GetReturnType().GetType());
 				dcArgPointer(a.vm, value);
 				break;
@@ -1822,7 +1823,7 @@ namespace py3lm {
 			}
 			case ValueType::String: {
 				dcCallVoid(a.vm, addr);
-				return CreatePyObject(*reinterpret_cast<std::string*>(std::get<0>(a.storage[0])));
+				return CreatePyObject(*reinterpret_cast<plg::string*>(std::get<0>(a.storage[0])));
 			}
 			case ValueType::ArrayBool: {
 				dcCallVoid(a.vm, addr);
@@ -1882,7 +1883,7 @@ namespace py3lm {
 			}
 			case ValueType::ArrayString: {
 				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<std::string>(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[0])));
+				return CreatePyObjectList<plg::string>(*reinterpret_cast<std::vector<plg::string>*>(std::get<0>(a.storage[0])));
 			}
 			case ValueType::Vector2: {
 				Vector2 val;
@@ -2029,7 +2030,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::String: {
-				void* const value = CreateValue<std::string>(pItem);
+				void* const value = CreateValue<plg::string>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2172,7 +2173,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::ArrayString: {
-				void* const value = CreateArray<std::string>(pItem);
+				void* const value = CreateArray<plg::string>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2266,7 +2267,7 @@ namespace py3lm {
 			case ValueType::Double:
 				return PushRefParam(CreateValue<double>(pItem));
 			case ValueType::String:
-				return PushRefParam(CreateValue<std::string>(pItem));
+				return PushRefParam(CreateValue<plg::string>(pItem));
 			case ValueType::ArrayBool:
 				return PushRefParam(CreateArray<bool>(pItem));
 			case ValueType::ArrayChar8:
@@ -2296,7 +2297,7 @@ namespace py3lm {
 			case ValueType::ArrayDouble:
 				return PushRefParam(CreateArray<double>(pItem));
 			case ValueType::ArrayString:
-				return PushRefParam(CreateArray<std::string>(pItem));
+				return PushRefParam(CreateArray<plg::string>(pItem));
 			case ValueType::Vector2:
 				return PushRefParam(CreateValue<Vector2>(pItem));
 			case ValueType::Vector3:
@@ -2344,7 +2345,7 @@ namespace py3lm {
 			case ValueType::Double:
 				return CreatePyObject(*reinterpret_cast<double*>(std::get<0>(a.storage[index])));
 			case ValueType::String:
-				return CreatePyObject(*reinterpret_cast<std::string*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*reinterpret_cast<plg::string*>(std::get<0>(a.storage[index])));
 			case ValueType::Pointer:
 				return CreatePyObject(*reinterpret_cast<uintptr_t*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayBool:
@@ -2376,7 +2377,7 @@ namespace py3lm {
 			case ValueType::ArrayDouble:
 				return CreatePyObjectList(*reinterpret_cast<std::vector<double>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayString:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<std::string>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<std::vector<plg::string>*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector2:
 				return CreatePyObject(*reinterpret_cast<Vector2*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector3:
@@ -2731,7 +2732,7 @@ namespace py3lm {
 	}
 
 	LoadResult Python3LanguageModule::OnPluginLoad(PluginRef plugin) {
-		const std::string& entryPoint = plugin.GetDescriptor().GetEntryPoint();
+		const std::string_view entryPoint = plugin.GetDescriptor().GetEntryPoint();
 		if (entryPoint.empty()) {
 			return ErrorData{ "Incorrect entry point: empty" };
 		}
@@ -2751,7 +2752,7 @@ namespace py3lm {
 			return ErrorData{ "Incorrect entry point: empty module path part" };
 		}
 
-		const fs::path& baseFolder = plugin.GetBaseDir();
+		const fs::path baseFolder(plugin.GetBaseDir());
 		auto modulePath = std::string(modulePathRel);
 		ReplaceAll(modulePath, ".", { static_cast<char>(fs::path::preferred_separator) });
 		fs::path filePathRelative = modulePath;
@@ -2837,10 +2838,10 @@ namespace py3lm {
 			return ErrorData{ "Failed to save instance: assignment fail" };
 		}
 
-		if (_pluginsMap.contains(plugin.GetName())) {
+		if (_pluginsMap.contains(plugin.GetId())) {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
-			return ErrorData{ "Plugin name duplicate" };
+			return ErrorData{ "Plugin id duplicate" };
 		}
 
 		const auto exportedMethods = plugin.GetDescriptor().GetExportedMethods();
@@ -2870,7 +2871,7 @@ namespace py3lm {
 			return ErrorData{ std::move(errorString) };
 		}
 
-		const auto [_, result] = _pluginsMap.try_emplace(plugin.GetName(), pluginModule, pluginInstance);
+		const auto [_, result] = _pluginsMap.try_emplace(plugin.GetId(), pluginModule, pluginInstance);
 		if (!result) {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
@@ -3357,11 +3358,11 @@ namespace py3lm {
 	}
 
 	PyObject* Python3LanguageModule::CreateInternalModule(PluginRef plugin) {
-		if (!_pluginsMap.contains(plugin.GetName())) {
+		if (!_pluginsMap.contains(plugin.GetId())) {
 			return nullptr;
 		}
 
-		PyObject* moduleObject = PyModule_New(plugin.GetName().c_str());
+		PyObject* moduleObject = PyModule_New(plugin.GetName().data());
 
 		for (const auto& [method, addr] : plugin.GetMethods()) {
 			PyObject* const methodObject = FindPythonMethod(addr);
@@ -3369,7 +3370,7 @@ namespace py3lm {
 				_provider->Log(std::format("[py3lm] Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
 				std::terminate();
 			}
-			PyObject_SetAttrString(moduleObject, method.GetName().c_str(), methodObject);
+			PyObject_SetAttrString(moduleObject, method.GetName().data(), methodObject);
 		}
 
 		return moduleObject;
@@ -3394,7 +3395,7 @@ namespace py3lm {
 				break;
 
 			PyMethodDef& def = moduleMethods.emplace_back();
-			def.ml_name = method.GetName().c_str();
+			def.ml_name = method.GetName().data();
 			def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
 			def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
 			def.ml_doc = nullptr;
@@ -3412,7 +3413,7 @@ namespace py3lm {
 
 		PyModuleDef& moduleDef = *(_moduleDefinitions.emplace_back(std::make_unique<PyModuleDef>()).get());
 		moduleDef.m_base = PyModuleDef_HEAD_INIT;
-		moduleDef.m_name = plugin.GetName().c_str();
+		moduleDef.m_name = plugin.GetName().data();
 		moduleDef.m_doc = nullptr;
 		moduleDef.m_size = -1;
 		moduleDef.m_methods = moduleMethods.data();
@@ -3425,7 +3426,7 @@ namespace py3lm {
 	}
 
 	void Python3LanguageModule::TryCallPluginMethodNoArgs(PluginRef plugin, const std::string& name, const std::string& context) {
-		const auto it = _pluginsMap.find(plugin.GetName());
+		const auto it = _pluginsMap.find(plugin.GetId());
 		if (it == _pluginsMap.end()) {
 			_provider->Log(std::format("[py3lm] {}: plugin '{}' not found in map", context, plugin.GetName()), Severity::Error);
 			return;
