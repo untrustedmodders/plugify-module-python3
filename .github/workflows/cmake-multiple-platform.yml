@@ -87,7 +87,7 @@ jobs:
           Move-Item -Path $PY3_RELEASE_LIB_PATH -Destination build\output\python3.12
           Move-Item -Path $PY3_LICENCE_PATH -Destination build\output\python3.12
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: py3lm-build-windows-${{ env.GITHUB_SHA_SHORT }}
           path: build/output/
@@ -134,7 +134,7 @@ jobs:
           mv -v $PY3_PATH/linux/release/lib/* build/output/python3.12
           mv "$PY3_PATH/LICENSE.txt" build/output/python3.12
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: py3lm-build-linux-${{ env.GITHUB_SHA_SHORT }}
           path: build/output/
