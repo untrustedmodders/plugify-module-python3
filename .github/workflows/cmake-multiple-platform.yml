@@ -57,7 +57,7 @@ jobs:
             echo>>"%GITHUB_ENV%" %%a=%%b
           )
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: "recursive"
 
@@ -102,7 +102,7 @@ jobs:
         shell: bash
         run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: "recursive"
 
@@ -153,12 +153,12 @@ jobs:
         shell: bash
         run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: py3lm-build-windows-${{ env.GITHUB_SHA_SHORT }}
           path: build/windows
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: py3lm-build-linux-${{ env.GITHUB_SHA_SHORT }}
           path: build/linux
@@ -206,7 +206,7 @@ jobs:
         run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup python
         uses: actions/setup-python@v4
