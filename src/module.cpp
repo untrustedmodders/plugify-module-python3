@@ -16,8 +16,27 @@
 using namespace plugify;
 namespace fs = std::filesystem;
 
+void std::default_delete<DCaggr>::operator()(DCaggr* p) const {
+	dcFreeAggr(p);
+}
+
+void std::default_delete<DCCallVM>::operator()(DCCallVM* p) const {
+	dcFree(p);
+}
+
 namespace py3lm {
 	extern Python3LanguageModule g_py3lm;
+
+	static thread_local VirtualMachine s_vm;
+
+	DCCallVM& VirtualMachine::operator()() {
+		if (_callVirtMachine == nullptr) {
+			DCCallVM* vm = dcNewCallVM(4096);
+			dcMode(vm, DC_CALL_C_DEFAULT);
+			_callVirtMachine = std::unique_ptr<DCCallVM>(vm);
+		}
+		return *_callVirtMachine;
+	}
 
 	namespace {
 		void ReplaceAll(std::string& str, const std::string& from, const std::string& to) {
@@ -1457,9 +1476,8 @@ namespace py3lm {
 			std::vector<std::pair<void*, ValueType>> storage; // used to store array temp memory
 			DCaggr* ag = nullptr;
 
-			ArgsScope(uint8_t size) {
-				vm = dcNewCallVM(4096);
-				dcMode(vm, DC_CALL_C_DEFAULT);
+			explicit ArgsScope(uint8_t size) {
+				vm = &s_vm();
 				dcReset(vm);
 				if (size) {
 					storage.reserve(size);
@@ -1616,7 +1634,6 @@ namespace py3lm {
 				if (ag) {
 					dcFreeAggr(ag);
 				}
-				dcFree(vm);
 			}
 		};
 

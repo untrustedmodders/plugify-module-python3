@@ -19,7 +19,28 @@ namespace plugify {
 	struct Matrix4x4;
 }
 
+extern "C" {
+	typedef struct DCCallVM_ DCCallVM;
+	typedef struct DCaggr_ DCaggr;
+}
+
+template <>
+struct std::default_delete<DCaggr> {
+	void operator()(DCaggr* p) const;
+};
+
+template <>
+struct std::default_delete<DCCallVM> {
+	void operator()(DCCallVM* p) const;
+};
+
 namespace py3lm {
+	struct VirtualMachine {
+		DCCallVM& operator()();
+	private:
+		std::unique_ptr<DCCallVM> _callVirtMachine;
+	};
+
 	struct PythonMethodData {
 		plugify::Function jitFunction;
 		PyObject* pythonFunction{};
