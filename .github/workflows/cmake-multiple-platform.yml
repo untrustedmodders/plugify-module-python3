@@ -66,14 +66,14 @@ jobs:
           mkdir -p build
           cd build
           cmake -DPY3LM_GITHUB_ACTIONS=1 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.buildnumber }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}" ..
-          cmake --build . --target py3-12-lang-module --config ${{ env.BUILD_TYPE }} -- /m
+          cmake --build . --target plugify-module-python3.12 --config ${{ env.BUILD_TYPE }} -- /m
 
       - name: Clean build directory
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path build\output\bin -Force
-          Move-Item -Path build\${{ env.BUILD_TYPE }}\py3-12-lang-module.dll -Destination build\output\bin
-          Move-Item -Path build\py3-12-lang-module.pmodule -Destination build\output
+          Move-Item -Path build\${{ env.BUILD_TYPE }}\plugify-module-python3.12.dll -Destination build\output\bin
+          Move-Item -Path build\plugify-module-python3.12.pmodule -Destination build\output
           $LIB_PATH = (Get-Item -Path 'build\lib' -Force).Target
           Move-Item -Path $LIB_PATH -Destination build\output
           New-Item -ItemType Directory -Path build\output\python3.12 -Force
@@ -119,13 +119,13 @@ jobs:
           mkdir -p build
           cd build
           cmake -DPY3LM_GITHUB_ACTIONS=1 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.buildnumber }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}" ..
-          cmake --build . --target py3-12-lang-module --config ${{ env.BUILD_TYPE }} -- -j
+          cmake --build . --target plugify-module-python3.12 --config ${{ env.BUILD_TYPE }} -- -j
 
       - name: Clean build directory
         run: |
           mkdir -p build/output/bin
-          mv build/libpy3-12-lang-module.so build/output/bin
-          mv build/py3-12-lang-module.pmodule build/output
+          mv build/libplugify-module-python3.12.so build/output/bin
+          mv build/plugify-module-python3.12.pmodule build/output
           mv "$(readlink -f build/lib)" build/output
           PY3_PATH=$(readlink build/python3.12)
           mkdir -p build/output/python3.12
@@ -232,7 +232,7 @@ jobs:
             package_name = 'py3lm-build-${{ needs.setup.outputs.buildnumber }}-{}-${{ env.GITHUB_SHA_SHORT }}'
             checksum_linux = '${{ needs.publish.outputs.checksum_linux }}'
             checksum_windows = '${{ needs.publish.outputs.checksum_windows }}'
-            json_url = 'https://untrustedmodders.github.io/py3-12-lang-module/py3-12-lang-module.json'
+            json_url = 'https://untrustedmodders.github.io/plugify-module-python3.12/plugify-module-python3.12.json'
             
             def load_json_from_url(url):
                 try:
@@ -242,8 +242,8 @@ jobs:
                 except requests.RequestException:
                     return {
                         "content": {
-                            "py3-12-lang-module": {
-                                "name": "py3-12-lang-module",
+                            "plugify-module-python3.12": {
+                                "name": "plugify-module-python3.12",
                                 "type": "python3",
                                 "author": "untrustedmodders",
                                 "description": "Adds support for Python3 plugins",
@@ -260,11 +260,11 @@ jobs:
                 new_version = {
                     "version": version,
                     "checksum": f"{checksum}",
-                    "download": f"https://github.com/untrustedmodders/py3-12-lang-module/releases/download/v{version}/{package.format(platform)}.zip",
+                    "download": f"https://github.com/untrustedmodders/plugify-module-python3.12/releases/download/v{version}/{package.format(platform)}.zip",
                     "platforms": [f"{platform}"]
                 }
             
-                versions = data["content"]["py3-12-lang-module"]["versions"]
+                versions = data["content"]["plugify-module-python3.12"]["versions"]
                 versions.append(new_version)
             
                 if len(versions) > 10:
@@ -275,7 +275,7 @@ jobs:
             data = load_json_from_url(json_url)
             data = append_new_version(data, version_number, checksum_windows, package_name, "windows")
             data = append_new_version(data, version_number, checksum_linux, package_name, "linux")
-            save_json('build/repo/py3-12-lang-module.json', data)
+            save_json('build/repo/plugify-module-python3.12.json', data)
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2

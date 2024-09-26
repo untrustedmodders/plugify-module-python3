@@ -21,8 +21,8 @@ The Plugify Python Language Module is a powerful extension for the Plugify proje
 1. Clone this repository:
 
     ```bash
-    git clone https://github.com/untrustedmodders/py3-12-lang-module.git
-    cd py3-12-lang-module
+    git clone https://github.com/untrustedmodders/plugify-module-python3.12.git
+    cd plugify-module-python3.12
     git submodule update --init --recursive
     ```
 

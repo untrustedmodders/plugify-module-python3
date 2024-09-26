@@ -7,9 +7,9 @@
   "description": "Adds support for Python3 plugins",
   "createdBy": "untrustedmodders",
   "createdByURL": "https://github.com/untrustedmodders/",
-  "docsURL": "https://github.com/untrustedmodders/py3-12-lang-module/blob/main/README.md",
-  "downloadURL": "https://github.com/untrustedmodders/cpp-lang-module/releases/download/v${PY3LM_VERSION}/${PY3LM_PACKAGE}.zip",
-  "updateURL": "https://untrustedmodders.github.io/py3-12-lang-module/py3-12-lang-module.json",
+  "docsURL": "https://github.com/untrustedmodders/plugify-module-python3.12/blob/main/README.md",
+  "downloadURL": "https://github.com/untrustedmodders/plugify-module-cpp/releases/download/v${PY3LM_VERSION}/${PY3LM_PACKAGE}.zip",
+  "updateURL": "https://untrustedmodders.github.io/plugify-module-python3.12/plugify-module-python3.12.json",
   "supportedPlatforms": [],
   "libraryDirectories": ["python3.12"],
   "forceLoad": false
