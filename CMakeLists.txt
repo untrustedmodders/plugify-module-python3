@@ -28,13 +28,8 @@ endif()
 # Plugify
 #
 set(PLUGIFY_BUILD_SHARED_LIB ON CACHE INTERNAL "")
-set(PLUGIFY_BUILD_FUNCTION ON CACHE INTERNAL "")
+set(PLUGIFY_BUILD_JIT ON CACHE INTERNAL "")
 add_subdirectory(external/plugify)
-
-#
-# dyncall
-#
-include(cmake/dyncall.cmake)
 
 #
 # Python 3 Language Module for Plugify
@@ -44,7 +39,7 @@ set(PY3LM_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/module.cpp")
 add_library(${PROJECT_NAME} SHARED ${PY3LM_SOURCES})
 
-set(PY3LM_LINK_LIBRARIES plugify::plugify plugify::plugify-function asmjit::asmjit dyncall_s)
+set(PY3LM_LINK_LIBRARIES plugify::plugify plugify::plugify-jit asmjit::asmjit )
 
 if(NOT COMPILER_SUPPORTS_FORMAT)
     set(PY3LM_LINK_LIBRARIES ${PY3LM_LINK_LIBRARIES} fmt::fmt-header-only)

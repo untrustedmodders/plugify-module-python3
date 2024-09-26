@@ -1,6 +1,7 @@
 #pragma once
 
-#include <plugify/function.h>
+#include <plugify/jit/callback.h>
+#include <plugify/jit/call.h>
 #include <plugify/language_module.h>
 #include <plugify/plugin.h>
 #define PY_SSIZE_T_CLEAN
@@ -19,30 +20,9 @@ namespace plugify {
 	struct Matrix4x4;
 }
 
-extern "C" {
-	typedef struct DCCallVM_ DCCallVM;
-	typedef struct DCaggr_ DCaggr;
-}
-
-template <>
-struct std::default_delete<DCaggr> {
-	void operator()(DCaggr* p) const;
-};
-
-template <>
-struct std::default_delete<DCCallVM> {
-	void operator()(DCCallVM* p) const;
-};
-
 namespace py3lm {
-	struct VirtualMachine {
-		DCCallVM& operator()();
-	private:
-		std::unique_ptr<DCCallVM> _callVirtMachine;
-	};
-
 	struct PythonMethodData {
-		plugify::Function jitFunction;
+		plugify::JitCallback jitCallback;
 		PyObject* pythonFunction{};
 	};
 
@@ -102,9 +82,14 @@ namespace py3lm {
 		PyObject* _ppsModule = nullptr;
 		std::vector<std::vector<PyMethodDef>> _moduleMethods;
 		std::vector<std::unique_ptr<PyModuleDef>> _moduleDefinitions;
-		std::vector<plugify::Function> _moduleFunctions;
+		struct JitHolder {
+			plugify::JitCallback jitCallback;
+			plugify::JitCall jitCall;
+		};
+		std::vector<JitHolder> _moduleFunctions;
 		struct ExternalHolder {
-			plugify::Function func;
+			plugify::JitCallback jitCallback;
+			plugify::JitCall jitCall;
 			std::unique_ptr<PyMethodDef> def;
 			PyObject* object;
 		};

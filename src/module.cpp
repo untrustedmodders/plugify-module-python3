@@ -8,7 +8,6 @@
 #include <plugify/string.h>
 #include <plugify/math.h>
 #include <module_export.h>
-#include <dyncall/dyncall.h>
 #include <cuchar>
 #include <climits>
 #include <array>
@@ -16,27 +15,8 @@
 using namespace plugify;
 namespace fs = std::filesystem;
 
-void std::default_delete<DCaggr>::operator()(DCaggr* p) const {
-	dcFreeAggr(p);
-}
-
-void std::default_delete<DCCallVM>::operator()(DCCallVM* p) const {
-	dcFree(p);
-}
-
 namespace py3lm {
 	extern Python3LanguageModule g_py3lm;
-
-	static thread_local VirtualMachine s_vm;
-
-	DCCallVM& VirtualMachine::operator()() {
-		if (_callVirtMachine == nullptr) {
-			DCCallVM* vm = dcNewCallVM(4096);
-			dcMode(vm, DC_CALL_C_DEFAULT);
-			_callVirtMachine = std::unique_ptr<DCCallVM>(vm);
-		}
-		return *_callVirtMachine;
-	}
 
 	namespace {
 		void ReplaceAll(std::string& str, const std::string& from, const std::string& to) {
@@ -377,7 +357,7 @@ namespace py3lm {
 			return nullptr;
 		}
 
-		void SetFallbackReturn(ValueType retType, const ReturnValue* ret, const Parameters* params) {
+		void SetFallbackReturn(ValueType retType, const JitCallback::Return* ret, const JitCallback::Parameters* params) {
 			switch (retType) {
 			case ValueType::Void:
 				break;
@@ -396,7 +376,7 @@ namespace py3lm {
 			case ValueType::Float:
 			case ValueType::Double:
 				// HACK: Fill all 8 byte with 0
-				ret->SetReturnPtr<uintptr_t>({});
+				ret->SetReturn<uintptr_t>({});
 				break;
 			case ValueType::String: {
 				auto* const returnParam = params->GetArgument<plg::string*>(0);
@@ -404,7 +384,7 @@ namespace py3lm {
 				break;
 			}
 			case ValueType::Function:
-				ret->SetReturnPtr<void*>(nullptr);
+				ret->SetReturn<void*>(nullptr);
 				break;
 			case ValueType::ArrayChar8:
 			case ValueType::ArrayChar16:
@@ -430,36 +410,36 @@ namespace py3lm {
 				break;
 			}
 			case ValueType::Vector2: {
-				ret->SetReturnPtr<Vector2>({});
+				ret->SetReturn<Vector2>({});
 				break;
 			}
 #if PY3LM_PLATFORM_WINDOWS
 			case ValueType::Vector3: {
 				auto* const returnParam = params->GetArgument<Vector3*>(0);
 				std::construct_at(returnParam);
-				ret->SetReturnPtr<Vector3*>(returnParam);
+				ret->SetReturn<Vector3*>(returnParam);
 				break;
 			}
 			case ValueType::Vector4: {
 				auto* const returnParam = params->GetArgument<Vector4*>(0);
 				std::construct_at(returnParam);
-				ret->SetReturnPtr<Vector4*>(returnParam);
+				ret->SetReturn<Vector4*>(returnParam);
 				break;
 			}
 #elif PY3LM_PLATFORM_LINUX || PY3LM_PLATFORM_APPLE
 			case ValueType::Vector3: {
-				ret->SetReturnPtr<Vector3>({});
+				ret->SetReturn<Vector3>({});
 				break;
 			}
 			case ValueType::Vector4: {
-				ret->SetReturnPtr<Vector4>({});
+				ret->SetReturn<Vector4>({});
 				break;
 			}
 #endif // PY3LM_PLATFORM_WINDOWS
 			case ValueType::Matrix4x4: {
 				auto* const returnParam = params->GetArgument<Matrix4x4*>(0);
 				std::construct_at(returnParam);
-				ret->SetReturnPtr<Matrix4x4*>(returnParam);
+				ret->SetReturn<Matrix4x4*>(returnParam);
 				break;
 			}
 			default: {
@@ -470,97 +450,97 @@ namespace py3lm {
 			}
 		}
 
-		bool SetReturn(PyObject* result, PropertyRef retType, const ReturnValue* ret, const Parameters* params) {
+		bool SetReturn(PyObject* result, PropertyRef retType, const JitCallback::Return* ret, const JitCallback::Parameters* params) {
 			switch (retType.GetType()) {
 			case ValueType::Void:
 				return true;
 			case ValueType::Bool:
 				if (auto value = ValueFromObject<bool>(result)) {
-					ret->SetReturnPtr<bool>(*value);
+					ret->SetReturn<bool>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Char8:
 				if (auto value = ValueFromObject<char>(result)) {
-					ret->SetReturnPtr<char>(*value);
+					ret->SetReturn<char>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Char16:
 				if (auto value = ValueFromObject<char16_t>(result)) {
-					ret->SetReturnPtr<char16_t>(*value);
+					ret->SetReturn<char16_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Int8:
 				if (auto value = ValueFromObject<int8_t>(result)) {
-					ret->SetReturnPtr<int8_t>(*value);
+					ret->SetReturn<int8_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Int16:
 				if (auto value = ValueFromObject<int16_t>(result)) {
-					ret->SetReturnPtr<int16_t>(*value);
+					ret->SetReturn<int16_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Int32:
 				if (auto value = ValueFromObject<int32_t>(result)) {
-					ret->SetReturnPtr<int32_t>(*value);
+					ret->SetReturn<int32_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Int64:
 				if (auto value = ValueFromObject<int64_t>(result)) {
-					ret->SetReturnPtr<int64_t>(*value);
+					ret->SetReturn<int64_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::UInt8:
 				if (auto value = ValueFromObject<uint8_t>(result)) {
-					ret->SetReturnPtr<uint8_t>(*value);
+					ret->SetReturn<uint8_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::UInt16:
 				if (auto value = ValueFromObject<uint16_t>(result)) {
-					ret->SetReturnPtr<uint16_t>(*value);
+					ret->SetReturn<uint16_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::UInt32:
 				if (auto value = ValueFromObject<uint32_t>(result)) {
-					ret->SetReturnPtr<uint32_t>(*value);
+					ret->SetReturn<uint32_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::UInt64:
 				if (auto value = ValueFromObject<uint64_t>(result)) {
-					ret->SetReturnPtr<uint64_t>(*value);
+					ret->SetReturn<uint64_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Pointer:
 				if (auto value = ValueFromObject<void*>(result)) {
-					ret->SetReturnPtr<void*>(*value);
+					ret->SetReturn<void*>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Float:
 				if (auto value = ValueFromObject<float>(result)) {
-					ret->SetReturnPtr<float>(*value);
+					ret->SetReturn<float>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Double:
 				if (auto value = ValueFromObject<double>(result)) {
-					ret->SetReturnPtr<double>(*value);
+					ret->SetReturn<double>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Function:
 				if (auto value = GetOrCreateFunctionValue(retType.GetPrototype().value(), result)) {
-					ret->SetReturnPtr<void*>(*value);
+					ret->SetReturn<void*>(*value);
 					return true;
 				}
 				break;
@@ -678,7 +658,7 @@ namespace py3lm {
 				break;
 			case ValueType::Vector2:
 				if (auto value = ValueFromObject<Vector2>(result)) {
-					ret->SetReturnPtr<Vector2>(*value);
+					ret->SetReturn<Vector2>(*value);
 					return true;
 				}
 				break;
@@ -687,7 +667,7 @@ namespace py3lm {
 				if (auto value = ValueFromObject<Vector3>(result)) {
 					auto* const returnParam = params->GetArgument<Vector3*>(0);
 					std::construct_at(returnParam, std::move(*value));
-					ret->SetReturnPtr<Vector3*>(returnParam);
+					ret->SetReturn<Vector3*>(returnParam);
 					return true;
 				}
 				break;
@@ -695,20 +675,20 @@ namespace py3lm {
 				if (auto value = ValueFromObject<Vector4>(result)) {
 					auto* const returnParam = params->GetArgument<Vector4*>(0);
 					std::construct_at(returnParam, std::move(*value));
-					ret->SetReturnPtr<Vector4*>(returnParam);
+					ret->SetReturn<Vector4*>(returnParam);
 					return true;
 				}
 				break;
 #elif PY3LM_PLATFORM_LINUX || PY3LM_PLATFORM_APPLE
 			case ValueType::Vector3:
 				if (auto value = ValueFromObject<Vector3>(result)) {
-					ret->SetReturnPtr<Vector3>(*value);
+					ret->SetReturn<Vector3>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Vector4:
 				if (auto value = ValueFromObject<Vector4>(result)) {
-					ret->SetReturnPtr<Vector4>(*value);
+					ret->SetReturn<Vector4>(*value);
 					return true;
 				}
 				break;
@@ -717,7 +697,7 @@ namespace py3lm {
 				if (auto value = ValueFromObject<Matrix4x4>(result)) {
 					auto* const returnParam = params->GetArgument<Matrix4x4*>(0);
 					std::construct_at(returnParam, std::move(*value));
-					ret->SetReturnPtr<Matrix4x4*>(returnParam);
+					ret->SetReturn<Matrix4x4*>(returnParam);
 					return true;
 				}
 				break;
@@ -731,7 +711,7 @@ namespace py3lm {
 			return false;
 		}
 
-		bool SetRefParam(PyObject* object, PropertyRef paramType, const Parameters* params, uint8_t index) {
+		bool SetRefParam(PyObject* object, PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				if (auto value = ValueFromObject<bool>(object)) {
@@ -1114,7 +1094,7 @@ namespace py3lm {
 			return arrayObject;
 		}
 
-		PyObject* ParamToObject(PropertyRef paramType, const Parameters* params, uint8_t index) {
+		PyObject* ParamToObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				return CreatePyObject(params->GetArgument<bool>(index));
@@ -1195,7 +1175,7 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* ParamRefToObject(PropertyRef paramType, const Parameters* params, uint8_t index) {
+		PyObject* ParamRefToObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				return CreatePyObject(*(params->GetArgument<bool*>(index)));
@@ -1274,7 +1254,7 @@ namespace py3lm {
 			}
 		}
 
-		void InternalCall(MethodRef method, MemAddr data, const Parameters* params, const uint8_t count, const ReturnValue* ret) {
+		void InternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* params, const uint8_t count, const JitCallback::Return* ret) {
 			PyObject* const func = data.RCast<PyObject*>();
 
 			enum class ParamProcess {
@@ -1302,7 +1282,7 @@ namespace py3lm {
 						if (paramType.IsReference()) {
 							++refParamsCount;
 						}
-						using ParamConvertionFunc = PyObject* (*)(PropertyRef, const Parameters*, uint8_t);
+						using ParamConvertionFunc = PyObject* (*)(PropertyRef, const JitCallback::Parameters*, uint8_t);
 						ParamConvertionFunc const convertFunc = paramType.IsReference() ? &ParamRefToObject : &ParamToObject;
 						PyObject* const arg = convertFunc(paramType, params, paramsStartIndex + index);
 						if (!arg) {
@@ -1409,10 +1389,10 @@ namespace py3lm {
 			Py_DECREF(result);
 		}
 
-		std::tuple<bool, Function> CreateInternalCall(const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, MethodRef method, PyObject* func) {
-			Function function(jitRuntime);
-			void* const methodAddr = function.GetJitFunc(method, &InternalCall, reinterpret_cast<void*>(func));
-			return { methodAddr != nullptr, std::move(function) };
+		std::tuple<bool, JitCallback> CreateInternalCall(const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, MethodRef method, PyObject* func) {
+			JitCallback callback(jitRuntime);
+			void* const methodAddr = callback.GetJitFunc(method, &InternalCall, reinterpret_cast<void*>(func));
+			return { methodAddr != nullptr, std::move(callback) };
 		}
 
 		MethodExportResult GenerateMethodExport(MethodRef method, const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, PyObject* pluginModule, PyObject* pluginInstance) {
@@ -1461,27 +1441,22 @@ namespace py3lm {
 				func = bind;
 			}
 
-			auto [result, function] = CreateInternalCall(jitRuntime, method, func);
+			auto [result, callback] = CreateInternalCall(jitRuntime, method, func);
 
 			if (!result) {
 				Py_DECREF(func);
-				return MethodExportError{ std::format("{} (jit error: {})", method.GetName(), function.GetError()) };
+				return MethodExportError{ std::format("{} (jit error: {})", method.GetName(), callback.GetError()) };
 			}
 
-			return MethodExportData{ std::move(function), func };
+			return MethodExportData{ std::move(callback), func };
 		}
 
 		struct ArgsScope {
-			DCCallVM* vm;
+			JitCall::Parameters params;
 			std::vector<std::pair<void*, ValueType>> storage; // used to store array temp memory
-			DCaggr* ag = nullptr;
 
-			explicit ArgsScope(uint8_t size) {
-				vm = &s_vm();
-				dcReset(vm);
-				if (size) {
-					storage.reserve(size);
-				}
+			explicit ArgsScope(uint8_t size) : params(size) {
+				storage.reserve(size);
 			}
 
 			~ArgsScope() {
@@ -1631,299 +1606,337 @@ namespace py3lm {
 					}
 					}
 				}
-				if (ag) {
-					dcFreeAggr(ag);
-				}
 			}
 		};
 
 		void BeginExternalCall(MethodRef method, ArgsScope& a) {
-			switch (method.GetReturnType().GetType()) {
-			case ValueType::String: {
-				void* const value = new plg::string();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayBool: {
-				void* const value = new std::vector<bool>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayChar8: {
-				void* const value = new std::vector<char>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayChar16: {
-				void* const value = new std::vector<char16_t>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayInt8: {
-				void* const value = new std::vector<int8_t>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayInt16: {
-				void* const value = new std::vector<int16_t>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayInt32: {
-				void* const value = new std::vector<int32_t>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayInt64: {
-				void* const value = new std::vector<int64_t>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayUInt8: {
-				void* const value = new std::vector<uint8_t>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayUInt16: {
-				void* const value = new std::vector<uint16_t>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayUInt32: {
-				void* const value = new std::vector<uint32_t>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayUInt64: {
-				void* const value = new std::vector<uint64_t>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayPointer: {
-				void* const value = new std::vector<uintptr_t>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayFloat: {
-				void* const value = new std::vector<float>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayDouble: {
-				void* const value = new std::vector<double>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::ArrayString: {
-				void* const value = new std::vector<plg::string>();
-				a.storage.emplace_back(value, method.GetReturnType().GetType());
-				dcArgPointer(a.vm, value);
-				break;
-			}
-			case ValueType::Vector2:
-				a.ag = dcNewAggr(2, sizeof(Vector2));
-				for (int i = 0; i < 2; ++i) {
-					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
+			ValueType retType = method.GetReturnType().GetType();
+			if (ValueUtils::IsHiddenParam(retType)) {
+				switch (retType) {
+					case ValueType::String: {
+						void* const value = new plg::string();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayBool: {
+						void* const value = new std::vector<bool>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayChar8: {
+						void* const value = new std::vector<char>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayChar16: {
+						void* const value = new std::vector<char16_t>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayInt8: {
+						void* const value = new std::vector<int8_t>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayInt16: {
+						void* const value = new std::vector<int16_t>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayInt32: {
+						void* const value = new std::vector<int32_t>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayInt64: {
+						void* const value = new std::vector<int64_t>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayUInt8: {
+						void* const value = new std::vector<uint8_t>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayUInt16: {
+						void* const value = new std::vector<uint16_t>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayUInt32: {
+						void* const value = new std::vector<uint32_t>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayUInt64: {
+						void* const value = new std::vector<uint64_t>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayPointer: {
+						void* const value = new std::vector<uintptr_t>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayFloat: {
+						void* const value = new std::vector<float>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayDouble: {
+						void* const value = new std::vector<double>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::ArrayString: {
+						void* const value = new std::vector<plg::string>();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					// Fit 64bit
+					/*case ValueType::Vector2: {
+						void* const value = new plugify::Vector2();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}*/
+					case ValueType::Vector3: {
+						void* const value = new plugify::Vector3();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::Vector4: {
+						void* const value = new plugify::Vector4();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					case ValueType::Matrix4x4: {
+						void* const value = new plugify::Matrix4x4();
+						a.storage.emplace_back(value, retType);
+						a.params.AddArgument(value);
+						break;
+					}
+					default:
+						const std::string error(std::format("[py3lm] BeginExternalCall unsupported type {:#x}", static_cast<uint8_t>(retType)));
+						g_py3lm.LogFatal(error);
+						std::terminate();
+						break;
 				}
-				dcCloseAggr(a.ag);
-				dcBeginCallAggr(a.vm, a.ag);
-				break;
-			case ValueType::Vector3:
-				a.ag = dcNewAggr(3, sizeof(Vector3));
-				for (int i = 0; i < 3; ++i) {
-					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-				}
-				dcCloseAggr(a.ag);
-				dcBeginCallAggr(a.vm, a.ag);
-				break;
-			case ValueType::Vector4:
-				a.ag = dcNewAggr(4, sizeof(Vector4));
-				for (int i = 0; i < 4; ++i) {
-					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-				}
-				dcCloseAggr(a.ag);
-				dcBeginCallAggr(a.vm, a.ag);
-				break;
-			case ValueType::Matrix4x4:
-				a.ag = dcNewAggr(16, sizeof(Matrix4x4));
-				for (int i = 0; i < 16; ++i) {
-					dcAggrField(a.ag, DC_SIGCHAR_FLOAT, static_cast<int>(sizeof(float) * i), 1);
-				}
-				dcCloseAggr(a.ag);
-				dcBeginCallAggr(a.vm, a.ag);
-				break;
-			default:
-				// Should not require storage
-				break;
 			}
 		}
 
-		PyObject* MakeExternalCall(MethodRef method, void* addr, const ArgsScope& a) {
-			switch (method.GetReturnType().GetType()) {
+		PyObject* MakeExternalCall(MethodRef method, JitCall::CallingFunc func, const ArgsScope& a) {
+			JitCall::Return ret;
+			ValueType retType = method.GetReturnType().GetType();
+			switch (retType) {
 			case ValueType::Void:
-				dcCallVoid(a.vm, addr);
+				func(a.params.GetDataPtr(), &ret);
 				return Py_None;
 			case ValueType::Bool: {
-				const bool val = dcCallBool(a.vm, addr);
+				func(a.params.GetDataPtr(), &ret);
+				const bool val = ret.GetReturn<bool>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Char8: {
-				const char val = dcCallChar(a.vm, addr);
+				func(a.params.GetDataPtr(), &ret);
+				const char val = ret.GetReturn<char>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Char16: {
-				const char16_t val = static_cast<char16_t>(dcCallShort(a.vm, addr));
+				func(a.params.GetDataPtr(), &ret);
+				const char16_t val = ret.GetReturn<char16_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Int8: {
-				const int8_t val = dcCallChar(a.vm, addr);
+				func(a.params.GetDataPtr(), &ret);
+				const int8_t val = ret.GetReturn<int8_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Int16: {
-				const int16_t val = dcCallShort(a.vm, addr);
+				func(a.params.GetDataPtr(), &ret);
+				const int16_t val = ret.GetReturn<int16_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Int32: {
-				const int32_t val = dcCallInt(a.vm, addr);
+				func(a.params.GetDataPtr(), &ret);
+				const int32_t val = ret.GetReturn<int32_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Int64: {
-				const int64_t val = dcCallLongLong(a.vm, addr);
+				func(a.params.GetDataPtr(), &ret);
+				const int64_t val = ret.GetReturn<int64_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::UInt8: {
-				const uint8_t val = static_cast<uint8_t>(dcCallChar(a.vm, addr));
+				func(a.params.GetDataPtr(), &ret);
+				const uint8_t val = ret.GetReturn<uint8_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::UInt16: {
-				const uint16_t val = static_cast<uint16_t>(dcCallShort(a.vm, addr));
+				func(a.params.GetDataPtr(), &ret);
+				const uint16_t val = ret.GetReturn<uint16_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::UInt32: {
-				const uint32_t val = static_cast<uint32_t>(dcCallInt(a.vm, addr));
+				func(a.params.GetDataPtr(), &ret);
+				const uint32_t val = ret.GetReturn<uint32_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::UInt64: {
-				const uint64_t val = static_cast<uint64_t>(dcCallLongLong(a.vm, addr));
+				func(a.params.GetDataPtr(), &ret);
+				const uint64_t val = ret.GetReturn<uint64_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Pointer: {
-				const uintptr_t val = reinterpret_cast<uintptr_t>(dcCallPointer(a.vm, addr));
+				func(a.params.GetDataPtr(), &ret);
+				const uintptr_t val = ret.GetReturn<uintptr_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Float: {
-				const float val = dcCallFloat(a.vm, addr);
+				func(a.params.GetDataPtr(), &ret);
+				const float val = ret.GetReturn<float>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Double: {
-				const double val = dcCallDouble(a.vm, addr);
+				func(a.params.GetDataPtr(), &ret);
+				const double val = ret.GetReturn<double>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Function: {
-				void* const val = dcCallPointer(a.vm, addr);
+				func(a.params.GetDataPtr(), &ret);
+				void* const val = ret.GetReturn<void*>();
 				return GetOrCreateFunctionObject(method.GetReturnType().GetPrototype().value(), val);
 			}
 			case ValueType::String: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObject(*reinterpret_cast<plg::string*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const str = ret.GetReturn<plg::string*>();
+				return CreatePyObject(*str);
 			}
 			case ValueType::ArrayBool: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<bool>(*reinterpret_cast<std::vector<bool>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<bool>*>();
+				return CreatePyObjectList<bool>(*arr);
 			}
 			case ValueType::ArrayChar8: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<char>(*reinterpret_cast<std::vector<char>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<char>*>();
+				return CreatePyObjectList<char>(*arr);
 			}
 			case ValueType::ArrayChar16: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<char16_t>(*reinterpret_cast<std::vector<char16_t>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<char16_t>*>();
+				return CreatePyObjectList<char16_t>(*arr);
 			}
 			case ValueType::ArrayInt8: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<int8_t>(*reinterpret_cast<std::vector<int8_t>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<int8_t>*>();
+				return CreatePyObjectList<int8_t>(*arr);
 			}
 			case ValueType::ArrayInt16: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<int16_t>(*reinterpret_cast<std::vector<int16_t>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<int16_t>*>();
+				return CreatePyObjectList<int16_t>(*arr);
 			}
 			case ValueType::ArrayInt32: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<int32_t>(*reinterpret_cast<std::vector<int32_t>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<int32_t>*>();
+				return CreatePyObjectList<int32_t>(*arr);
 			}
 			case ValueType::ArrayInt64: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<int64_t>(*reinterpret_cast<std::vector<int64_t>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<int64_t>*>();
+				return CreatePyObjectList<int64_t>(*arr);
 			}
 			case ValueType::ArrayUInt8: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<uint8_t>(*reinterpret_cast<std::vector<uint8_t>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<uint8_t>*>();
+				return CreatePyObjectList<uint8_t>(*arr);
 			}
 			case ValueType::ArrayUInt16: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<uint16_t>(*reinterpret_cast<std::vector<uint16_t>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<uint16_t>*>();
+				return CreatePyObjectList<uint16_t>(*arr);
 			}
 			case ValueType::ArrayUInt32: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<uint32_t>(*reinterpret_cast<std::vector<uint32_t>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<uint32_t>*>();
+				return CreatePyObjectList<uint32_t>(*arr);
 			}
 			case ValueType::ArrayUInt64: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<uint64_t>(*reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<uint64_t>*>();
+				return CreatePyObjectList<uint64_t>(*arr);
 			}
 			case ValueType::ArrayPointer: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<uintptr_t>(*reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<uintptr_t>*>();
+				return CreatePyObjectList<uintptr_t>(*arr);
 			}
 			case ValueType::ArrayFloat: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<float>(*reinterpret_cast<std::vector<float>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<float>*>();
+				return CreatePyObjectList<float>(*arr);
 			}
 			case ValueType::ArrayDouble: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<double>(*reinterpret_cast<std::vector<double>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<double>*>();
+				return CreatePyObjectList<double>(*arr);
 			}
 			case ValueType::ArrayString: {
-				dcCallVoid(a.vm, addr);
-				return CreatePyObjectList<plg::string>(*reinterpret_cast<std::vector<plg::string>*>(std::get<0>(a.storage[0])));
+				func(a.params.GetDataPtr(), &ret);
+				auto* const arr = ret.GetReturn<std::vector<plg::string>*>();
+				return CreatePyObjectList<plg::string>(*arr);
 			}
 			case ValueType::Vector2: {
-				Vector2 val;
-				dcCallAggr(a.vm, addr, a.ag, &val);
+				func(a.params.GetDataPtr(), &ret);
+				Vector2 val = ret.GetReturn<Vector2>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Vector3: {
+				func(a.params.GetDataPtr(), &ret);
 				Vector3 val;
-				dcCallAggr(a.vm, addr, a.ag, &val);
+				if (ValueUtils::IsHiddenParam(retType)) {
+					val = *ret.GetReturn<Vector3*>();
+				} else {
+					val = ret.GetReturn<Vector3>();
+				}
 				return CreatePyObject(val);
 			}
 			case ValueType::Vector4: {
+				func(a.params.GetDataPtr(), &ret);
 				Vector4 val;
-				dcCallAggr(a.vm, addr, a.ag, &val);
+				if (ValueUtils::IsHiddenParam(retType)) {
+					val = *ret.GetReturn<Vector4*>();
+				} else {
+					val = ret.GetReturn<Vector4>();
+				}
 				return CreatePyObject(val);
 			}
 			case ValueType::Matrix4x4: {
-				Matrix4x4 val;
-				dcCallAggr(a.vm, addr, a.ag, &val);
+				func(a.params.GetDataPtr(), &ret);
+				Matrix4x4 val = *ret.GetReturn<Matrix4x4*>();
 				return CreatePyObject(val);
 			}
 			default: {
-				const std::string error(std::format("MakeExternalCall unsupported type {:#x}", static_cast<uint8_t>(method.GetReturnType().GetType())));
+				const std::string error(std::format("MakeExternalCall unsupported type {:#x}", static_cast<uint8_t>(retType)));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return nullptr;
 			}
@@ -1939,7 +1952,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgBool(a.vm, *value);
+				a.params.AddArgument(*value);
 				return true;
 			}
 			case ValueType::Char8: {
@@ -1947,7 +1960,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgChar(a.vm, *value);
+				a.params.AddArgument(*value);
 				return true;
 			}
 			case ValueType::Char16: {
@@ -1955,7 +1968,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgShort(a.vm, static_cast<short>(*value));
+				a.params.AddArgument(static_cast<short>(*value));
 				return true;
 			}
 			case ValueType::Int8: {
@@ -1963,7 +1976,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgChar(a.vm, *value);
+				a.params.AddArgument(*value);
 				return true;
 			}
 			case ValueType::Int16: {
@@ -1971,7 +1984,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgShort(a.vm, *value);
+				a.params.AddArgument(*value);
 				return true;
 			}
 			case ValueType::Int32: {
@@ -1979,7 +1992,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgInt(a.vm, *value);
+				a.params.AddArgument(*value);
 				return true;
 			}
 			case ValueType::Int64: {
@@ -1987,7 +2000,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgLongLong(a.vm, *value);
+				a.params.AddArgument(*value);
 				return true;
 			}
 			case ValueType::UInt8: {
@@ -1995,7 +2008,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgChar(a.vm, static_cast<int8_t>(*value));
+				a.params.AddArgument(static_cast<int8_t>(*value));
 				return true;
 			}
 			case ValueType::UInt16: {
@@ -2003,7 +2016,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgShort(a.vm, static_cast<int16_t>(*value));
+				a.params.AddArgument(static_cast<int16_t>(*value));
 				return true;
 			}
 			case ValueType::UInt32: {
@@ -2011,7 +2024,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgInt(a.vm, static_cast<int32_t>(*value));
+				a.params.AddArgument(static_cast<int32_t>(*value));
 				return true;
 			}
 			case ValueType::UInt64: {
@@ -2019,7 +2032,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgLongLong(a.vm, static_cast<int64_t>(*value));
+				a.params.AddArgument(static_cast<int64_t>(*value));
 				return true;
 			}
 			case ValueType::Pointer: {
@@ -2027,7 +2040,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgPointer(a.vm, reinterpret_cast<void*>(*value));
+				a.params.AddArgument(reinterpret_cast<void*>(*value));
 				return true;
 			}
 			case ValueType::Float: {
@@ -2035,7 +2048,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgFloat(a.vm, *value);
+				a.params.AddArgument(*value);
 				return true;
 			}
 			case ValueType::Double: {
@@ -2043,7 +2056,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgDouble(a.vm, *value);
+				a.params.AddArgument(*value);
 				return true;
 			}
 			case ValueType::String: {
@@ -2052,7 +2065,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::Function: {
@@ -2060,7 +2073,7 @@ namespace py3lm {
 				if (!value) {
 					return false;
 				}
-				dcArgPointer(a.vm, reinterpret_cast<void*>(*value));
+				a.params.AddArgument(reinterpret_cast<void*>(*value));
 				return true;
 			}
 			case ValueType::ArrayBool: {
@@ -2069,7 +2082,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayChar8: {
@@ -2078,7 +2091,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayChar16: {
@@ -2087,7 +2100,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayInt8: {
@@ -2096,7 +2109,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayInt16: {
@@ -2105,7 +2118,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayInt32: {
@@ -2114,7 +2127,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayInt64: {
@@ -2123,7 +2136,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayUInt8: {
@@ -2132,7 +2145,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayUInt16: {
@@ -2141,7 +2154,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayUInt32: {
@@ -2150,7 +2163,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayUInt64: {
@@ -2159,7 +2172,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayPointer: {
@@ -2168,7 +2181,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayFloat: {
@@ -2177,7 +2190,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayDouble: {
@@ -2186,7 +2199,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::ArrayString: {
@@ -2195,7 +2208,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::Vector2: {
@@ -2204,7 +2217,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::Vector3: {
@@ -2213,7 +2226,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::Vector4: {
@@ -2222,7 +2235,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			case ValueType::Matrix4x4: {
@@ -2231,7 +2244,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			}
 			default: {
@@ -2250,7 +2263,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				dcArgPointer(a.vm, value);
+				a.params.AddArgument(value);
 				return true;
 			};
 
@@ -2411,27 +2424,27 @@ namespace py3lm {
 			}
 		}
 
-		void ExternalCallNoArgs(MethodRef method, MemAddr addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
+		void ExternalCallNoArgs(MethodRef method, MemAddr data, const JitCallback::Parameters* p, uint8_t count, const JitCallback::Return* ret) {
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			ArgsScope a(1);
 			BeginExternalCall(method, a);
-			PyObject* const retObj = MakeExternalCall(method, addr, a);
+			PyObject* const retObj = MakeExternalCall(method, data.CCast<JitCall::CallingFunc>(), a);
 			if (!retObj) {
 				// MakeExternalCall set error
-				ret->SetReturnPtr(nullptr);
+				ret->SetReturn(nullptr);
 				return;
 			}
-			ret->SetReturnPtr(retObj);
+			ret->SetReturn(retObj);
 		}
 
-		void ExternalCall(MethodRef method, MemAddr addr, const Parameters* p, uint8_t count, const ReturnValue* ret) {
+		void ExternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* p, uint8_t count, const JitCallback::Return* ret) {
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			const auto args = p->GetArgument<PyObject*>(1);
 
 			if (!PyTuple_Check(args)) {
 				const std::string error(std::format("Function \"{}\" expects a tuple of arguments", method.GetFunctionName()));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
-				ret->SetReturnPtr(nullptr);
+				ret->SetReturn(nullptr);
 				return;
 			}
 
@@ -2441,7 +2454,7 @@ namespace py3lm {
 			if (size != static_cast<Py_ssize_t>(paramCount)) {
 				const std::string error(std::format("Wrong number of parameters, {} when {} required.", size, paramCount));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
-				ret->SetReturnPtr(nullptr);
+				ret->SetReturn(nullptr);
 				return;
 			}
 
@@ -2462,15 +2475,15 @@ namespace py3lm {
 				const bool pushResult = pushParamFunc(paramType, PyTuple_GetItem(args, i), a);
 				if (!pushResult) {
 					// pushParamFunc set error
-					ret->SetReturnPtr(nullptr);
+					ret->SetReturn(nullptr);
 					return;
 				}
 			}
 
-			PyObject* retObj = MakeExternalCall(method, addr, a);
+			PyObject* retObj = MakeExternalCall(method, data.CCast<JitCall::CallingFunc>(), a);
 			if (!retObj) {
 				// MakeExternalCall set error
-				ret->SetReturnPtr(nullptr);
+				ret->SetReturn(nullptr);
 				return;
 			}
 
@@ -2490,7 +2503,7 @@ namespace py3lm {
 					if (!value) {
 						// StorageValueToObject set error
 						Py_DECREF(retTuple);
-						ret->SetReturnPtr(nullptr);
+						ret->SetReturn(nullptr);
 						return;
 					}
 					PyTuple_SET_ITEM(retTuple, k++, value);
@@ -2503,7 +2516,7 @@ namespace py3lm {
 				retObj = retTuple;
 			}
 
-			ret->SetReturnPtr(retObj);
+			ret->SetReturn(retObj);
 		}
 
 		template<typename T>
@@ -2698,7 +2711,7 @@ namespace py3lm {
 				Py_DECREF(data.pythonFunction);
 			}
 
-			for (const auto& [_1, _2, object] : _externalFunctions) {
+			for (const auto& [_1, _2, _3, object] : _externalFunctions) {
 				Py_DECREF(object);
 			}
 
@@ -2900,7 +2913,7 @@ namespace py3lm {
 		_pythonMethods.reserve(methodsHolders.size());
 
 		for (auto& [method, methodData] : methodsHolders) {
-			const MemAddr methodAddr = methodData.jitFunction.GetFunction();
+			const MemAddr methodAddr = methodData.jitCallback.GetFunction();
 			methods.emplace_back(method, methodAddr);
 			AddToFunctionsMap(methodAddr, methodData.pythonFunction);
 			_pythonMethods.emplace_back(std::move(methodData));
@@ -2947,8 +2960,16 @@ namespace py3lm {
 			Py_INCREF(object);
 			return object;
 		}
+		JitCall call(_jitRuntime);
 
-		Function function(_jitRuntime);
+		const MemAddr callAddr = call.GetJitFunc(method, funcAddr);
+		if (!callAddr) {
+			const std::string error(std::format("Lang module JIT failed to generate c++ call wrapper '{}'", call.GetError()));
+			PyErr_SetString(PyExc_RuntimeError, error.c_str());
+			return nullptr;
+		}
+
+		JitCallback callback(_jitRuntime);
 
 		asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
 		sig.addArg(asmjit::TypeId::kUIntPtr);
@@ -2957,9 +2978,9 @@ namespace py3lm {
 
 		const bool noArgs = method.GetParamTypes().empty();
 
-		void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, funcAddr);
+		const MemAddr methodAddr = callback.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr);
 		if (!methodAddr) {
-			const std::string error(std::format("Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", function.GetError()));
+			const std::string error(std::format("Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", callback.GetError()));
 			PyErr_SetString(PyExc_RuntimeError, error.c_str());
 			return nullptr;
 		}
@@ -2967,7 +2988,7 @@ namespace py3lm {
 		auto defPtr = std::make_unique<PyMethodDef>();
 		PyMethodDef& def = *(defPtr.get());
 		def.ml_name = "PlugifyExternal";
-		def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
+		def.ml_meth = methodAddr.RCast<PyCFunction>();
 		def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
 		def.ml_doc = nullptr;
 
@@ -2978,7 +2999,7 @@ namespace py3lm {
 		}
 
 		Py_INCREF(object);
-		_externalFunctions.emplace_back(std::move(function), std::move(defPtr), object);
+		_externalFunctions.emplace_back(std::move(callback), std::move(call), std::move(defPtr), object);
 		AddToFunctionsMap(funcAddr, object);
 
 		return object;
@@ -2998,17 +3019,17 @@ namespace py3lm {
 			return { funcAddr };
 		}
 
-		auto [result, function] = CreateInternalCall(_jitRuntime, method, object);
+		auto [result, callback] = CreateInternalCall(_jitRuntime, method, object);
 		if (!result) {
-			const std::string error(std::format("Lang module JIT failed to generate C++ wrapper from function object '{}'", function.GetError()));
+			const std::string error(std::format("Lang module JIT failed to generate C++ wrapper from callback object '{}'", callback.GetError()));
 			PyErr_SetString(PyExc_RuntimeError, error.c_str());
 			return std::nullopt;
 		}
 
-		void* const funcAddr = function.GetFunction();
+		void* const funcAddr = callback.GetFunction();
 
 		Py_INCREF(object);
-		_internalFunctions.emplace_back(std::move(function), object);
+		_internalFunctions.emplace_back(std::move(callback), object);
 		AddToFunctionsMap(funcAddr, object);
 
 		return { funcAddr };
@@ -3367,7 +3388,7 @@ namespace py3lm {
 
 	PyObject* Python3LanguageModule::FindPythonMethod(MemAddr addr) const {
 		for (const auto& data : _pythonMethods) {
-			if (data.jitFunction.GetFunction() == addr) {
+			if (data.jitCallback.GetFunction() == addr) {
 				return data.pythonFunction;
 			}
 		}
@@ -3397,7 +3418,16 @@ namespace py3lm {
 		auto& moduleMethods = _moduleMethods.emplace_back();
 
 		for (const auto& [method, addr] : plugin.GetMethods()) {
-			Function function(_jitRuntime);
+			JitCall call(_jitRuntime);
+
+			const MemAddr callAddr = call.GetJitFunc(method, addr);
+			if (!callAddr) {
+				const std::string error(std::format("Lang module JIT failed to generate c++ call wrapper '{}'", call.GetError()));
+				PyErr_SetString(PyExc_RuntimeError, error.c_str());
+				return nullptr;
+			}
+
+			JitCallback callback(_jitRuntime);
 
 			asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
 			sig.addArg(asmjit::TypeId::kUIntPtr);
@@ -3407,17 +3437,17 @@ namespace py3lm {
 			const bool noArgs = method.GetParamTypes().empty();
 
 			// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-			void* const methodAddr = function.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, addr);
+			const MemAddr methodAddr = callback.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr);
 			if (!methodAddr)
 				break;
 
 			PyMethodDef& def = moduleMethods.emplace_back();
 			def.ml_name = method.GetName().data();
-			def.ml_meth = reinterpret_cast<PyCFunction>(methodAddr);
+			def.ml_meth = methodAddr.RCast<PyCFunction>();
 			def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
 			def.ml_doc = nullptr;
 
-			_moduleFunctions.emplace_back(std::move(function));
+			_moduleFunctions.emplace_back(std::move(callback), std::move(call));
 		}
 
 		{
