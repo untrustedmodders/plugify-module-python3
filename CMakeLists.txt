@@ -46,7 +46,6 @@ if(NOT COMPILER_SUPPORTS_FORMAT)
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PY3LM_LINK_LIBRARIES})
-target_include_directories(${PROJECT_NAME} PRIVATE ${dyncall_SOURCE_DIR})
 
 include(GenerateExportHeader)
 generate_export_header(${PROJECT_NAME} EXPORT_MACRO_NAME PY3LM_EXPORT EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/exports/module_export.h)
