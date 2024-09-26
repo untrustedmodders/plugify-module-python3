@@ -1827,94 +1827,94 @@ namespace py3lm {
 			}
 			case ValueType::String: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const str = ret.GetReturn<plg::string*>();
+				auto* const str = reinterpret_cast<plg::string*>(std::get<0>(a.storage[0]));
 				return CreatePyObject(*str);
 			}
 			case ValueType::ArrayBool: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<bool>*>();
+				auto* const arr = reinterpret_cast<std::vector<bool>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<bool>(*arr);
 			}
 			case ValueType::ArrayChar8: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<char>*>();
+				auto* const arr = reinterpret_cast<std::vector<char>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<char>(*arr);
 			}
 			case ValueType::ArrayChar16: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<char16_t>*>();
+				auto* const arr = reinterpret_cast<std::vector<char16_t>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<char16_t>(*arr);
 			}
 			case ValueType::ArrayInt8: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<int8_t>*>();
+				auto* const arr = reinterpret_cast<std::vector<int8_t>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<int8_t>(*arr);
 			}
 			case ValueType::ArrayInt16: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<int16_t>*>();
+				auto* const arr = reinterpret_cast<std::vector<int16_t>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<int16_t>(*arr);
 			}
 			case ValueType::ArrayInt32: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<int32_t>*>();
+				auto* const arr = reinterpret_cast<std::vector<int32_t>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<int32_t>(*arr);
 			}
 			case ValueType::ArrayInt64: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<int64_t>*>();
+				auto* const arr = reinterpret_cast<std::vector<int64_t>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<int64_t>(*arr);
 			}
 			case ValueType::ArrayUInt8: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<uint8_t>*>();
+				auto* const arr = reinterpret_cast<std::vector<uint8_t>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<uint8_t>(*arr);
 			}
 			case ValueType::ArrayUInt16: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<uint16_t>*>();
+				auto* const arr = reinterpret_cast<std::vector<uint16_t>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<uint16_t>(*arr);
 			}
 			case ValueType::ArrayUInt32: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<uint32_t>*>();
+				auto* const arr = reinterpret_cast<std::vector<uint32_t>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<uint32_t>(*arr);
 			}
 			case ValueType::ArrayUInt64: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<uint64_t>*>();
+				auto* const arr = reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<uint64_t>(*arr);
 			}
 			case ValueType::ArrayPointer: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<uintptr_t>*>();
+				auto* const arr = reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<uintptr_t>(*arr);
 			}
 			case ValueType::ArrayFloat: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<float>*>();
+				auto* const arr = reinterpret_cast<std::vector<float>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<float>(*arr);
 			}
 			case ValueType::ArrayDouble: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<double>*>();
+				auto* const arr = reinterpret_cast<std::vector<double>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<double>(*arr);
 			}
 			case ValueType::ArrayString: {
 				func(a.params.GetDataPtr(), &ret);
-				auto* const arr = ret.GetReturn<std::vector<plg::string>*>();
+				auto* const arr = reinterpret_cast<std::vector<plg::string>*>(std::get<0>(a.storage[0]));
 				return CreatePyObjectList<plg::string>(*arr);
 			}
 			case ValueType::Vector2: {
 				func(a.params.GetDataPtr(), &ret);
-				Vector2 val = ret.GetReturn<Vector2>();
+				const Vector2 val = ret.GetReturn<Vector2>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Vector3: {
 				func(a.params.GetDataPtr(), &ret);
 				Vector3 val;
 				if (ValueUtils::IsHiddenParam(retType)) {
-					val = *ret.GetReturn<Vector3*>();
+					val = *reinterpret_cast<Vector3*>(std::get<0>(a.storage[0]));
 				} else {
 					val = ret.GetReturn<Vector3>();
 				}
@@ -1924,7 +1924,7 @@ namespace py3lm {
 				func(a.params.GetDataPtr(), &ret);
 				Vector4 val;
 				if (ValueUtils::IsHiddenParam(retType)) {
-					val = *ret.GetReturn<Vector4*>();
+					val = *reinterpret_cast<Vector4*>(std::get<0>(a.storage[0]));
 				} else {
 					val = ret.GetReturn<Vector4>();
 				}
@@ -1932,7 +1932,7 @@ namespace py3lm {
 			}
 			case ValueType::Matrix4x4: {
 				func(a.params.GetDataPtr(), &ret);
-				Matrix4x4 val = *ret.GetReturn<Matrix4x4*>();
+				Matrix4x4 val = *reinterpret_cast<Matrix4x4*>(std::get<0>(a.storage[0]));
 				return CreatePyObject(val);
 			}
 			default: {
