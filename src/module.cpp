@@ -1745,7 +1745,7 @@ namespace py3lm {
 
 		PyObject* MakeExternalCall(MethodRef method, JitCall::CallingFunc func, const ArgsScope& a) {
 			JitCall::Return ret;
-            func(a.params.GetDataPtr(), &ret);
+			func(a.params.GetDataPtr(), &ret);
 			ValueType retType = method.GetReturnType().GetType();
 			switch (retType) {
 			case ValueType::Void:
