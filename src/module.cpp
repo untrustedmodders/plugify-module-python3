@@ -2425,7 +2425,7 @@ namespace py3lm {
 			}
 
 			Py_ssize_t refParamsCount = 0;
-			const Py_ssize_t paramsStartIndex = plugify::ValueUtils::IsObject(method.GetReturnType().GetType()) ? 1 : 0;
+			const Py_ssize_t paramsStartIndex = plugify::ValueUtils::IsHiddenParam(method.GetReturnType().GetType()) ? 1 : 0;
 
 			ArgsScope a(1 + paramCount);
 
