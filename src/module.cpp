@@ -79,7 +79,7 @@ namespace py3lm {
 				if ((seqCh1 & 0b11000000) != 0b10000000) {
 					return { -2, {} };
 				}
-				return { 2, (c8toc16(seqCh0 & 0b00011111) << 6 ) | c8toc16(seqCh1 & 0b00111111) };
+				return { 2, (c8toc16(seqCh0 & 0b00011111) << 6) | c8toc16(seqCh1 & 0b00111111) };
 			}
 			if ((seqCh0 & 0b10000000) == 0b00000000) {
 				return { 1, c8toc16(seqCh0) };
@@ -101,12 +101,12 @@ namespace py3lm {
 				return { 1, { c16toc8(ch16), '\0' } };
 			}
 			if (static_cast<uint16_t>(ch16) < 0x800) {
-				return { 2, { c16toc8((ch16 & 0b11111000000) >> 6), c16toc8(ch16 & 0b111111), '\0' } };
+				return { 2, { c16toc8(((ch16 & 0b11111000000) >> 6) | 0b11000000), c16toc8((ch16 & 0b111111) | 0b10000000), '\0' } };
 			}
 			if (0xD800 <= static_cast<uint16_t>(ch16) && static_cast<uint16_t>(ch16) < 0xE000) {
 				return { -1, {} };
 			}
-			return { 3, { c16toc8((ch16 & 0b1111000000000000) >> 12), c16toc8((ch16 & 0b111111000000) >> 6), c16toc8(ch16 & 0b111111), '\0' } };
+			return { 3, { c16toc8(((ch16 & 0b1111000000000000) >> 12) | 0b11100000), c16toc8(((ch16 & 0b111111000000) >> 6) | 0b10000000), c16toc8((ch16 & 0b111111) | 0b10000000), '\0' } };
 		}
 
 		using MethodExportError = std::string;
