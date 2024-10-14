@@ -945,8 +945,8 @@ namespace py3lm {
 				}
 				break;
 			case ValueType::Matrix4x4:
-				if (auto value = ValueFromObject<Vector2>(object)) {
-					auto* const param = params->GetArgument<Vector2*>(index);
+				if (auto value = ValueFromObject<Matrix4x4>(object)) {
+					auto* const param = params->GetArgument<Matrix4x4*>(index);
 					*param = *value;
 					return true;
 				}
