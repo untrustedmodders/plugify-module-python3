@@ -1424,6 +1424,7 @@ namespace py3lm {
 			}
 
 			if (!func) {
+				PyErr_Clear();
 				return MethodExportError{ std::format("{} (Not found '{}' in module)", method.GetName(), method.GetFunctionName())};
 			}
 
