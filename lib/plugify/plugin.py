@@ -155,7 +155,7 @@ class Matrix4x4:
 
     @staticmethod
     def zero():
-        return Matrix4x4([[0] * 4 for _ in range(4)])
+        return Matrix4x4([[0.0] * 4 for _ in range(4)])
 
     @staticmethod
     def from_list(elements):
