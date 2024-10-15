@@ -1,3 +1,6 @@
+from copy import deepcopy
+
+
 class Plugin:
     pass
 
@@ -162,4 +165,4 @@ class Matrix4x4:
         return Matrix4x4(elements)
 
     def to_list(self):
-        return self.elements
+        return deepcopy(self.elements)
