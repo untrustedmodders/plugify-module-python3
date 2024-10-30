@@ -1267,7 +1267,7 @@ namespace py3lm {
 			const auto paramTypes = method.GetParamTypes();
 			uint8_t paramsCount = static_cast<uint8_t>(paramTypes.size());
 			uint8_t refParamsCount = 0;
-			uint8_t paramsStartIndex = ValueUtils::IsHiddenParam(method.GetReturnType().GetType()) ? 1 : 0;
+			uint8_t paramsStartIndex = ValueUtils::IsHiddenParam(method.GetReturnType().GetType()) && !PY3LM_ARCH_ARM ? 1 : 0;
 
 			PyObject* argTuple = nullptr;
 			if (paramsCount) {
@@ -1610,129 +1610,110 @@ namespace py3lm {
 			}
 		};
 
-		void BeginExternalCall(MethodRef method, ArgsScope& a) {
+		void BeginExternalCall(MethodRef method, ArgsScope& a, [[maybe_unused]] JitCall::Return& ret) {
 			ValueType retType = method.GetReturnType().GetType();
 			if (ValueUtils::IsHiddenParam(retType)) {
+				void* value;
 				switch (retType) {
 					case ValueType::String: {
-						void* const value = new plg::string();
+						value = new plg::string();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayBool: {
-						void* const value = new std::vector<bool>();
+						value = new std::vector<bool>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayChar8: {
-						void* const value = new std::vector<char>();
+						value = new std::vector<char>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayChar16: {
-						void* const value = new std::vector<char16_t>();
+						value = new std::vector<char16_t>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayInt8: {
-						void* const value = new std::vector<int8_t>();
+						value = new std::vector<int8_t>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayInt16: {
-						void* const value = new std::vector<int16_t>();
+						value = new std::vector<int16_t>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayInt32: {
-						void* const value = new std::vector<int32_t>();
+						value = new std::vector<int32_t>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayInt64: {
-						void* const value = new std::vector<int64_t>();
+						value = new std::vector<int64_t>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayUInt8: {
-						void* const value = new std::vector<uint8_t>();
+						value = new std::vector<uint8_t>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayUInt16: {
-						void* const value = new std::vector<uint16_t>();
+						value = new std::vector<uint16_t>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayUInt32: {
-						void* const value = new std::vector<uint32_t>();
+						value = new std::vector<uint32_t>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayUInt64: {
-						void* const value = new std::vector<uint64_t>();
+						value = new std::vector<uint64_t>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayPointer: {
-						void* const value = new std::vector<uintptr_t>();
+						value = new std::vector<uintptr_t>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayFloat: {
-						void* const value = new std::vector<float>();
+						value = new std::vector<float>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayDouble: {
-						void* const value = new std::vector<double>();
+						value = new std::vector<double>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::ArrayString: {
-						void* const value = new std::vector<plg::string>();
+						value = new std::vector<plg::string>();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					// Fit 64bit
 					/*case ValueType::Vector2: {
-						void* const value = new plugify::Vector2();
+						ealue = new plugify::Vector2();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}*/
 					case ValueType::Vector3: {
-						void* const value = new plugify::Vector3();
+						value = new plugify::Vector3();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::Vector4: {
-						void* const value = new plugify::Vector4();
+						value = new plugify::Vector4();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					case ValueType::Matrix4x4: {
-						void* const value = new plugify::Matrix4x4();
+						value = new plugify::Matrix4x4();
 						a.storage.emplace_back(value, retType);
-						a.params.AddArgument(value);
 						break;
 					}
 					default:
@@ -1741,11 +1722,16 @@ namespace py3lm {
 						std::terminate();
 						break;
 				}
+
+#if !PY3LM_ARCH_ARM
+				a.params.AddArgument(value);
+#else
+				ret.SetReturn(value);
+#endif
 			}
 		}
 
-		PyObject* MakeExternalCall(MethodRef method, JitCall::CallingFunc func, const ArgsScope& a) {
-			JitCall::Return ret;
+		PyObject* MakeExternalCall(MethodRef method, JitCall::CallingFunc func, const ArgsScope& a, JitCall::Return& ret) {
 			func(a.params.GetDataPtr(), &ret);
 			ValueType retType = method.GetReturnType().GetType();
 			switch (retType) {
@@ -1812,67 +1798,67 @@ namespace py3lm {
 				return GetOrCreateFunctionObject(method.GetReturnType().GetPrototype().value(), val);
 			}
 			case ValueType::String: {
-				auto* const str = reinterpret_cast<plg::string*>(std::get<0>(a.storage[0]));
+				auto* const str = ret.GetReturn<plg::string*>();
 				return CreatePyObject(*str);
 			}
 			case ValueType::ArrayBool: {
-				auto* const arr = reinterpret_cast<std::vector<bool>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<bool>*>();
 				return CreatePyObjectList<bool>(*arr);
 			}
 			case ValueType::ArrayChar8: {
-				auto* const arr = reinterpret_cast<std::vector<char>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<char>*>();
 				return CreatePyObjectList<char>(*arr);
 			}
 			case ValueType::ArrayChar16: {
-				auto* const arr = reinterpret_cast<std::vector<char16_t>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<char16_t>*>();
 				return CreatePyObjectList<char16_t>(*arr);
 			}
 			case ValueType::ArrayInt8: {
-				auto* const arr = reinterpret_cast<std::vector<int8_t>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<int8_t>*>();
 				return CreatePyObjectList<int8_t>(*arr);
 			}
 			case ValueType::ArrayInt16: {
-				auto* const arr = reinterpret_cast<std::vector<int16_t>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<int16_t>*>();
 				return CreatePyObjectList<int16_t>(*arr);
 			}
 			case ValueType::ArrayInt32: {
-				auto* const arr = reinterpret_cast<std::vector<int32_t>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<int32_t>*>();
 				return CreatePyObjectList<int32_t>(*arr);
 			}
 			case ValueType::ArrayInt64: {
-				auto* const arr = reinterpret_cast<std::vector<int64_t>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<int64_t>*>();
 				return CreatePyObjectList<int64_t>(*arr);
 			}
 			case ValueType::ArrayUInt8: {
-				auto* const arr = reinterpret_cast<std::vector<uint8_t>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<uint8_t>*>();
 				return CreatePyObjectList<uint8_t>(*arr);
 			}
 			case ValueType::ArrayUInt16: {
-				auto* const arr = reinterpret_cast<std::vector<uint16_t>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<uint16_t>*>();
 				return CreatePyObjectList<uint16_t>(*arr);
 			}
 			case ValueType::ArrayUInt32: {
-				auto* const arr = reinterpret_cast<std::vector<uint32_t>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<uint32_t>*>();
 				return CreatePyObjectList<uint32_t>(*arr);
 			}
 			case ValueType::ArrayUInt64: {
-				auto* const arr = reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<uint64_t>*>();
 				return CreatePyObjectList<uint64_t>(*arr);
 			}
 			case ValueType::ArrayPointer: {
-				auto* const arr = reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<uintptr_t>*>();
 				return CreatePyObjectList<uintptr_t>(*arr);
 			}
 			case ValueType::ArrayFloat: {
-				auto* const arr = reinterpret_cast<std::vector<float>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<float>*>();
 				return CreatePyObjectList<float>(*arr);
 			}
 			case ValueType::ArrayDouble: {
-				auto* const arr = reinterpret_cast<std::vector<double>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<double>*>();
 				return CreatePyObjectList<double>(*arr);
 			}
 			case ValueType::ArrayString: {
-				auto* const arr = reinterpret_cast<std::vector<plg::string>*>(std::get<0>(a.storage[0]));
+				auto* const arr = ret.GetReturn<std::vector<plg::string>*>();
 				return CreatePyObjectList<plg::string>(*arr);
 			}
 			case ValueType::Vector2: {
@@ -1882,7 +1868,7 @@ namespace py3lm {
 			case ValueType::Vector3: {
 				Vector3 val;
 				if (ValueUtils::IsHiddenParam(retType)) {
-					val = *reinterpret_cast<Vector3*>(std::get<0>(a.storage[0]));
+					val = *ret.GetReturn<Vector3*>();
 				} else {
 					val = ret.GetReturn<Vector3>();
 				}
@@ -1891,14 +1877,14 @@ namespace py3lm {
 			case ValueType::Vector4: {
 				Vector4 val;
 				if (ValueUtils::IsHiddenParam(retType)) {
-					val = *reinterpret_cast<Vector4*>(std::get<0>(a.storage[0]));
+					val = *ret.GetReturn<Vector4*>();
 				} else {
 					val = ret.GetReturn<Vector4>();
 				}
 				return CreatePyObject(val);
 			}
 			case ValueType::Matrix4x4: {
-				Matrix4x4 val = *reinterpret_cast<Matrix4x4*>(std::get<0>(a.storage[0]));
+				Matrix4x4 val = *ret.GetReturn<Matrix4x4*>();
 				return CreatePyObject(val);
 			}
 			default: {
@@ -2393,8 +2379,9 @@ namespace py3lm {
 		void ExternalCallNoArgs(MethodRef method, MemAddr data, const JitCallback::Parameters* p, uint8_t count, const JitCallback::Return* ret) {
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			ArgsScope a(1);
-			BeginExternalCall(method, a);
-			PyObject* const retObj = MakeExternalCall(method, data.CCast<JitCall::CallingFunc>(), a);
+			JitCall::Return r;
+			BeginExternalCall(method, a, r);
+			PyObject* const retObj = MakeExternalCall(method, data.CCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// MakeExternalCall set error
 				ret->SetReturn(nullptr);
@@ -2428,8 +2415,9 @@ namespace py3lm {
 			const Py_ssize_t paramsStartIndex = plugify::ValueUtils::IsHiddenParam(method.GetReturnType().GetType()) ? 1 : 0;
 
 			ArgsScope a(1 + paramCount);
+			JitCall::Return r;
 
-			BeginExternalCall(method, a);
+			BeginExternalCall(method, a, r);
 
 			for (Py_ssize_t i = 0; i < size; ++i) {
 				const PropertyRef paramType = paramTypes[i];
@@ -2446,7 +2434,7 @@ namespace py3lm {
 				}
 			}
 
-			PyObject* retObj = MakeExternalCall(method, data.CCast<JitCall::CallingFunc>(), a);
+			PyObject* retObj = MakeExternalCall(method, data.CCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// MakeExternalCall set error
 				ret->SetReturn(nullptr);
