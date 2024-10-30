@@ -35,7 +35,7 @@ add_subdirectory(external/plugify)
 # Python 3 Language Module for Plugify
 #
 set(PY3LM_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/module.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/module.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/module.cpp")
 add_library(${PROJECT_NAME} SHARED ${PY3LM_SOURCES})
 

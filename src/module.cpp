@@ -1,16 +1,16 @@
-#include "module.h"
-#include <plugify/plugify_provider.h>
-#include <plugify/compat_format.h>
-#include <plugify/log.h>
-#include <plugify/module.h>
-#include <plugify/plugin_descriptor.h>
-#include <plugify/plugin.h>
-#include <plugify/string.h>
-#include <plugify/math.h>
-#include <module_export.h>
-#include <cuchar>
-#include <climits>
+#include "module.hpp"
 #include <array>
+#include <climits>
+#include <cuchar>
+#include <module_export.h>
+#include <plugify/compat_format.hpp>
+#include <plugify/log.hpp>
+#include <plugify/math.hpp>
+#include <plugify/module.hpp>
+#include <plugify/plugify_provider.hpp>
+#include <plugify/plugin.hpp>
+#include <plugify/plugin_descriptor.hpp>
+#include <plugify/string.hpp>
 
 using namespace plugify;
 namespace fs = std::filesystem;
@@ -2932,7 +2932,7 @@ namespace py3lm {
 
 		const bool noArgs = method.GetParamTypes().empty();
 
-		const MemAddr methodAddr = callback.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr);
+		const MemAddr methodAddr = callback.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
 		if (!methodAddr) {
 			const std::string error(std::format("Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", callback.GetError()));
 			PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -3391,7 +3391,7 @@ namespace py3lm {
 			const bool noArgs = method.GetParamTypes().empty();
 
 			// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-			const MemAddr methodAddr = callback.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr);
+			const MemAddr methodAddr = callback.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
 			if (!methodAddr)
 				break;
 

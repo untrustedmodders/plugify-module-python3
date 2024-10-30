@@ -1,9 +1,9 @@
 #pragma once
 
-#include <plugify/jit/callback.h>
-#include <plugify/jit/call.h>
-#include <plugify/language_module.h>
-#include <plugify/plugin.h>
+#include <plugify/jit/callback.hpp>
+#include <plugify/jit/call.hpp>
+#include <plugify/language_module.hpp>
+#include <plugify/plugin.hpp>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <asmjit/asmjit.h>
