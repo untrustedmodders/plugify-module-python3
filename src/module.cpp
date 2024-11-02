@@ -357,7 +357,7 @@ namespace py3lm {
 			return nullptr;
 		}
 
-		void SetFallbackReturn(ValueType retType, const JitCallback::Return* ret, const JitCallback::Parameters* params) {
+		void SetFallbackReturn(ValueType retType, const JitCallback::Return* ret) {
 			switch (retType) {
 			case ValueType::Void:
 				break;
@@ -378,13 +378,11 @@ namespace py3lm {
 				// HACK: Fill all 8 byte with 0
 				ret->SetReturn<uintptr_t>({});
 				break;
-			case ValueType::String: {
-				auto* const returnParam = params->GetArgument<plg::string*>(0);
-				std::construct_at(returnParam);
-				break;
-			}
 			case ValueType::Function:
 				ret->SetReturn<void*>(nullptr);
+				break;
+			case ValueType::String:
+				ret->ConstructAt<plg::string>();
 				break;
 			case ValueType::ArrayChar8:
 			case ValueType::ArrayChar16:
@@ -398,50 +396,25 @@ namespace py3lm {
 			case ValueType::ArrayUInt64:
 			case ValueType::ArrayPointer:
 			case ValueType::ArrayFloat:
-			case ValueType::ArrayDouble: {
+			case ValueType::ArrayDouble:
 				// HACK: Assume the same structure for empty array
-				auto* const returnParam = params->GetArgument<plg::vector<uintptr_t>*>(0);
-				std::construct_at(returnParam);
+				ret->ConstructAt<plg::vector<uintptr_t>>();
 				break;
-			}
-			case ValueType::ArrayString: {
-				auto* const returnParam = params->GetArgument<plg::vector<plg::string>*>(0);
-				std::construct_at(returnParam);
+			case ValueType::ArrayString:
+				ret->ConstructAt<plg::vector<plg::string>>();
 				break;
-			}
-			case ValueType::Vector2: {
+			case ValueType::Vector2:
 				ret->SetReturn<Vector2>({});
 				break;
-			}
-#if PY3LM_PLATFORM_WINDOWS
-			case ValueType::Vector3: {
-				auto* const returnParam = params->GetArgument<Vector3*>(0);
-				std::construct_at(returnParam);
-				ret->SetReturn<Vector3*>(returnParam);
-				break;
-			}
-			case ValueType::Vector4: {
-				auto* const returnParam = params->GetArgument<Vector4*>(0);
-				std::construct_at(returnParam);
-				ret->SetReturn<Vector4*>(returnParam);
-				break;
-			}
-#elif PY3LM_PLATFORM_LINUX || PY3LM_PLATFORM_APPLE
-			case ValueType::Vector3: {
+			case ValueType::Vector3:
 				ret->SetReturn<Vector3>({});
 				break;
-			}
-			case ValueType::Vector4: {
+			case ValueType::Vector4:
 				ret->SetReturn<Vector4>({});
 				break;
-			}
-#endif // PY3LM_PLATFORM_WINDOWS
-			case ValueType::Matrix4x4: {
-				auto* const returnParam = params->GetArgument<Matrix4x4*>(0);
-				std::construct_at(returnParam);
-				ret->SetReturn<Matrix4x4*>(returnParam);
+			case ValueType::Matrix4x4:
+				ret->SetReturn<Matrix4x4>({});
 				break;
-			}
 			default: {
 				const std::string error(std::format("[py3lm] SetFallbackReturn unsupported type {:#x}", static_cast<uint8_t>(retType)));
 				g_py3lm.LogFatal(error);
@@ -450,7 +423,7 @@ namespace py3lm {
 			}
 		}
 
-		bool SetReturn(PyObject* result, PropertyRef retType, const JitCallback::Return* ret, const JitCallback::Parameters* params) {
+		bool SetReturn(PyObject* result, PropertyRef retType, const JitCallback::Return* ret) {
 			switch (retType.GetType()) {
 			case ValueType::Void:
 				return true;
@@ -546,113 +519,97 @@ namespace py3lm {
 				break;
 			case ValueType::String:
 				if (auto value = ValueFromObject<plg::string>(result)) {
-					auto* const returnParam = params->GetArgument<plg::string*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::string>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayBool:
 				if (auto value = ArrayFromObject<bool>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<bool>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<bool>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayChar8:
 				if (auto value = ArrayFromObject<char>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<char>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<char>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayChar16:
 				if (auto value = ArrayFromObject<char16_t>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<char16_t>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<char16_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt8:
 				if (auto value = ArrayFromObject<int8_t>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<int8_t>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<int8_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt16:
 				if (auto value = ArrayFromObject<int16_t>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<int16_t>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<int16_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt32:
 				if (auto value = ArrayFromObject<int32_t>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<int32_t>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<int32_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt64:
 				if (auto value = ArrayFromObject<int64_t>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<int64_t>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<int64_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt8:
 				if (auto value = ArrayFromObject<uint8_t>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<uint8_t>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<uint8_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt16:
 				if (auto value = ArrayFromObject<uint16_t>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<uint16_t>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<uint16_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt32:
 				if (auto value = ArrayFromObject<uint32_t>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<uint32_t>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<uint32_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt64:
 				if (auto value = ArrayFromObject<uint64_t>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<uint64_t>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<uint64_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayPointer:
 				if (auto value = ArrayFromObject<void*>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<void*>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<void*>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayFloat:
 				if (auto value = ArrayFromObject<float>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<float>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<float>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayDouble:
 				if (auto value = ArrayFromObject<double>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<double>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<double>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayString:
 				if (auto value = ArrayFromObject<plg::string>(result)) {
-					auto* const returnParam = params->GetArgument<plg::vector<plg::string>*>(0);
-					std::construct_at(returnParam, std::move(*value));
+					ret->ConstructAt<plg::vector<plg::string>>(std::move(*value));
 					return true;
 				}
 				break;
@@ -662,24 +619,6 @@ namespace py3lm {
 					return true;
 				}
 				break;
-#if PY3LM_PLATFORM_WINDOWS
-			case ValueType::Vector3:
-				if (auto value = ValueFromObject<Vector3>(result)) {
-					auto* const returnParam = params->GetArgument<Vector3*>(0);
-					std::construct_at(returnParam, std::move(*value));
-					ret->SetReturn<Vector3*>(returnParam);
-					return true;
-				}
-				break;
-			case ValueType::Vector4:
-				if (auto value = ValueFromObject<Vector4>(result)) {
-					auto* const returnParam = params->GetArgument<Vector4*>(0);
-					std::construct_at(returnParam, std::move(*value));
-					ret->SetReturn<Vector4*>(returnParam);
-					return true;
-				}
-				break;
-#elif PY3LM_PLATFORM_LINUX || PY3LM_PLATFORM_APPLE
 			case ValueType::Vector3:
 				if (auto value = ValueFromObject<Vector3>(result)) {
 					ret->SetReturn<Vector3>(*value);
@@ -692,12 +631,9 @@ namespace py3lm {
 					return true;
 				}
 				break;
-#endif // PY3LM_PLATFORM_WINDOWS
 			case ValueType::Matrix4x4:
 				if (auto value = ValueFromObject<Matrix4x4>(result)) {
-					auto* const returnParam = params->GetArgument<Matrix4x4*>(0);
-					std::construct_at(returnParam, std::move(*value));
-					ret->SetReturn<Matrix4x4*>(returnParam);
+					ret->SetReturn<Matrix4x4>(*value);
 					return true;
 				}
 				break;
@@ -1267,7 +1203,6 @@ namespace py3lm {
 			const auto paramTypes = method.GetParamTypes();
 			uint8_t paramsCount = static_cast<uint8_t>(paramTypes.size());
 			uint8_t refParamsCount = 0;
-			uint8_t paramsStartIndex = ValueUtils::IsHiddenParam(method.GetReturnType().GetType()) && !PY3LM_ARCH_ARM ? 1 : 0;
 
 			PyObject* argTuple = nullptr;
 			if (paramsCount) {
@@ -1284,7 +1219,7 @@ namespace py3lm {
 						}
 						using ParamConvertionFunc = PyObject* (*)(PropertyRef, const JitCallback::Parameters*, uint8_t);
 						ParamConvertionFunc const convertFunc = paramType.IsReference() ? &ParamRefToObject : &ParamToObject;
-						PyObject* const arg = convertFunc(paramType, params, paramsStartIndex + index);
+						PyObject* const arg = convertFunc(paramType, params, index);
 						if (!arg) {
 							// convertFunc may set error
 							processResult = PyErr_Occurred() ? ParamProcess::ErrorWithException : ParamProcess::Error;
@@ -1309,7 +1244,7 @@ namespace py3lm {
 					PyErr_Print();
 				}
 
-				SetFallbackReturn(method.GetReturnType().GetType(), ret, params);
+				SetFallbackReturn(method.GetReturnType().GetType(), ret);
 
 				return;
 			}
@@ -1325,7 +1260,7 @@ namespace py3lm {
 			if (!result) {
 				PyErr_Print();
 
-				SetFallbackReturn(method.GetReturnType().GetType(), ret, params);
+				SetFallbackReturn(method.GetReturnType().GetType(), ret);
 
 				return;
 			}
@@ -1338,7 +1273,7 @@ namespace py3lm {
 
 					Py_DECREF(result);
 
-					SetFallbackReturn(method.GetReturnType().GetType(), ret, params);
+					SetFallbackReturn(method.GetReturnType().GetType(), ret);
 
 					return;
 				}
@@ -1351,7 +1286,7 @@ namespace py3lm {
 
 					Py_DECREF(result);
 
-					SetFallbackReturn(method.GetReturnType().GetType(), ret, params);
+					SetFallbackReturn(method.GetReturnType().GetType(), ret);
 
 					return;
 				}
@@ -1365,7 +1300,7 @@ namespace py3lm {
 					if (!paramType.IsReference()) {
 						continue;
 					}
-					if (!SetRefParam(PyTuple_GET_ITEM(result, Py_ssize_t{ 1 + k }), paramType, params, paramsStartIndex + index)) {
+					if (!SetRefParam(PyTuple_GET_ITEM(result, Py_ssize_t{ 1 + k }), paramType, params, index)) {
 						// SetRefParam may set error
 						if (PyErr_Occurred()) {
 							PyErr_Print();
@@ -1378,12 +1313,12 @@ namespace py3lm {
 				}
 			}
 
-			if (!SetReturn(returnObject, method.GetReturnType(), ret, params)) {
+			if (!SetReturn(returnObject, method.GetReturnType(), ret)) {
 				if (PyErr_Occurred()) {
 					PyErr_Print();
 				}
 
-				SetFallbackReturn(method.GetReturnType().GetType(), ret, params);
+				SetFallbackReturn(method.GetReturnType().GetType(), ret);
 			}
 
 			Py_DECREF(result);
@@ -1610,7 +1545,7 @@ namespace py3lm {
 			}
 		};
 
-		void BeginExternalCall(MethodRef method, ArgsScope& a, [[maybe_unused]] JitCall::Return& ret) {
+		void BeginExternalCall(MethodRef method, ArgsScope& a) {
 			ValueType retType = method.GetReturnType().GetType();
 			if (ValueUtils::IsHiddenParam(retType)) {
 				void* value;
@@ -1695,12 +1630,11 @@ namespace py3lm {
 						a.storage.emplace_back(value, retType);
 						break;
 					}
-					// Fit 64bit
-					/*case ValueType::Vector2: {
-						ealue = new plugify::Vector2();
+					case ValueType::Vector2: {
+						value = new plugify::Vector2();
 						a.storage.emplace_back(value, retType);
 						break;
-					}*/
+					}
 					case ValueType::Vector3: {
 						value = new plugify::Vector3();
 						a.storage.emplace_back(value, retType);
@@ -1723,11 +1657,7 @@ namespace py3lm {
 						break;
 				}
 
-#if !PY3LM_ARCH_ARM
 				a.params.AddArgument(value);
-#else
-				ret.SetReturn(value);
-#endif
 			}
 		}
 
@@ -2380,7 +2310,7 @@ namespace py3lm {
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			ArgsScope a(1);
 			JitCall::Return r;
-			BeginExternalCall(method, a, r);
+			BeginExternalCall(method, a);
 			PyObject* const retObj = MakeExternalCall(method, data.CCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// MakeExternalCall set error
@@ -2417,7 +2347,7 @@ namespace py3lm {
 			ArgsScope a(1 + paramCount);
 			JitCall::Return r;
 
-			BeginExternalCall(method, a, r);
+			BeginExternalCall(method, a);
 
 			for (Py_ssize_t i = 0; i < size; ++i) {
 				const PropertyRef paramType = paramTypes[i];
@@ -2453,7 +2383,7 @@ namespace py3lm {
 					if (!paramType.IsReference()) {
 						continue;
 					}
-					PyObject* const value = StorageValueToObject(paramType, a, j);
+					PyObject* const value = StorageValueToObject(paramType, a, j++);
 					if (!value) {
 						// StorageValueToObject set error
 						Py_DECREF(retTuple);
@@ -2461,7 +2391,6 @@ namespace py3lm {
 						return;
 					}
 					PyTuple_SET_ITEM(retTuple, k++, value);
-					++j;
 					if (k >= refParamsCount + 1) {
 						break;
 					}
