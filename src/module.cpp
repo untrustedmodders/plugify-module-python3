@@ -316,13 +316,13 @@ namespace py3lm {
 		}
 
 		template<typename T>
-		std::optional<std::vector<T>> ArrayFromObject(PyObject* arrayObject) {
+		std::optional<plg::vector<T>> ArrayFromObject(PyObject* arrayObject) {
 			if (!PyList_Check(arrayObject)) {
 				PyErr_SetString(PyExc_TypeError, "Not list");
 				return std::nullopt;
 			}
 			const Py_ssize_t size = PyList_Size(arrayObject);
-			std::vector<T> array(static_cast<size_t>(size));
+			plg::vector<T> array(static_cast<size_t>(size));
 			for (Py_ssize_t i = 0; i < size; ++i) {
 				if (PyObject* const valueObject = PyList_GetItem(arrayObject, i)) {
 					if (auto value = ValueFromObject<T>(valueObject)) {
@@ -352,7 +352,7 @@ namespace py3lm {
 		void* CreateArray(PyObject* pItem) {
 			auto array = ArrayFromObject<T>(pItem);
 			if (array) {
-				return new std::vector<T>(std::move(*array));
+				return new plg::vector<T>(std::move(*array));
 			}
 			return nullptr;
 		}
@@ -400,12 +400,12 @@ namespace py3lm {
 			case ValueType::ArrayFloat:
 			case ValueType::ArrayDouble: {
 				// HACK: Assume the same structure for empty array
-				auto* const returnParam = params->GetArgument<std::vector<uintptr_t>*>(0);
+				auto* const returnParam = params->GetArgument<plg::vector<uintptr_t>*>(0);
 				std::construct_at(returnParam);
 				break;
 			}
 			case ValueType::ArrayString: {
-				auto* const returnParam = params->GetArgument<std::vector<plg::string>*>(0);
+				auto* const returnParam = params->GetArgument<plg::vector<plg::string>*>(0);
 				std::construct_at(returnParam);
 				break;
 			}
@@ -553,105 +553,105 @@ namespace py3lm {
 				break;
 			case ValueType::ArrayBool:
 				if (auto value = ArrayFromObject<bool>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<bool>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<bool>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayChar8:
 				if (auto value = ArrayFromObject<char>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<char>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<char>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayChar16:
 				if (auto value = ArrayFromObject<char16_t>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<char16_t>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<char16_t>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt8:
 				if (auto value = ArrayFromObject<int8_t>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<int8_t>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<int8_t>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt16:
 				if (auto value = ArrayFromObject<int16_t>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<int16_t>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<int16_t>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt32:
 				if (auto value = ArrayFromObject<int32_t>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<int32_t>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<int32_t>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt64:
 				if (auto value = ArrayFromObject<int64_t>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<int64_t>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<int64_t>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt8:
 				if (auto value = ArrayFromObject<uint8_t>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<uint8_t>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<uint8_t>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt16:
 				if (auto value = ArrayFromObject<uint16_t>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<uint16_t>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<uint16_t>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt32:
 				if (auto value = ArrayFromObject<uint32_t>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<uint32_t>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<uint32_t>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt64:
 				if (auto value = ArrayFromObject<uint64_t>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<uint64_t>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<uint64_t>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayPointer:
 				if (auto value = ArrayFromObject<void*>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<void*>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<void*>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayFloat:
 				if (auto value = ArrayFromObject<float>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<float>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<float>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayDouble:
 				if (auto value = ArrayFromObject<double>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<double>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<double>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayString:
 				if (auto value = ArrayFromObject<plg::string>(result)) {
-					auto* const returnParam = params->GetArgument<std::vector<plg::string>*>(0);
+					auto* const returnParam = params->GetArgument<plg::vector<plg::string>*>(0);
 					std::construct_at(returnParam, std::move(*value));
 					return true;
 				}
@@ -820,105 +820,105 @@ namespace py3lm {
 				break;
 			case ValueType::ArrayBool:
 				if (auto value = ArrayFromObject<bool>(object)) {
-					auto* const param = params->GetArgument<std::vector<bool>*>(index);
+					auto* const param = params->GetArgument<plg::vector<bool>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayChar8:
 				if (auto value = ArrayFromObject<char>(object)) {
-					auto* const param = params->GetArgument<std::vector<char>*>(index);
+					auto* const param = params->GetArgument<plg::vector<char>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayChar16:
 				if (auto value = ArrayFromObject<char16_t>(object)) {
-					auto* const param = params->GetArgument<std::vector<char16_t>*>(index);
+					auto* const param = params->GetArgument<plg::vector<char16_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt8:
 				if (auto value = ArrayFromObject<int8_t>(object)) {
-					auto* const param = params->GetArgument<std::vector<int8_t>*>(index);
+					auto* const param = params->GetArgument<plg::vector<int8_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt16:
 				if (auto value = ArrayFromObject<int16_t>(object)) {
-					auto* const param = params->GetArgument<std::vector<int16_t>*>(index);
+					auto* const param = params->GetArgument<plg::vector<int16_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt32:
 				if (auto value = ArrayFromObject<int32_t>(object)) {
-					auto* const param = params->GetArgument<std::vector<int32_t>*>(index);
+					auto* const param = params->GetArgument<plg::vector<int32_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt64:
 				if (auto value = ArrayFromObject<int64_t>(object)) {
-					auto* const param = params->GetArgument<std::vector<int64_t>*>(index);
+					auto* const param = params->GetArgument<plg::vector<int64_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt8:
 				if (auto value = ArrayFromObject<uint8_t>(object)) {
-					auto* const param = params->GetArgument<std::vector<uint8_t>*>(index);
+					auto* const param = params->GetArgument<plg::vector<uint8_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt16:
 				if (auto value = ArrayFromObject<uint16_t>(object)) {
-					auto* const param = params->GetArgument<std::vector<uint16_t>*>(index);
+					auto* const param = params->GetArgument<plg::vector<uint16_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt32:
 				if (auto value = ArrayFromObject<uint32_t>(object)) {
-					auto* const param = params->GetArgument<std::vector<uint32_t>*>(index);
+					auto* const param = params->GetArgument<plg::vector<uint32_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt64:
 				if (auto value = ArrayFromObject<uint64_t>(object)) {
-					auto* const param = params->GetArgument<std::vector<uint64_t>*>(index);
+					auto* const param = params->GetArgument<plg::vector<uint64_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayPointer:
 				if (auto value = ArrayFromObject<void*>(object)) {
-					auto* const param = params->GetArgument<std::vector<void*>*>(index);
+					auto* const param = params->GetArgument<plg::vector<void*>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayFloat:
 				if (auto value = ArrayFromObject<float>(object)) {
-					auto* const param = params->GetArgument<std::vector<float>*>(index);
+					auto* const param = params->GetArgument<plg::vector<float>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayDouble:
 				if (auto value = ArrayFromObject<double>(object)) {
-					auto* const param = params->GetArgument<std::vector<double>*>(index);
+					auto* const param = params->GetArgument<plg::vector<double>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayString:
 				if (auto value = ArrayFromObject<plg::string>(object)) {
-					auto* const param = params->GetArgument<std::vector<plg::string>*>(index);
+					auto* const param = params->GetArgument<plg::vector<plg::string>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
@@ -1078,7 +1078,7 @@ namespace py3lm {
 		}
 
 		template<typename T>
-		PyObject* CreatePyObjectList(const std::vector<T>& arrayArg) {
+		PyObject* CreatePyObjectList(const plg::vector<T>& arrayArg) {
 			const auto size = static_cast<Py_ssize_t>(arrayArg.size());
 			PyObject* const arrayObject = PyList_New(size);
 			if (arrayObject) {
@@ -1129,35 +1129,35 @@ namespace py3lm {
 			case ValueType::String:
 				return CreatePyObject(*(params->GetArgument<const plg::string*>(index)));
 			case ValueType::ArrayBool:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<bool>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<bool>*>(index)));
 			case ValueType::ArrayChar8:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<char>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<char>*>(index)));
 			case ValueType::ArrayChar16:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<char16_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<char16_t>*>(index)));
 			case ValueType::ArrayInt8:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<int8_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int8_t>*>(index)));
 			case ValueType::ArrayInt16:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<int16_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int16_t>*>(index)));
 			case ValueType::ArrayInt32:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<int32_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int32_t>*>(index)));
 			case ValueType::ArrayInt64:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<int64_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int64_t>*>(index)));
 			case ValueType::ArrayUInt8:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint8_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint8_t>*>(index)));
 			case ValueType::ArrayUInt16:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint16_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint16_t>*>(index)));
 			case ValueType::ArrayUInt32:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint32_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint32_t>*>(index)));
 			case ValueType::ArrayUInt64:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint64_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint64_t>*>(index)));
 			case ValueType::ArrayPointer:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<void*>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<void*>*>(index)));
 			case ValueType::ArrayFloat:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<float>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<float>*>(index)));
 			case ValueType::ArrayDouble:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<double>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<double>*>(index)));
 			case ValueType::ArrayString:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<plg::string>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::string>*>(index)));
 			case ValueType::Vector2:
 				return CreatePyObject(*(params->GetArgument<Vector2*>(index)));
 			case ValueType::Vector3:
@@ -1208,35 +1208,35 @@ namespace py3lm {
 			case ValueType::String:
 				return CreatePyObject(*(params->GetArgument<const plg::string*>(index)));
 			case ValueType::ArrayBool:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<bool>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<bool>*>(index)));
 			case ValueType::ArrayChar8:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<char>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<char>*>(index)));
 			case ValueType::ArrayChar16:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<char16_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<char16_t>*>(index)));
 			case ValueType::ArrayInt8:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<int8_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int8_t>*>(index)));
 			case ValueType::ArrayInt16:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<int16_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int16_t>*>(index)));
 			case ValueType::ArrayInt32:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<int32_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int32_t>*>(index)));
 			case ValueType::ArrayInt64:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<int64_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int64_t>*>(index)));
 			case ValueType::ArrayUInt8:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint8_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint8_t>*>(index)));
 			case ValueType::ArrayUInt16:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint16_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint16_t>*>(index)));
 			case ValueType::ArrayUInt32:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint32_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint32_t>*>(index)));
 			case ValueType::ArrayUInt64:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<uint64_t>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint64_t>*>(index)));
 			case ValueType::ArrayPointer:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<void*>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<void*>*>(index)));
 			case ValueType::ArrayFloat:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<float>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<float>*>(index)));
 			case ValueType::ArrayDouble:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<double>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<double>*>(index)));
 			case ValueType::ArrayString:
-				return CreatePyObjectList(*(params->GetArgument<const std::vector<plg::string>*>(index)));
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::string>*>(index)));
 			case ValueType::Vector2:
 				return CreatePyObject(*(params->GetArgument<Vector2*>(index)));
 			case ValueType::Vector3:
@@ -1524,63 +1524,63 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::ArrayBool: {
-						delete reinterpret_cast<std::vector<bool>*>(ptr);
+						delete reinterpret_cast<plg::vector<bool>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayChar8: {
-						delete reinterpret_cast<std::vector<char>*>(ptr);
+						delete reinterpret_cast<plg::vector<char>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayChar16: {
-						delete reinterpret_cast<std::vector<char16_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<char16_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayInt8: {
-						delete reinterpret_cast<std::vector<int16_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<int16_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayInt16: {
-						delete reinterpret_cast<std::vector<int16_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<int16_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayInt32: {
-						delete reinterpret_cast<std::vector<int32_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<int32_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayInt64: {
-						delete reinterpret_cast<std::vector<int64_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<int64_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayUInt8: {
-						delete reinterpret_cast<std::vector<uint8_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<uint8_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayUInt16: {
-						delete reinterpret_cast<std::vector<uint16_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<uint16_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayUInt32: {
-						delete reinterpret_cast<std::vector<uint32_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<uint32_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayUInt64: {
-						delete reinterpret_cast<std::vector<uint64_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<uint64_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayPointer: {
-						delete reinterpret_cast<std::vector<uintptr_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<uintptr_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayFloat: {
-						delete reinterpret_cast<std::vector<float>*>(ptr);
+						delete reinterpret_cast<plg::vector<float>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayDouble: {
-						delete reinterpret_cast<std::vector<double>*>(ptr);
+						delete reinterpret_cast<plg::vector<double>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayString: {
-						delete reinterpret_cast<std::vector<plg::string>*>(ptr);
+						delete reinterpret_cast<plg::vector<plg::string>*>(ptr);
 						break;
 					}
 					case ValueType::Vector2: {
@@ -1621,77 +1621,77 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::ArrayBool: {
-						value = new std::vector<bool>();
+						value = new plg::vector<bool>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayChar8: {
-						value = new std::vector<char>();
+						value = new plg::vector<char>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayChar16: {
-						value = new std::vector<char16_t>();
+						value = new plg::vector<char16_t>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayInt8: {
-						value = new std::vector<int8_t>();
+						value = new plg::vector<int8_t>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayInt16: {
-						value = new std::vector<int16_t>();
+						value = new plg::vector<int16_t>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayInt32: {
-						value = new std::vector<int32_t>();
+						value = new plg::vector<int32_t>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayInt64: {
-						value = new std::vector<int64_t>();
+						value = new plg::vector<int64_t>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayUInt8: {
-						value = new std::vector<uint8_t>();
+						value = new plg::vector<uint8_t>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayUInt16: {
-						value = new std::vector<uint16_t>();
+						value = new plg::vector<uint16_t>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayUInt32: {
-						value = new std::vector<uint32_t>();
+						value = new plg::vector<uint32_t>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayUInt64: {
-						value = new std::vector<uint64_t>();
+						value = new plg::vector<uint64_t>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayPointer: {
-						value = new std::vector<uintptr_t>();
+						value = new plg::vector<uintptr_t>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayFloat: {
-						value = new std::vector<float>();
+						value = new plg::vector<float>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayDouble: {
-						value = new std::vector<double>();
+						value = new plg::vector<double>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::ArrayString: {
-						value = new std::vector<plg::string>();
+						value = new plg::vector<plg::string>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
@@ -1802,63 +1802,63 @@ namespace py3lm {
 				return CreatePyObject(*str);
 			}
 			case ValueType::ArrayBool: {
-				auto* const arr = ret.GetReturn<std::vector<bool>*>();
+				auto* const arr = ret.GetReturn<plg::vector<bool>*>();
 				return CreatePyObjectList<bool>(*arr);
 			}
 			case ValueType::ArrayChar8: {
-				auto* const arr = ret.GetReturn<std::vector<char>*>();
+				auto* const arr = ret.GetReturn<plg::vector<char>*>();
 				return CreatePyObjectList<char>(*arr);
 			}
 			case ValueType::ArrayChar16: {
-				auto* const arr = ret.GetReturn<std::vector<char16_t>*>();
+				auto* const arr = ret.GetReturn<plg::vector<char16_t>*>();
 				return CreatePyObjectList<char16_t>(*arr);
 			}
 			case ValueType::ArrayInt8: {
-				auto* const arr = ret.GetReturn<std::vector<int8_t>*>();
+				auto* const arr = ret.GetReturn<plg::vector<int8_t>*>();
 				return CreatePyObjectList<int8_t>(*arr);
 			}
 			case ValueType::ArrayInt16: {
-				auto* const arr = ret.GetReturn<std::vector<int16_t>*>();
+				auto* const arr = ret.GetReturn<plg::vector<int16_t>*>();
 				return CreatePyObjectList<int16_t>(*arr);
 			}
 			case ValueType::ArrayInt32: {
-				auto* const arr = ret.GetReturn<std::vector<int32_t>*>();
+				auto* const arr = ret.GetReturn<plg::vector<int32_t>*>();
 				return CreatePyObjectList<int32_t>(*arr);
 			}
 			case ValueType::ArrayInt64: {
-				auto* const arr = ret.GetReturn<std::vector<int64_t>*>();
+				auto* const arr = ret.GetReturn<plg::vector<int64_t>*>();
 				return CreatePyObjectList<int64_t>(*arr);
 			}
 			case ValueType::ArrayUInt8: {
-				auto* const arr = ret.GetReturn<std::vector<uint8_t>*>();
+				auto* const arr = ret.GetReturn<plg::vector<uint8_t>*>();
 				return CreatePyObjectList<uint8_t>(*arr);
 			}
 			case ValueType::ArrayUInt16: {
-				auto* const arr = ret.GetReturn<std::vector<uint16_t>*>();
+				auto* const arr = ret.GetReturn<plg::vector<uint16_t>*>();
 				return CreatePyObjectList<uint16_t>(*arr);
 			}
 			case ValueType::ArrayUInt32: {
-				auto* const arr = ret.GetReturn<std::vector<uint32_t>*>();
+				auto* const arr = ret.GetReturn<plg::vector<uint32_t>*>();
 				return CreatePyObjectList<uint32_t>(*arr);
 			}
 			case ValueType::ArrayUInt64: {
-				auto* const arr = ret.GetReturn<std::vector<uint64_t>*>();
+				auto* const arr = ret.GetReturn<plg::vector<uint64_t>*>();
 				return CreatePyObjectList<uint64_t>(*arr);
 			}
 			case ValueType::ArrayPointer: {
-				auto* const arr = ret.GetReturn<std::vector<uintptr_t>*>();
+				auto* const arr = ret.GetReturn<plg::vector<uintptr_t>*>();
 				return CreatePyObjectList<uintptr_t>(*arr);
 			}
 			case ValueType::ArrayFloat: {
-				auto* const arr = ret.GetReturn<std::vector<float>*>();
+				auto* const arr = ret.GetReturn<plg::vector<float>*>();
 				return CreatePyObjectList<float>(*arr);
 			}
 			case ValueType::ArrayDouble: {
-				auto* const arr = ret.GetReturn<std::vector<double>*>();
+				auto* const arr = ret.GetReturn<plg::vector<double>*>();
 				return CreatePyObjectList<double>(*arr);
 			}
 			case ValueType::ArrayString: {
-				auto* const arr = ret.GetReturn<std::vector<plg::string>*>();
+				auto* const arr = ret.GetReturn<plg::vector<plg::string>*>();
 				return CreatePyObjectList<plg::string>(*arr);
 			}
 			case ValueType::Vector2: {
@@ -2331,35 +2331,35 @@ namespace py3lm {
 			case ValueType::Pointer:
 				return CreatePyObject(*reinterpret_cast<uintptr_t*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayBool:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<bool>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<bool>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayChar8:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<char>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<char>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayChar16:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<char16_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<char16_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt8:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<int8_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<int8_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt16:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<int16_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<int16_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt32:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<int32_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<int32_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt64:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<int64_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<int64_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt8:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<uint8_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<uint8_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt16:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<uint16_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<uint16_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt32:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<uint32_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<uint32_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt64:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<uint64_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<uint64_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayPointer:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<uintptr_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<uintptr_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayFloat:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<float>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<float>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayDouble:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<double>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<double>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayString:
-				return CreatePyObjectList(*reinterpret_cast<std::vector<plg::string>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::string>*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector2:
 				return CreatePyObject(*reinterpret_cast<Vector2*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector3:
