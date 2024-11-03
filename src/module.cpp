@@ -384,21 +384,47 @@ namespace py3lm {
 			case ValueType::String:
 				ret->ConstructAt<plg::string>();
 				break;
+			case ValueType::ArrayBool:
+				ret->ConstructAt<plg::vector<bool>>();
+				break;
 			case ValueType::ArrayChar8:
+				ret->ConstructAt<plg::vector<char>>();
+				break;
 			case ValueType::ArrayChar16:
+				ret->ConstructAt<plg::vector<char16_t>>();
+				break;
 			case ValueType::ArrayInt8:
+				ret->ConstructAt<plg::vector<int8_t>>();
+				break;
 			case ValueType::ArrayInt16:
+				ret->ConstructAt<plg::vector<int16_t>>();
+				break;
 			case ValueType::ArrayInt32:
+				ret->ConstructAt<plg::vector<int32_t>>();
+				break;
 			case ValueType::ArrayInt64:
+				ret->ConstructAt<plg::vector<int64_t>>();
+				break;
 			case ValueType::ArrayUInt8:
+				ret->ConstructAt<plg::vector<uint8_t>>();
+				break;
 			case ValueType::ArrayUInt16:
+				ret->ConstructAt<plg::vector<uint16_t>>();
+				break;
 			case ValueType::ArrayUInt32:
+				ret->ConstructAt<plg::vector<uint32_t>>();
+				break;
 			case ValueType::ArrayUInt64:
+				ret->ConstructAt<plg::vector<uint64_t>>();
+				break;
 			case ValueType::ArrayPointer:
-			case ValueType::ArrayFloat:
-			case ValueType::ArrayDouble:
-				// HACK: Assume the same structure for empty array
 				ret->ConstructAt<plg::vector<uintptr_t>>();
+				break;
+			case ValueType::ArrayFloat:
+				ret->ConstructAt<plg::vector<float>>();
+				break;
+			case ValueType::ArrayDouble:
+				ret->ConstructAt<plg::vector<double>>();
 				break;
 			case ValueType::ArrayString:
 				ret->ConstructAt<plg::vector<plg::string>>();
