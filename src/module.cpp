@@ -418,7 +418,7 @@ namespace py3lm {
 				ret->ConstructAt<plg::vector<uint64_t>>();
 				break;
 			case ValueType::ArrayPointer:
-				ret->ConstructAt<plg::vector<uintptr_t>>();
+				ret->ConstructAt<plg::vector<void*>>();
 				break;
 			case ValueType::ArrayFloat:
 				ret->ConstructAt<plg::vector<float>>();
@@ -1469,7 +1469,7 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::Pointer: {
-						delete reinterpret_cast<uintptr_t*>(ptr);
+						delete reinterpret_cast<void**>(ptr);
 						break;
 					}
 					case ValueType::Float: {
@@ -1529,7 +1529,7 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::ArrayPointer: {
-						delete reinterpret_cast<plg::vector<uintptr_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<void*>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayFloat: {
@@ -1637,7 +1637,7 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::ArrayPointer: {
-						value = new plg::vector<uintptr_t>();
+						value = new plg::vector<void*>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
@@ -1738,7 +1738,7 @@ namespace py3lm {
 				return CreatePyObject(val);
 			}
 			case ValueType::Pointer: {
-				const uintptr_t val = ret.GetReturn<uintptr_t>();
+				void* val = ret.GetReturn<void*>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Float: {
@@ -1802,8 +1802,8 @@ namespace py3lm {
 				return CreatePyObjectList<uint64_t>(*arr);
 			}
 			case ValueType::ArrayPointer: {
-				auto* const arr = ret.GetReturn<plg::vector<uintptr_t>*>();
-				return CreatePyObjectList<uintptr_t>(*arr);
+				auto* const arr = ret.GetReturn<plg::vector<void*>*>();
+				return CreatePyObjectList<void*>(*arr);
 			}
 			case ValueType::ArrayFloat: {
 				auto* const arr = ret.GetReturn<plg::vector<float>*>();
@@ -1944,7 +1944,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::Pointer: {
-				const auto value = ValueFromObject<uintptr_t>(pItem);
+				const auto value = ValueFromObject<void*>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2084,7 +2084,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::ArrayPointer: {
-				void* const value = CreateArray<uintptr_t>(pItem);
+				void* const value = CreateArray<void*>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2199,7 +2199,7 @@ namespace py3lm {
 			case ValueType::UInt64:
 				return PushRefParam(CreateValue<uint64_t>(pItem));
 			case ValueType::Pointer:
-				return PushRefParam(CreateValue<uintptr_t>(pItem));
+				return PushRefParam(CreateValue<void*>(pItem));
 			case ValueType::Float:
 				return PushRefParam(CreateValue<float>(pItem));
 			case ValueType::Double:
@@ -2229,7 +2229,7 @@ namespace py3lm {
 			case ValueType::ArrayUInt64:
 				return PushRefParam(CreateArray<uint64_t>(pItem));
 			case ValueType::ArrayPointer:
-				return PushRefParam(CreateArray<uintptr_t>(pItem));
+				return PushRefParam(CreateArray<void*>(pItem));
 			case ValueType::ArrayFloat:
 				return PushRefParam(CreateArray<float>(pItem));
 			case ValueType::ArrayDouble:
@@ -2285,7 +2285,7 @@ namespace py3lm {
 			case ValueType::String:
 				return CreatePyObject(*reinterpret_cast<plg::string*>(std::get<0>(a.storage[index])));
 			case ValueType::Pointer:
-				return CreatePyObject(*reinterpret_cast<uintptr_t*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*reinterpret_cast<void**>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayBool:
 				return CreatePyObjectList(*reinterpret_cast<plg::vector<bool>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayChar8:
@@ -2309,7 +2309,7 @@ namespace py3lm {
 			case ValueType::ArrayUInt64:
 				return CreatePyObjectList(*reinterpret_cast<plg::vector<uint64_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayPointer:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<uintptr_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<void*>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayFloat:
 				return CreatePyObjectList(*reinterpret_cast<plg::vector<float>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayDouble:
