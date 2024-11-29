@@ -56,7 +56,8 @@ namespace py3lm {
 		std::optional<plugify::Vector4> Vector4ValueFromObject(PyObject* object);
 		PyObject* CreateMatrix4x4Object(const plugify::Matrix4x4& matrix);
 		std::optional<plugify::Matrix4x4> Matrix4x4ValueFromObject(PyObject* object);
-		void LogFatal(const std::string& msg) const;
+		void LogFatal(std::string_view msg) const;
+		void LogError() const;
 
 	private:
 		PyObject* FindPythonMethod(plugify::MemAddr addr) const;
@@ -80,6 +81,8 @@ namespace py3lm {
 		PyObject* _Vector4TypeObject = nullptr;
 		PyObject* _Matrix4x4TypeObject = nullptr;
 		PyObject* _ppsModule = nullptr;
+		PyObject* _tracebackModule = nullptr;
+		PyObject* _formatException = nullptr;
 		std::vector<std::vector<PyMethodDef>> _moduleMethods;
 		std::vector<std::unique_ptr<PyModuleDef>> _moduleDefinitions;
 		struct JitHolder {

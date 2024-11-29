@@ -1267,7 +1267,7 @@ namespace py3lm {
 					Py_DECREF(argTuple);
 				}
 				if (processResult == ParamProcess::ErrorWithException) {
-					PyErr_Print();
+					g_py3lm.LogError();
 				}
 
 				SetFallbackReturn(method.GetReturnType().GetType(), ret);
@@ -1284,7 +1284,7 @@ namespace py3lm {
 			}
 
 			if (!result) {
-				PyErr_Print();
+				g_py3lm.LogError();
 
 				SetFallbackReturn(method.GetReturnType().GetType(), ret);
 
@@ -1295,7 +1295,7 @@ namespace py3lm {
 				if (!PyTuple_CheckExact(result)) {
 					PyErr_SetString(PyExc_TypeError, "Returned value not tuple");
 
-					PyErr_Print();
+					g_py3lm.LogError();
 
 					Py_DECREF(result);
 
@@ -1308,7 +1308,7 @@ namespace py3lm {
 					const std::string error(std::format("Returned tuple wrong size {}, expected {}", tupleSize, static_cast<Py_ssize_t>(1 + refParamsCount)));
 					PyErr_SetString(PyExc_TypeError, error.c_str());
 
-					PyErr_Print();
+					g_py3lm.LogError();
 
 					Py_DECREF(result);
 
@@ -1329,7 +1329,7 @@ namespace py3lm {
 					if (!SetRefParam(PyTuple_GET_ITEM(result, Py_ssize_t{ 1 + k }), paramType, params, index)) {
 						// SetRefParam may set error
 						if (PyErr_Occurred()) {
-							PyErr_Print();
+							g_py3lm.LogError();
 						}
 					}
 					++k;
@@ -1341,7 +1341,7 @@ namespace py3lm {
 
 			if (!SetReturn(returnObject, method.GetReturnType(), ret)) {
 				if (PyErr_Occurred()) {
-					PyErr_Print();
+					g_py3lm.LogError();
 				}
 
 				SetFallbackReturn(method.GetReturnType().GetType(), ret);
@@ -2526,52 +2526,52 @@ namespace py3lm {
 
 		PyObject* const plugifyPluginModuleName = PyUnicode_DecodeFSDefault("plugify.plugin");
 		if (!plugifyPluginModuleName) {
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to allocate plugify.plugin module string" };
 		}
 
 		PyObject* const plugifyPluginModule = PyImport_Import(plugifyPluginModuleName);
 		Py_DECREF(plugifyPluginModuleName);
 		if (!plugifyPluginModule) {
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to import plugify.plugin python module" };
 		}
 
 		_PluginTypeObject = PyObject_GetAttrString(plugifyPluginModule, "Plugin");
 		if (!_PluginTypeObject) {
 			Py_DECREF(plugifyPluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to find plugify.plugin.Plugin type" };
 		}
 		_PluginInfoTypeObject = PyObject_GetAttrString(plugifyPluginModule, "PluginInfo");
 		if (!_PluginInfoTypeObject) {
 			Py_DECREF(plugifyPluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to find plugify.plugin.PluginInfo type" };
 		}
 
 		_Vector2TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector2");
 		if (!_Vector2TypeObject) {
 			Py_DECREF(plugifyPluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to find plugify.plugin.Vector2 type" };
 		}
 		_Vector3TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector3");
 		if (!_Vector3TypeObject) {
 			Py_DECREF(plugifyPluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to find plugify.plugin.Vector3 type" };
 		}
 		_Vector4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector4");
 		if (!_Vector4TypeObject) {
 			Py_DECREF(plugifyPluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to find plugify.plugin.Vector4 type" };
 		}
 		_Matrix4x4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Matrix4x4");
 		if (!_Matrix4x4TypeObject) {
 			Py_DECREF(plugifyPluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to find plugify.plugin.Matrix4x4 type" };
 		}
 
@@ -2579,15 +2579,33 @@ namespace py3lm {
 
 		_ppsModule = PyImport_ImportModule("plugify.pps");
 		if (!_ppsModule) {
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to import plugify.pps python module" };
+		}
+
+		_tracebackModule = PyImport_ImportModule("traceback");
+		if (!_tracebackModule) {
+			LogError();
+			return ErrorData{ "Failed to import traceback python module" };
+		}
+		_formatException = PyObject_GetAttrString(_tracebackModule, "format_exception");
+		if (!_formatException) {
+			return ErrorData{ "Failed to import traceback.format_exception python module" };
 		}
 
 		return InitResultData{};
 	}
 
 	void Python3LanguageModule::Shutdown() {
-		if (Py_IsInitialized()) {
+		if (Py_IsInitialized()) {			
+			if (_formatException) {
+				Py_DECREF(_formatException);
+			}
+			
+			if (_tracebackModule) {
+				Py_DECREF(_tracebackModule);
+			}
+
 			if (_ppsModule) {
 				Py_DECREF(_ppsModule);
 			}
@@ -2635,6 +2653,8 @@ namespace py3lm {
 
 			Py_Finalize();
 		}
+		_formatException = nullptr;
+		_tracebackModule = nullptr;
 		_ppsModule = nullptr;
 		_Vector2TypeObject = nullptr;
 		_Vector3TypeObject = nullptr;
@@ -2711,7 +2731,7 @@ namespace py3lm {
 
 		PyObject* const pluginModule = PyImport_ImportModule(moduleName.c_str());
 		if (!pluginModule) {
-			PyErr_Print();
+			LogError();
 			return ErrorData{ std::format("Failed to import {} module", moduleName) };
 		}
 
@@ -2725,7 +2745,7 @@ namespace py3lm {
 		if (!pluginClass) {
 			Py_DECREF(classNameString);
 			Py_DECREF(pluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to find plugin class" };
 		}
 
@@ -2734,7 +2754,7 @@ namespace py3lm {
 			Py_DECREF(pluginClass);
 			Py_DECREF(classNameString);
 			Py_DECREF(pluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ std::format("Class '{}' not subclass of Plugin", className) };
 		}
 
@@ -2743,7 +2763,7 @@ namespace py3lm {
 		if (!pluginInstance) {
 			Py_DECREF(classNameString);
 			Py_DECREF(pluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to create plugin instance" };
 		}
 
@@ -2764,7 +2784,7 @@ namespace py3lm {
 		if (!pluginInfo) {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to save instance: plugin info not constructed" };
 		}
 
@@ -2773,7 +2793,7 @@ namespace py3lm {
 		if (resultCode != 0) {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
-			PyErr_Print();
+			LogError();
 			return ErrorData{ "Failed to save instance: assignment fail" };
 		}
 
@@ -3396,7 +3416,7 @@ namespace py3lm {
 
 		PyObject* const nameString = PyUnicode_DecodeFSDefault(name.c_str());
 		if (!nameString) {
-			PyErr_Print();
+			LogError();
 			_provider->Log(std::format("[py3lm] {}: failed to allocate name string", context), Severity::Error);
 			return;
 		}
@@ -3404,7 +3424,7 @@ namespace py3lm {
 		if (PyObject_HasAttr(pluginData._instance, nameString)) {
 			PyObject* const returnObject = PyObject_CallMethodNoArgs(pluginData._instance, nameString);
 			if (!returnObject) {
-				PyErr_Print();
+				LogError();
 				_provider->Log(std::format("[py3lm] {}: call '{}' failed", context, name), Severity::Error);
 			}
 		}
@@ -3414,7 +3434,50 @@ namespace py3lm {
 		return;
 	}
 
-	void Python3LanguageModule::LogFatal(const std::string& msg) const {
+	void Python3LanguageModule::LogError() const {
+		PyObject* ptype = nullptr;
+		PyObject* pvalue = nullptr;
+		PyObject* ptraceback = nullptr;
+		PyErr_Fetch(&ptype, &pvalue, &ptraceback);
+		std::string result;
+		if (!pvalue) {
+			Py_INCREF(Py_None);
+			pvalue = Py_None;
+		}
+		if (!ptraceback) {
+			Py_INCREF(Py_None);
+			ptraceback = Py_None;
+		}
+		PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
+		PyObject* strList = PyObject_CallFunctionObjArgs(_formatException, ptype, pvalue, ptraceback, nullptr);
+		Py_DECREF(ptype);
+		Py_DECREF(pvalue);
+		Py_DECREF(ptraceback);
+		if (!strList) {
+			_provider->Log("Couldn't get exact error message", Severity::Error);
+			return;
+		}
+
+		if (PySequence_Check(strList)) {
+			PyObject* strList_fast = PySequence_Fast(strList, "Shouldn't happen (1)");
+			PyObject** items = PySequence_Fast_ITEMS(strList_fast);
+			Py_ssize_t L = PySequence_Fast_GET_SIZE(strList_fast);
+			for (Py_ssize_t i = 0; i < L; ++i) {
+				PyObject* utf8 = PyUnicode_AsUTF8String(items[i]);
+				result += PyBytes_AsString(utf8);
+				Py_DECREF(utf8);
+			}
+			Py_DECREF(strList_fast);
+		} else {
+			result = "Can't get exact error message";
+		}
+
+		Py_DECREF(strList);
+
+		_provider->Log(result, Severity::Error);
+	}
+
+	void Python3LanguageModule::LogFatal(std::string_view msg) const {
 		_provider->Log(msg, Severity::Fatal);
 	}
 
