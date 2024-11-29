@@ -81,7 +81,6 @@ namespace py3lm {
 		PyObject* _Vector4TypeObject = nullptr;
 		PyObject* _Matrix4x4TypeObject = nullptr;
 		PyObject* _ppsModule = nullptr;
-		PyObject* _tracebackModule = nullptr;
 		PyObject* _formatException = nullptr;
 		std::vector<std::vector<PyMethodDef>> _moduleMethods;
 		std::vector<std::unique_ptr<PyModuleDef>> _moduleDefinitions;

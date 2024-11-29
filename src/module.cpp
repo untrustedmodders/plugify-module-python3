@@ -2583,15 +2583,19 @@ namespace py3lm {
 			return ErrorData{ "Failed to import plugify.pps python module" };
 		}
 
-		_tracebackModule = PyImport_ImportModule("traceback");
-		if (!_tracebackModule) {
+		PyObject* const tracebackModule = PyImport_ImportModule("traceback");
+		if (!tracebackModule) {
 			LogError();
 			return ErrorData{ "Failed to import traceback python module" };
 		}
-		_formatException = PyObject_GetAttrString(_tracebackModule, "format_exception");
+		_formatException = PyObject_GetAttrString(tracebackModule, "format_exception");
 		if (!_formatException) {
+			Py_DECREF(tracebackModule);
+			LogError();
 			return ErrorData{ "Failed to import traceback.format_exception python module" };
 		}
+
+		Py_DECREF(tracebackModule);
 
 		return InitResultData{};
 	}
@@ -2600,10 +2604,6 @@ namespace py3lm {
 		if (Py_IsInitialized()) {			
 			if (_formatException) {
 				Py_DECREF(_formatException);
-			}
-			
-			if (_tracebackModule) {
-				Py_DECREF(_tracebackModule);
 			}
 
 			if (_ppsModule) {
@@ -2654,7 +2654,6 @@ namespace py3lm {
 			Py_Finalize();
 		}
 		_formatException = nullptr;
-		_tracebackModule = nullptr;
 		_ppsModule = nullptr;
 		_Vector2TypeObject = nullptr;
 		_Vector3TypeObject = nullptr;
