@@ -3367,7 +3367,7 @@ namespace py3lm {
 			def.ml_doc = nullptr;
 		}
 
-		PyModuleDef& moduleDef = *(_moduleDefinitions.emplace_back(std::make_unique<PyModuleDef>()).get());
+		PyModuleDef& moduleDef = *(_moduleDefinitions.emplace_back(std::make_unique<PyModuleDef>()));
 		moduleDef.m_base = PyModuleDef_HEAD_INIT;
 		moduleDef.m_name = plugin.GetName().data();
 		moduleDef.m_doc = nullptr;
