@@ -5,7 +5,6 @@
 #include <module_export.h>
 #include <plugify/compat_format.hpp>
 #include <plugify/log.hpp>
-#include <plugify/math.hpp>
 #include <plugify/module.hpp>
 #include <plugify/plugify_provider.hpp>
 #include <plugify/plugin.hpp>
@@ -296,22 +295,22 @@ namespace py3lm {
 		}
 
 		template<>
-		std::optional<Vector2> ValueFromObject(PyObject* object) {
+		std::optional<plg::vec2> ValueFromObject(PyObject* object) {
 			return g_py3lm.Vector2ValueFromObject(object);
 		}
 
 		template<>
-		std::optional<Vector3> ValueFromObject(PyObject* object) {
+		std::optional<plg::vec3> ValueFromObject(PyObject* object) {
 			return g_py3lm.Vector3ValueFromObject(object);
 		}
 
 		template<>
-		std::optional<Vector4> ValueFromObject(PyObject* object) {
+		std::optional<plg::vec4> ValueFromObject(PyObject* object) {
 			return g_py3lm.Vector4ValueFromObject(object);
 		}
 
 		template<>
-		std::optional<Matrix4x4> ValueFromObject(PyObject* object) {
+		std::optional<plg::mat4x4> ValueFromObject(PyObject* object) {
 			return g_py3lm.Matrix4x4ValueFromObject(object);
 		}
 
@@ -430,16 +429,16 @@ namespace py3lm {
 				ret->ConstructAt<plg::vector<plg::string>>();
 				break;
 			case ValueType::Vector2:
-				ret->SetReturn<Vector2>({});
+				ret->SetReturn<plg::vec2>({});
 				break;
 			case ValueType::Vector3:
-				ret->SetReturn<Vector3>({});
+				ret->SetReturn<plg::vec3>({});
 				break;
 			case ValueType::Vector4:
-				ret->SetReturn<Vector4>({});
+				ret->SetReturn<plg::vec4>({});
 				break;
 			case ValueType::Matrix4x4:
-				ret->SetReturn<Matrix4x4>({});
+				ret->SetReturn<plg::mat4x4>({});
 				break;
 			default: {
 				const std::string error(std::format("[py3lm] SetFallbackReturn unsupported type {:#x}", static_cast<uint8_t>(retType)));
@@ -640,26 +639,26 @@ namespace py3lm {
 				}
 				break;
 			case ValueType::Vector2:
-				if (auto value = ValueFromObject<Vector2>(result)) {
-					ret->SetReturn<Vector2>(*value);
+				if (auto value = ValueFromObject<plg::vec2>(result)) {
+					ret->SetReturn<plg::vec2>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Vector3:
-				if (auto value = ValueFromObject<Vector3>(result)) {
-					ret->SetReturn<Vector3>(*value);
+				if (auto value = ValueFromObject<plg::vec3>(result)) {
+					ret->SetReturn<plg::vec3>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Vector4:
-				if (auto value = ValueFromObject<Vector4>(result)) {
-					ret->SetReturn<Vector4>(*value);
+				if (auto value = ValueFromObject<plg::vec4>(result)) {
+					ret->SetReturn<plg::vec4>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Matrix4x4:
-				if (auto value = ValueFromObject<Matrix4x4>(result)) {
-					ret->SetReturn<Matrix4x4>(*value);
+				if (auto value = ValueFromObject<plg::mat4x4>(result)) {
+					ret->SetReturn<plg::mat4x4>(*value);
 					return true;
 				}
 				break;
@@ -886,29 +885,29 @@ namespace py3lm {
 				}
 				break;
 			case ValueType::Vector2:
-				if (auto value = ValueFromObject<Vector2>(object)) {
-					auto* const param = params->GetArgument<Vector2*>(index);
+				if (auto value = ValueFromObject<plg::vec2>(object)) {
+					auto* const param = params->GetArgument<plg::vec2*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Vector3:
-				if (auto value = ValueFromObject<Vector3>(object)) {
-					auto* const param = params->GetArgument<Vector3*>(index);
+				if (auto value = ValueFromObject<plg::vec3>(object)) {
+					auto* const param = params->GetArgument<plg::vec3*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Vector4:
-				if (auto value = ValueFromObject<Vector4>(object)) {
-					auto* const param = params->GetArgument<Vector4*>(index);
+				if (auto value = ValueFromObject<plg::vec4>(object)) {
+					auto* const param = params->GetArgument<plg::vec4*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Matrix4x4:
-				if (auto value = ValueFromObject<Matrix4x4>(object)) {
-					auto* const param = params->GetArgument<Matrix4x4*>(index);
+				if (auto value = ValueFromObject<plg::mat4x4>(object)) {
+					auto* const param = params->GetArgument<plg::mat4x4*>(index);
 					*param = *value;
 					return true;
 				}
@@ -1016,22 +1015,22 @@ namespace py3lm {
 		}
 
 		template<>
-		PyObject* CreatePyObject(Vector2 value) {
+		PyObject* CreatePyObject(plg::vec2 value) {
 			return g_py3lm.CreateVector2Object(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(Vector3 value) {
+		PyObject* CreatePyObject(plg::vec3 value) {
 			return g_py3lm.CreateVector3Object(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(Vector4 value) {
+		PyObject* CreatePyObject(plg::vec4 value) {
 			return g_py3lm.CreateVector4Object(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(Matrix4x4 value) {
+		PyObject* CreatePyObject(plg::mat4x4 value) {
 			return g_py3lm.CreateMatrix4x4Object(value);
 		}
 
@@ -1121,13 +1120,13 @@ namespace py3lm {
 			case ValueType::ArrayString:
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::string>*>(index)));
 			case ValueType::Vector2:
-				return CreatePyObject(*(params->GetArgument<Vector2*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec2*>(index)));
 			case ValueType::Vector3:
-				return CreatePyObject(*(params->GetArgument<Vector3*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec3*>(index)));
 			case ValueType::Vector4:
-				return CreatePyObject(*(params->GetArgument<Vector4*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec4*>(index)));
 			case ValueType::Matrix4x4:
-				return CreatePyObject(*(params->GetArgument<Matrix4x4*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::mat4x4*>(index)));
 			default: {
 				const std::string error(std::format("[py3lm] ParamToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
@@ -1200,13 +1199,13 @@ namespace py3lm {
 			case ValueType::ArrayString:
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::string>*>(index)));
 			case ValueType::Vector2:
-				return CreatePyObject(*(params->GetArgument<Vector2*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec2*>(index)));
 			case ValueType::Vector3:
-				return CreatePyObject(*(params->GetArgument<Vector3*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec3*>(index)));
 			case ValueType::Vector4:
-				return CreatePyObject(*(params->GetArgument<Vector4*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec4*>(index)));
 			case ValueType::Matrix4x4:
-				return CreatePyObject(*(params->GetArgument<Matrix4x4*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::mat4x4*>(index)));
 			default: {
 				const std::string error(std::format("[py3lm] ParamRefToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
@@ -1545,19 +1544,19 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::Vector2: {
-						delete reinterpret_cast<Vector2*>(ptr);
+						delete reinterpret_cast<plg::vec2*>(ptr);
 						break;
 					}
 					case ValueType::Vector3: {
-						delete reinterpret_cast<Vector3*>(ptr);
+						delete reinterpret_cast<plg::vec3*>(ptr);
 						break;
 					}
 					case ValueType::Vector4: {
-						delete reinterpret_cast<Vector4*>(ptr);
+						delete reinterpret_cast<plg::vec4*>(ptr);
 						break;
 					}
 					case ValueType::Matrix4x4: {
-						delete reinterpret_cast<Matrix4x4*>(ptr);
+						delete reinterpret_cast<plg::mat4x4*>(ptr);
 						break;
 					}
 					default: {
@@ -1657,22 +1656,22 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::Vector2: {
-						value = new plugify::Vector2();
+						value = new plg::vec2();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::Vector3: {
-						value = new plugify::Vector3();
+						value = new plg::vec3();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::Vector4: {
-						value = new plugify::Vector4();
+						value = new plg::vec4();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::Matrix4x4: {
-						value = new plugify::Matrix4x4();
+						value = new plg::mat4x4();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
@@ -1818,29 +1817,29 @@ namespace py3lm {
 				return CreatePyObjectList<plg::string>(*arr);
 			}
 			case ValueType::Vector2: {
-				const Vector2 val = ret.GetReturn<Vector2>();
+				const plg::vec2 val = ret.GetReturn<plg::vec2>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Vector3: {
-				Vector3 val;
+				plg::vec3 val;
 				if (ValueUtils::IsHiddenParam(retType)) {
-					val = *ret.GetReturn<Vector3*>();
+					val = *ret.GetReturn<plg::vec3*>();
 				} else {
-					val = ret.GetReturn<Vector3>();
+					val = ret.GetReturn<plg::vec3>();
 				}
 				return CreatePyObject(val);
 			}
 			case ValueType::Vector4: {
-				Vector4 val;
+				plg::vec4 val;
 				if (ValueUtils::IsHiddenParam(retType)) {
-					val = *ret.GetReturn<Vector4*>();
+					val = *ret.GetReturn<plg::vec4*>();
 				} else {
-					val = ret.GetReturn<Vector4>();
+					val = ret.GetReturn<plg::vec4>();
 				}
 				return CreatePyObject(val);
 			}
 			case ValueType::Matrix4x4: {
-				Matrix4x4 val = *ret.GetReturn<Matrix4x4*>();
+				plg::mat4x4 val = *ret.GetReturn<plg::mat4x4*>();
 				return CreatePyObject(val);
 			}
 			default: {
@@ -2120,7 +2119,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::Vector2: {
-				void* const value = CreateValue<Vector2>(pItem);
+				void* const value = CreateValue<plg::vec2>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2129,7 +2128,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::Vector3: {
-				void* const value = CreateValue<Vector3>(pItem);
+				void* const value = CreateValue<plg::vec3>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2138,7 +2137,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::Vector4: {
-				void* const value = CreateValue<Vector4>(pItem);
+				void* const value = CreateValue<plg::vec4>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2147,7 +2146,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::Matrix4x4: {
-				void* const value = CreateValue<Matrix4x4>(pItem);
+				void* const value = CreateValue<plg::mat4x4>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2237,13 +2236,13 @@ namespace py3lm {
 			case ValueType::ArrayString:
 				return PushRefParam(CreateArray<plg::string>(pItem));
 			case ValueType::Vector2:
-				return PushRefParam(CreateValue<Vector2>(pItem));
+				return PushRefParam(CreateValue<plg::vec2>(pItem));
 			case ValueType::Vector3:
-				return PushRefParam(CreateValue<Vector3>(pItem));
+				return PushRefParam(CreateValue<plg::vec3>(pItem));
 			case ValueType::Vector4:
-				return PushRefParam(CreateValue<Vector4>(pItem));
+				return PushRefParam(CreateValue<plg::vec4>(pItem));
 			case ValueType::Matrix4x4:
-				return PushRefParam(CreateValue<Matrix4x4>(pItem));
+				return PushRefParam(CreateValue<plg::mat4x4>(pItem));
 			default: {
 				const std::string error(std::format("PushObjectAsRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -2317,13 +2316,13 @@ namespace py3lm {
 			case ValueType::ArrayString:
 				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::string>*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector2:
-				return CreatePyObject(*reinterpret_cast<Vector2*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*reinterpret_cast<plg::vec2*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector3:
-				return CreatePyObject(*reinterpret_cast<Vector3*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*reinterpret_cast<plg::vec3*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector4:
-				return CreatePyObject(*reinterpret_cast<Vector4*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*reinterpret_cast<plg::vec4*>(std::get<0>(a.storage[index])));
 			case ValueType::Matrix4x4:
-				return CreatePyObject(*reinterpret_cast<Matrix4x4*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*reinterpret_cast<plg::mat4x4*>(std::get<0>(a.storage[index])));
 			default: {
 				const std::string error(std::format("StorageValueToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -2601,7 +2600,7 @@ namespace py3lm {
 	}
 
 	void Python3LanguageModule::Shutdown() {
-		if (Py_IsInitialized()) {			
+		if (Py_IsInitialized()) {
 			if (_formatException) {
 				Py_DECREF(_formatException);
 			}
@@ -2963,7 +2962,7 @@ namespace py3lm {
 		return { funcAddr };
 	}
 
-	PyObject* Python3LanguageModule::CreateVector2Object(const Vector2& vector) {
+	PyObject* Python3LanguageModule::CreateVector2Object(const plg::vec2& vector) {
 		PyObject* const args = PyTuple_New(Py_ssize_t{ 2 });
 		if (!args) {
 			PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
@@ -2987,7 +2986,7 @@ namespace py3lm {
 		return vectorObject;
 	}
 
-	std::optional<Vector2> Python3LanguageModule::Vector2ValueFromObject(PyObject* object) {
+	std::optional<plg::vec2> Python3LanguageModule::Vector2ValueFromObject(PyObject* object) {
 		const int typeResult = PyObject_IsInstance(object, _Vector2TypeObject);
 		if (typeResult == -1) {
 			// Python exception was set by PyObject_IsInstance
@@ -3007,10 +3006,10 @@ namespace py3lm {
 			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 			return std::nullopt;
 		}
-		return Vector2{ *xValue, *yValue };
+		return plg::vec2{ *xValue, *yValue };
 	}
 
-	PyObject* Python3LanguageModule::CreateVector3Object(const Vector3& vector) {
+	PyObject* Python3LanguageModule::CreateVector3Object(const plg::vec3& vector) {
 		PyObject* const args = PyTuple_New(Py_ssize_t{ 3 });
 		if (!args) {
 			PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
@@ -3040,7 +3039,7 @@ namespace py3lm {
 		return vectorObject;
 	}
 
-	std::optional<Vector3> Python3LanguageModule::Vector3ValueFromObject(PyObject* object) {
+	std::optional<plg::vec3> Python3LanguageModule::Vector3ValueFromObject(PyObject* object) {
 		const int typeResult = PyObject_IsInstance(object, _Vector3TypeObject);
 		if (typeResult == -1) {
 			// Python exception was set by PyObject_IsInstance
@@ -3065,10 +3064,10 @@ namespace py3lm {
 			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 			return std::nullopt;
 		}
-		return Vector3{ *xValue, *yValue, *zValue };
+		return plg::vec3{ *xValue, *yValue, *zValue };
 	}
 
-	PyObject* Python3LanguageModule::CreateVector4Object(const Vector4& vector) {
+	PyObject* Python3LanguageModule::CreateVector4Object(const plg::vec4& vector) {
 		PyObject* const args = PyTuple_New(Py_ssize_t{ 4 });
 		if (!args) {
 			PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
@@ -3104,7 +3103,7 @@ namespace py3lm {
 		return vectorObject;
 	}
 
-	std::optional<Vector4> Python3LanguageModule::Vector4ValueFromObject(PyObject* object) {
+	std::optional<plg::vec4> Python3LanguageModule::Vector4ValueFromObject(PyObject* object) {
 		const int typeResult = PyObject_IsInstance(object, _Vector4TypeObject);
 		if (typeResult == -1) {
 			// Python exception was set by PyObject_IsInstance
@@ -3134,10 +3133,10 @@ namespace py3lm {
 			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 			return std::nullopt;
 		}
-		return Vector4{ *xValue, *yValue, *zValue, *wValue };
+		return plg::vec4{ *xValue, *yValue, *zValue, *wValue };
 	}
 
-	PyObject* Python3LanguageModule::CreateMatrix4x4Object(const Matrix4x4& matrix) {
+	PyObject* Python3LanguageModule::CreateMatrix4x4Object(const plg::mat4x4& matrix) {
 		PyObject* const elementsObject = PyList_New(Py_ssize_t{ 16 });
 		if (!elementsObject) {
 			PyErr_SetString(PyExc_RuntimeError, "Fail to create Matrix4x4 elements list");
@@ -3252,7 +3251,7 @@ namespace py3lm {
 		return vectorObject;
 	}
 
-	std::optional<Matrix4x4> Python3LanguageModule::Matrix4x4ValueFromObject(PyObject* object) {
+	std::optional<plg::mat4x4> Python3LanguageModule::Matrix4x4ValueFromObject(PyObject* object) {
 		const int typeResult = PyObject_IsInstance(object, _Matrix4x4TypeObject);
 		if (typeResult == -1) {
 			// Python exception was set by PyObject_IsInstance
@@ -3277,7 +3276,7 @@ namespace py3lm {
 			PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
 			return std::nullopt;
 		}
-		Matrix4x4 matrix{};
+		plg::mat4x4 matrix{};
 		for (Py_ssize_t i = 0; i < Py_ssize_t{ 4 }; ++i) {
 			PyObject* const elementsRowListObject = PyList_GetItem(elementsListObject, i);
 			if (!elementsRowListObject) [[unlikely]] {

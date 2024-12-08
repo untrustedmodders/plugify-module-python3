@@ -4,6 +4,7 @@
 #include <plugify/jit/call.hpp>
 #include <plugify/language_module.hpp>
 #include <plugify/plugin.hpp>
+#include <plugify/numerics.hpp>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <asmjit/asmjit.h>
@@ -12,13 +13,6 @@
 #include <string>
 #include <map>
 #include <unordered_map>
-
-namespace plugify {
-	struct Vector2;
-	struct Vector3;
-	struct Vector4;
-	struct Matrix4x4;
-}
 
 namespace py3lm {
 	struct PythonMethodData {
@@ -48,14 +42,14 @@ namespace py3lm {
 	public:
 		PyObject* GetOrCreateFunctionObject(plugify::MethodRef method, void* funcAddr);
 		std::optional<void*> GetOrCreateFunctionValue(plugify::MethodRef method, PyObject* object);
-		PyObject* CreateVector2Object(const plugify::Vector2& vector);
-		std::optional<plugify::Vector2> Vector2ValueFromObject(PyObject* object);
-		PyObject* CreateVector3Object(const plugify::Vector3& vector);
-		std::optional<plugify::Vector3> Vector3ValueFromObject(PyObject* object);
-		PyObject* CreateVector4Object(const plugify::Vector4& vector);
-		std::optional<plugify::Vector4> Vector4ValueFromObject(PyObject* object);
-		PyObject* CreateMatrix4x4Object(const plugify::Matrix4x4& matrix);
-		std::optional<plugify::Matrix4x4> Matrix4x4ValueFromObject(PyObject* object);
+		PyObject* CreateVector2Object(const plg::vec2& vector);
+		std::optional<plg::vec2> Vector2ValueFromObject(PyObject* object);
+		PyObject* CreateVector3Object(const plg::vec3& vector);
+		std::optional<plg::vec3> Vector3ValueFromObject(PyObject* object);
+		PyObject* CreateVector4Object(const plg::vec4& vector);
+		std::optional<plg::vec4> Vector4ValueFromObject(PyObject* object);
+		PyObject* CreateMatrix4x4Object(const plg::mat4x4& matrix);
+		std::optional<plg::mat4x4> Matrix4x4ValueFromObject(PyObject* object);
 		void LogFatal(std::string_view msg) const;
 		void LogError() const;
 
