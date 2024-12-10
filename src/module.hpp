@@ -4,6 +4,7 @@
 #include <plugify/jit/call.hpp>
 #include <plugify/language_module.hpp>
 #include <plugify/plugin.hpp>
+#include <plugify/numerics.hpp>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <asmjit/asmjit.h>
@@ -13,17 +14,83 @@
 #include <map>
 #include <unordered_map>
 
-namespace plugify {
-	struct Vector2;
-	struct Vector3;
-	struct Vector4;
-	struct Matrix4x4;
-}
-
 namespace py3lm {
 	struct PythonMethodData {
 		plugify::JitCallback jitCallback;
 		PyObject* pythonFunction{};
+	};
+
+	enum class PyAbstractType : int64_t {
+		Invalid          = 0LL,
+		Type             = 1LL << 1 ,
+		BaseObject       = 1LL << 2 ,
+		Long             = 1LL << 3 ,
+		Bool             = 1LL << 4 ,
+		Ellipsis         = 1LL << 5 ,
+		None             = 1LL << 6 ,
+		NotImplemented   = 1LL << 7 ,
+		ByteArrayIter    = 1LL << 8 ,
+		ByteArray        = 1LL << 9 ,
+		BytesIter        = 1LL << 10,
+		Bytes            = 1LL << 11,
+		CFunction        = 1LL << 12,
+		CallIter         = 1LL << 13,
+		Capsule          = 1LL << 14,
+		Cell             = 1LL << 15,
+		ClassMethod      = 1LL << 16,
+		Complex          = 1LL << 17,
+		DictItems        = 1LL << 18,
+		DictIterItem     = 1LL << 19,
+		DictIterKey      = 1LL << 20,
+		DictIterValue    = 1LL << 21,
+		DictKeys         = 1LL << 22,
+		DictProxy        = 1LL << 23,
+		DictValues       = 1LL << 24,
+		Dict             = 1LL << 25,
+		Enum             = 1LL << 26,
+		Filter           = 1LL << 27,
+		Float            = 1LL << 28,
+		Frame            = 1LL << 29,
+		FrozenSet        = 1LL << 30,
+		Function         = 1LL << 31,
+		Gen              = 1LL << 32,
+		InstanceMethod   = 1LL << 33,
+		ListIter         = 1LL << 34,
+		ListRevIter      = 1LL << 35,
+		List             = 1LL << 36,
+		LongRangeIter    = 1LL << 37,
+		Map              = 1LL << 38,
+		MemoryView       = 1LL << 39,
+		Method           = 1LL << 40,
+		Module           = 1LL << 41,
+		Property         = 1LL << 42,
+		RangeIter        = 1LL << 43,
+		Range            = 1LL << 44,
+		SeqIter          = 1LL << 45,
+		SetIter          = 1LL << 46,
+		Set              = 1LL << 47,
+		Slice            = 1LL << 48,
+		StaticMethod     = 1LL << 49,
+		TraceBack        = 1LL << 50,
+		TupleIter        = 1LL << 51,
+		Tuple            = 1LL << 52,
+		UnicodeIter      = 1LL << 53,
+		Unicode          = 1LL << 54,
+		Zip              = 1LL << 55,
+		StdPrinter       = 1LL << 56,
+		Code             = 1LL << 57,
+		Reversed         = 1LL << 58,
+		ClassMethodDescr = 1LL << 59,
+		GetSetDescr      = 1LL << 60,
+		WrapperDescr     = 1LL << 61,
+		MethodDescr      = 1LL << 62,
+		MemberDescr      = 1LL << 63,
+		//Super            = 1LL << 64,
+	};
+
+	struct PythonType {
+		PyAbstractType type;
+		const char* name;
 	};
 
 	class Python3LanguageModule final : public plugify::ILanguageModule {
@@ -48,14 +115,15 @@ namespace py3lm {
 	public:
 		PyObject* GetOrCreateFunctionObject(plugify::MethodRef method, void* funcAddr);
 		std::optional<void*> GetOrCreateFunctionValue(plugify::MethodRef method, PyObject* object);
-		PyObject* CreateVector2Object(const plugify::Vector2& vector);
-		std::optional<plugify::Vector2> Vector2ValueFromObject(PyObject* object);
-		PyObject* CreateVector3Object(const plugify::Vector3& vector);
-		std::optional<plugify::Vector3> Vector3ValueFromObject(PyObject* object);
-		PyObject* CreateVector4Object(const plugify::Vector4& vector);
-		std::optional<plugify::Vector4> Vector4ValueFromObject(PyObject* object);
-		PyObject* CreateMatrix4x4Object(const plugify::Matrix4x4& matrix);
-		std::optional<plugify::Matrix4x4> Matrix4x4ValueFromObject(PyObject* object);
+		PyObject* CreateVector2Object(const plg::vec2& vector);
+		std::optional<plg::vec2> Vector2ValueFromObject(PyObject* object);
+		PyObject* CreateVector3Object(const plg::vec3& vector);
+		std::optional<plg::vec3> Vector3ValueFromObject(PyObject* object);
+		PyObject* CreateVector4Object(const plg::vec4& vector);
+		std::optional<plg::vec4> Vector4ValueFromObject(PyObject* object);
+		PyObject* CreateMatrix4x4Object(const plg::mat4x4& matrix);
+		std::optional<plg::mat4x4> Matrix4x4ValueFromObject(PyObject* object);
+		PythonType GetObjectType(PyObject* type) const;
 		void LogFatal(std::string_view msg) const;
 		void LogError() const;
 
@@ -99,5 +167,6 @@ namespace py3lm {
 		std::vector<PythonMethodData> _internalFunctions;
 		std::unordered_map<void*, PyObject*> _externalMap;
 		std::unordered_map<PyObject*, void*> _internalMap;
+		std::unordered_map<PyTypeObject*, PythonType> _typeMap;
 	};
 }

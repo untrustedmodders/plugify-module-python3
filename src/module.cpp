@@ -5,7 +5,6 @@
 #include <module_export.h>
 #include <plugify/compat_format.hpp>
 #include <plugify/log.hpp>
-#include <plugify/math.hpp>
 #include <plugify/module.hpp>
 #include <plugify/plugify_provider.hpp>
 #include <plugify/plugin.hpp>
@@ -113,8 +112,60 @@ namespace py3lm {
 		using MethodExportData = PythonMethodData;
 		using MethodExportResult = std::variant<MethodExportError, MethodExportData>;
 
+		template<typename E>
+		constexpr std::underlying_type_t<E> CastEnumToIntegral(E e) noexcept {
+			return static_cast<std::underlying_type_t<E>>(e);
+		}
+
+		constexpr PyAbstractType operator|(PyAbstractType lhs, PyAbstractType rhs) noexcept {
+			return static_cast<PyAbstractType>(CastEnumToIntegral(lhs) | CastEnumToIntegral(rhs));
+		}
+
+		constexpr PyAbstractType& operator|=(PyAbstractType& lhs, PyAbstractType rhs) noexcept {
+			lhs = lhs | rhs;
+			return lhs;
+		}
+
+		template<typename E>
+		constexpr bool ContainsOnlyOneBitSet(E e) noexcept {
+			const auto flag = CastEnumToIntegral(e);
+			return (flag != 0) && ((flag & (flag - 1)) == 0);
+		}
+
 		template<class T>
-		inline constexpr bool always_false_v = std::is_same_v<std::decay_t<T>, std::add_cv_t<std::decay_t<T>>>;
+		constexpr bool always_false_v = std::is_same_v<std::decay_t<T>, std::add_cv_t<std::decay_t<T>>>;
+
+		template<class T>
+		constexpr bool is_vector_type_v =
+				std::is_same_v<T, plg::vector<bool>> ||
+				std::is_same_v<T, plg::vector<char>> ||
+				std::is_same_v<T, plg::vector<char16_t>> ||
+				std::is_same_v<T, plg::vector<int8_t>> ||
+				std::is_same_v<T, plg::vector<int16_t>> ||
+				std::is_same_v<T, plg::vector<int32_t>> ||
+				std::is_same_v<T, plg::vector<int64_t>> ||
+				std::is_same_v<T, plg::vector<uint8_t>> ||
+				std::is_same_v<T, plg::vector<uint16_t>> ||
+				std::is_same_v<T, plg::vector<uint32_t>> ||
+				std::is_same_v<T, plg::vector<uint64_t>> ||
+				std::is_same_v<T, plg::vector<void*>> ||
+				std::is_same_v<T, plg::vector<float>> ||
+				std::is_same_v<T, plg::vector<double>> ||
+				std::is_same_v<T, plg::vector<plg::string>> ||
+				std::is_same_v<T, plg::vector<plg::variant<plg::none>>>;
+
+		template<class T>
+		constexpr bool is_none_type_v =
+				std::is_same_v<T, plg::invalid> ||
+				std::is_same_v<T, plg::none> ||
+				std::is_same_v<T, plg::variant<plg::none>> ||
+				std::is_same_v<T, plg::function> ||
+				std::is_same_v<T, plg::any>;
+
+		void SetTypeError(std::string_view message, PyObject* object) {
+			const std::string error(std::format("{}, but {} provided", message, g_py3lm.GetObjectType(object).name));
+			PyErr_SetString(PyExc_TypeError, error.c_str());
+		}
 
 		template<typename T>
 		std::optional<T> ValueFromObject(PyObject* /*object*/) {
@@ -126,7 +177,7 @@ namespace py3lm {
 			if (PyBool_Check(object)) {
 				return { object == Py_True };
 			}
-			PyErr_SetString(PyExc_TypeError, "Not boolean");
+			SetTypeError("Expected boolean", object);
 			return std::nullopt;
 		}
 
@@ -150,7 +201,7 @@ namespace py3lm {
 				}
 				return std::nullopt;
 			}
-			PyErr_SetString(PyExc_TypeError, "Not string");
+			SetTypeError("Expected string", object);
 			return std::nullopt;
 		}
 
@@ -187,7 +238,7 @@ namespace py3lm {
 				}
 				return std::nullopt;
 			}
-			PyErr_SetString(PyExc_TypeError, "Not string");
+			SetTypeError("Expected string", object);
 			return std::nullopt;
 		}
 
@@ -205,7 +256,7 @@ namespace py3lm {
 				}
 				return std::nullopt;
 			}
-			PyErr_SetString(PyExc_TypeError, "Not integer");
+			SetTypeError("Expected integer", object);
 			return std::nullopt;
 		}
 
@@ -262,7 +313,7 @@ namespace py3lm {
 					return result;
 				}
 			}
-			PyErr_SetString(PyExc_TypeError, "Not integer");
+			SetTypeError("Expected integer", object);
 			return std::nullopt;
 		}
 
@@ -271,7 +322,7 @@ namespace py3lm {
 			if (PyFloat_Check(object)) {
 				return static_cast<float>(PyFloat_AS_DOUBLE(object));
 			}
-			PyErr_SetString(PyExc_TypeError, "Not float");
+			SetTypeError("Expected float", object);
 			return std::nullopt;
 		}
 
@@ -280,7 +331,7 @@ namespace py3lm {
 			if (PyFloat_Check(object)) {
 				return PyFloat_AS_DOUBLE(object);
 			}
-			PyErr_SetString(PyExc_TypeError, "Not float");
+			SetTypeError("Expected float", object);
 			return std::nullopt;
 		}
 
@@ -289,36 +340,119 @@ namespace py3lm {
 			if (PyUnicode_Check(object)) {
 				Py_ssize_t size{};
 				const char* const buffer = PyUnicode_AsUTF8AndSize(object, &size);
-				return std::make_optional<plg::string>(buffer, buffer + size);
+				return plg::string(buffer, buffer + size);
 			}
-			PyErr_SetString(PyExc_TypeError, "Not string");
+			SetTypeError("Expected string", object);
 			return std::nullopt;
 		}
 
+		template<typename T>
+		std::optional<plg::vector<T>> ArrayFromObject(PyObject* arrayObject);
+
 		template<>
-		std::optional<Vector2> ValueFromObject(PyObject* object) {
+		std::optional<plg::any> ValueFromObject(PyObject* object) {
+			auto [type, name] = g_py3lm.GetObjectType(object);
+			switch (type) {
+				case PyAbstractType::Long:
+					return static_cast<int64_t>(PyLong_AsLongLong(object));
+				case PyAbstractType::Bool:
+					return PyLong_AsLong(object) != 0;
+				case PyAbstractType::Float:
+					return PyFloat_AS_DOUBLE(object);
+				case PyAbstractType::Unicode: {
+					Py_ssize_t size{};
+					const char* const buffer = PyUnicode_AsUTF8AndSize(object, &size);
+					return plg::string(buffer, buffer + size);
+				}
+				case PyAbstractType::List: {
+					const Py_ssize_t size = PyList_Size(object);
+					if (size == 0) {
+						return plg::vector<int64_t>();
+					}
+					std::vector<const char*> typeNames;
+					PyAbstractType flag = PyAbstractType::Invalid;
+					typeNames.reserve(static_cast<size_t>(size));
+					for (Py_ssize_t i = 0; i < size; i++) {
+						PyObject* const valueObject = PyList_GetItem(object, i);
+						if (valueObject) {
+							auto [valueType, valueName] = g_py3lm.GetObjectType(valueObject);
+							flag |= valueType;
+							typeNames.emplace_back(valueName);
+							continue;
+						}
+						return std::nullopt;
+					}
+					if (ContainsOnlyOneBitSet(flag)) {
+						switch (flag) {
+							case PyAbstractType::Long: {
+								if (auto array = ArrayFromObject<int64_t>(object)) {
+									return std::move(*array);
+								}
+								return std::nullopt;
+							}
+							case PyAbstractType::Bool: {
+								if (auto array = ArrayFromObject<bool>(object)) {
+									return std::move(*array);
+								}
+								return std::nullopt;
+							}
+							case PyAbstractType::Float: {
+								if (auto array = ArrayFromObject<double>(object)) {
+									return std::move(*array);
+								}
+								return std::nullopt;
+							}
+							case PyAbstractType::Unicode: {
+								if (auto array = ArrayFromObject<plg::string>(object)) {
+									return std::move(*array);
+								}
+								return std::nullopt;
+							}
+							default:
+								goto failure;
+						}
+					} else {
+					failure:
+						std::string error = std::format("List should contains same types, but contains: [{}]", typeNames[0]);
+						for (auto it = std::next(typeNames.begin()); it != typeNames.end(); ++it) {
+							std::format_to(std::back_inserter(error), ", {}", *it);
+						}
+						PyErr_SetString(PyExc_TypeError, error.c_str());
+						return std::nullopt;
+					}
+					break;
+				}
+				default:
+					const std::string error(std::format("An any argument not supports python type: {} for marshalling.", name));
+					PyErr_SetString(PyExc_TypeError, error.c_str());
+					return std::nullopt;
+			}
+		}
+
+		template<>
+		std::optional<plg::vec2> ValueFromObject(PyObject* object) {
 			return g_py3lm.Vector2ValueFromObject(object);
 		}
 
 		template<>
-		std::optional<Vector3> ValueFromObject(PyObject* object) {
+		std::optional<plg::vec3> ValueFromObject(PyObject* object) {
 			return g_py3lm.Vector3ValueFromObject(object);
 		}
 
 		template<>
-		std::optional<Vector4> ValueFromObject(PyObject* object) {
+		std::optional<plg::vec4> ValueFromObject(PyObject* object) {
 			return g_py3lm.Vector4ValueFromObject(object);
 		}
 
 		template<>
-		std::optional<Matrix4x4> ValueFromObject(PyObject* object) {
+		std::optional<plg::mat4x4> ValueFromObject(PyObject* object) {
 			return g_py3lm.Matrix4x4ValueFromObject(object);
 		}
 
 		template<typename T>
 		std::optional<plg::vector<T>> ArrayFromObject(PyObject* arrayObject) {
 			if (!PyList_Check(arrayObject)) {
-				PyErr_SetString(PyExc_TypeError, "Not list");
+				SetTypeError("Expected list", arrayObject);
 				return std::nullopt;
 			}
 			const Py_ssize_t size = PyList_Size(arrayObject);
@@ -384,6 +518,9 @@ namespace py3lm {
 			case ValueType::String:
 				ret->ConstructAt<plg::string>();
 				break;
+			case ValueType::Any:
+				ret->ConstructAt<plg::any>();
+				break;
 			case ValueType::ArrayBool:
 				ret->ConstructAt<plg::vector<bool>>();
 				break;
@@ -429,17 +566,20 @@ namespace py3lm {
 			case ValueType::ArrayString:
 				ret->ConstructAt<plg::vector<plg::string>>();
 				break;
+			case ValueType::ArrayAny:
+				ret->ConstructAt<plg::vector<plg::any>>();
+				break;
 			case ValueType::Vector2:
-				ret->SetReturn<Vector2>({});
+				ret->SetReturn<plg::vec2>({});
 				break;
 			case ValueType::Vector3:
-				ret->SetReturn<Vector3>({});
+				ret->SetReturn<plg::vec3>({});
 				break;
 			case ValueType::Vector4:
-				ret->SetReturn<Vector4>({});
+				ret->SetReturn<plg::vec4>({});
 				break;
 			case ValueType::Matrix4x4:
-				ret->SetReturn<Matrix4x4>({});
+				ret->SetReturn<plg::mat4x4>({});
 				break;
 			default: {
 				const std::string error(std::format("[py3lm] SetFallbackReturn unsupported type {:#x}", static_cast<uint8_t>(retType)));
@@ -549,6 +689,12 @@ namespace py3lm {
 					return true;
 				}
 				break;
+			case ValueType::Any:
+				if (auto value = ValueFromObject<plg::any>(result)) {
+					ret->ConstructAt<plg::any>(std::move(*value));
+					return true;
+				}
+				break;
 			case ValueType::ArrayBool:
 				if (auto value = ArrayFromObject<bool>(result)) {
 					ret->ConstructAt<plg::vector<bool>>(std::move(*value));
@@ -639,27 +785,33 @@ namespace py3lm {
 					return true;
 				}
 				break;
+			case ValueType::ArrayAny:
+				if (auto value = ArrayFromObject<plg::any>(result)) {
+					ret->ConstructAt<plg::vector<plg::any>>(std::move(*value));
+					return true;
+				}
+				break;
 			case ValueType::Vector2:
-				if (auto value = ValueFromObject<Vector2>(result)) {
-					ret->SetReturn<Vector2>(*value);
+				if (auto value = ValueFromObject<plg::vec2>(result)) {
+					ret->SetReturn<plg::vec2>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Vector3:
-				if (auto value = ValueFromObject<Vector3>(result)) {
-					ret->SetReturn<Vector3>(*value);
+				if (auto value = ValueFromObject<plg::vec3>(result)) {
+					ret->SetReturn<plg::vec3>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Vector4:
-				if (auto value = ValueFromObject<Vector4>(result)) {
-					ret->SetReturn<Vector4>(*value);
+				if (auto value = ValueFromObject<plg::vec4>(result)) {
+					ret->SetReturn<plg::vec4>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Matrix4x4:
-				if (auto value = ValueFromObject<Matrix4x4>(result)) {
-					ret->SetReturn<Matrix4x4>(*value);
+				if (auto value = ValueFromObject<plg::mat4x4>(result)) {
+					ret->SetReturn<plg::mat4x4>(*value);
 					return true;
 				}
 				break;
@@ -780,6 +932,13 @@ namespace py3lm {
 					return true;
 				}
 				break;
+			case ValueType::Any:
+				if (auto value = ValueFromObject<plg::any>(object)) {
+					auto* const param = params->GetArgument<plg::any*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
 			case ValueType::ArrayBool:
 				if (auto value = ArrayFromObject<bool>(object)) {
 					auto* const param = params->GetArgument<plg::vector<bool>*>(index);
@@ -885,30 +1044,37 @@ namespace py3lm {
 					return true;
 				}
 				break;
+			case ValueType::ArrayAny:
+				if (auto value = ArrayFromObject<plg::any>(object)) {
+					auto* const param = params->GetArgument<plg::vector<plg::any>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
 			case ValueType::Vector2:
-				if (auto value = ValueFromObject<Vector2>(object)) {
-					auto* const param = params->GetArgument<Vector2*>(index);
+				if (auto value = ValueFromObject<plg::vec2>(object)) {
+					auto* const param = params->GetArgument<plg::vec2*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Vector3:
-				if (auto value = ValueFromObject<Vector3>(object)) {
-					auto* const param = params->GetArgument<Vector3*>(index);
+				if (auto value = ValueFromObject<plg::vec3>(object)) {
+					auto* const param = params->GetArgument<plg::vec3*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Vector4:
-				if (auto value = ValueFromObject<Vector4>(object)) {
-					auto* const param = params->GetArgument<Vector4*>(index);
+				if (auto value = ValueFromObject<plg::vec4>(object)) {
+					auto* const param = params->GetArgument<plg::vec4*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Matrix4x4:
-				if (auto value = ValueFromObject<Matrix4x4>(object)) {
-					auto* const param = params->GetArgument<Matrix4x4*>(index);
+				if (auto value = ValueFromObject<plg::mat4x4>(object)) {
+					auto* const param = params->GetArgument<plg::mat4x4*>(index);
 					*param = *value;
 					return true;
 				}
@@ -923,19 +1089,21 @@ namespace py3lm {
 			return false;
 		}
 
+		using void_t = void*;
+
 		template<typename T>
-		PyObject* CreatePyObject(T /*value*/) {
+		PyObject* CreatePyObject(const T& /*value*/) {
 			static_assert(always_false_v<T>, "CreatePyObject specialization required");
 			return nullptr;
 		}
 
 		template<>
-		PyObject* CreatePyObject(bool value) {
+		PyObject* CreatePyObject(const bool& value) {
 			return PyBool_FromLong(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(char value) {
+		PyObject* CreatePyObject(const char& value) {
 			if (value == char{ 0 }) {
 				return PyUnicode_FromStringAndSize(nullptr, Py_ssize_t{ 0 });
 			}
@@ -943,7 +1111,7 @@ namespace py3lm {
 		}
 
 		template<>
-		PyObject* CreatePyObject(char16_t value) {
+		PyObject* CreatePyObject(const char16_t& value) {
 			if (value == char16_t{ 0 }) {
 				return PyUnicode_FromStringAndSize(nullptr, Py_ssize_t{ 0 });
 			}
@@ -956,87 +1124,125 @@ namespace py3lm {
 		}
 
 		template<>
-		PyObject* CreatePyObject(int8_t value) {
+		PyObject* CreatePyObject(const int8_t& value) {
 			return PyLong_FromLong(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(int16_t value) {
+		PyObject* CreatePyObject(const int16_t& value) {
 			return PyLong_FromLong(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(int32_t value) {
+		PyObject* CreatePyObject(const int32_t& value) {
 			return PyLong_FromLong(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(int64_t value) {
+		PyObject* CreatePyObject(const int64_t& value) {
 			return PyLong_FromLongLong(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(uint8_t value) {
+		PyObject* CreatePyObject(const uint8_t& value) {
 			return PyLong_FromUnsignedLong(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(uint16_t value) {
+		PyObject* CreatePyObject(const uint16_t& value) {
 			return PyLong_FromUnsignedLong(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(uint32_t value) {
+		PyObject* CreatePyObject(const uint32_t& value) {
 			return PyLong_FromUnsignedLong(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(uint64_t value) {
+		PyObject* CreatePyObject(const uint64_t& value) {
 			return PyLong_FromUnsignedLongLong(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(void* value) {
-			return PyLong_FromVoidPtr(value);
+		PyObject* CreatePyObject(const void_t& value) {
+			return PyLong_FromVoidPtr(const_cast<void_t&>(value));
 		}
 
 		template<>
-		PyObject* CreatePyObject(float value) {
+		PyObject* CreatePyObject(const float& value) {
 			return PyFloat_FromDouble(static_cast<double>(value));
 		}
 
 		template<>
-		PyObject* CreatePyObject(double value) {
+		PyObject* CreatePyObject(const double& value) {
 			return PyFloat_FromDouble(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(plg::string value) {
+		PyObject* CreatePyObject(const plg::string& value) {
 			return PyUnicode_FromStringAndSize(value.data(), static_cast<Py_ssize_t>(value.size()));
 		}
 
 		template<>
-		PyObject* CreatePyObject(Vector2 value) {
+		PyObject* CreatePyObject(const plg::vec2& value) {
 			return g_py3lm.CreateVector2Object(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(Vector3 value) {
+		PyObject* CreatePyObject(const plg::vec3& value) {
 			return g_py3lm.CreateVector3Object(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(Vector4 value) {
+		PyObject* CreatePyObject(const plg::vec4& value) {
 			return g_py3lm.CreateVector4Object(value);
 		}
 
 		template<>
-		PyObject* CreatePyObject(Matrix4x4 value) {
+		PyObject* CreatePyObject(const plg::mat4x4& value) {
 			return g_py3lm.CreateMatrix4x4Object(value);
+		}
+
+		template<>
+		PyObject* CreatePyObject(const plg::invalid& value) {
+			return nullptr;
+		}
+
+		template<>
+		PyObject* CreatePyObject(const plg::none& value) {
+			return nullptr;
+		}
+
+		template<>
+		PyObject* CreatePyObject(const plg::variant<plg::none>& value) {
+			return nullptr;
+		}
+
+		template<>
+		PyObject* CreatePyObject(const plg::function& value) {
+			return nullptr;
 		}
 
 		PyObject* GetOrCreateFunctionObject(MethodRef method, void* funcAddr) {
 			return g_py3lm.GetOrCreateFunctionObject(method, funcAddr);
+		}
+
+		template<typename T>
+		PyObject* CreatePyObjectList(const plg::vector<T>& arrayArg);
+
+		PyObject* CreatePyObject(const plg::any& value) {
+			PyObject* output = nullptr;
+			plg::visit([&output](auto&& val) {
+				using T = std::decay_t<decltype(val)>;
+				if constexpr (is_vector_type_v<T>) {
+					output = CreatePyObjectList(val);
+				} else if constexpr (is_none_type_v<T>) {
+					output = Py_None;
+				} else {
+					output = CreatePyObject(val);
+				}
+			}, value);
+			return output;
 		}
 
 		template<typename T>
@@ -1090,6 +1296,8 @@ namespace py3lm {
 				return GetOrCreateFunctionObject(paramType.GetPrototype().value(), params->GetArgument<void*>(index));
 			case ValueType::String:
 				return CreatePyObject(*(params->GetArgument<const plg::string*>(index)));
+			case ValueType::Any:
+				return CreatePyObject(*(params->GetArgument<const plg::any*>(index)));
 			case ValueType::ArrayBool:
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<bool>*>(index)));
 			case ValueType::ArrayChar8:
@@ -1120,14 +1328,16 @@ namespace py3lm {
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<double>*>(index)));
 			case ValueType::ArrayString:
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::string>*>(index)));
+			case ValueType::ArrayAny:
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::any>*>(index)));
 			case ValueType::Vector2:
-				return CreatePyObject(*(params->GetArgument<Vector2*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec2*>(index)));
 			case ValueType::Vector3:
-				return CreatePyObject(*(params->GetArgument<Vector3*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec3*>(index)));
 			case ValueType::Vector4:
-				return CreatePyObject(*(params->GetArgument<Vector4*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec4*>(index)));
 			case ValueType::Matrix4x4:
-				return CreatePyObject(*(params->GetArgument<Matrix4x4*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::mat4x4*>(index)));
 			default: {
 				const std::string error(std::format("[py3lm] ParamToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
@@ -1169,6 +1379,8 @@ namespace py3lm {
 				return CreatePyObject(*(params->GetArgument<double*>(index)));
 			case ValueType::String:
 				return CreatePyObject(*(params->GetArgument<const plg::string*>(index)));
+			case ValueType::Any:
+				return CreatePyObject(*(params->GetArgument<const plg::any*>(index)));
 			case ValueType::ArrayBool:
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<bool>*>(index)));
 			case ValueType::ArrayChar8:
@@ -1199,14 +1411,16 @@ namespace py3lm {
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<double>*>(index)));
 			case ValueType::ArrayString:
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::string>*>(index)));
+			case ValueType::ArrayAny:
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::any>*>(index)));
 			case ValueType::Vector2:
-				return CreatePyObject(*(params->GetArgument<Vector2*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec2*>(index)));
 			case ValueType::Vector3:
-				return CreatePyObject(*(params->GetArgument<Vector3*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec3*>(index)));
 			case ValueType::Vector4:
-				return CreatePyObject(*(params->GetArgument<Vector4*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::vec4*>(index)));
 			case ValueType::Matrix4x4:
-				return CreatePyObject(*(params->GetArgument<Matrix4x4*>(index)));
+				return CreatePyObject(*(params->GetArgument<plg::mat4x4*>(index)));
 			default: {
 				const std::string error(std::format("[py3lm] ParamRefToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
@@ -1293,7 +1507,7 @@ namespace py3lm {
 
 			if (hasRefParams) {
 				if (!PyTuple_CheckExact(result)) {
-					PyErr_SetString(PyExc_TypeError, "Returned value not tuple");
+					SetTypeError("Expected tuple as return value", result);
 
 					g_py3lm.LogError();
 
@@ -1484,6 +1698,10 @@ namespace py3lm {
 						delete reinterpret_cast<plg::string*>(ptr);
 						break;
 					}
+					case ValueType::Any: {
+						delete reinterpret_cast<plg::any*>(ptr);
+						break;
+					}
 					case ValueType::ArrayBool: {
 						delete reinterpret_cast<plg::vector<bool>*>(ptr);
 						break;
@@ -1544,20 +1762,24 @@ namespace py3lm {
 						delete reinterpret_cast<plg::vector<plg::string>*>(ptr);
 						break;
 					}
+					case ValueType::ArrayAny: {
+						delete reinterpret_cast<plg::vector<plg::any>*>(ptr);
+						break;
+					}
 					case ValueType::Vector2: {
-						delete reinterpret_cast<Vector2*>(ptr);
+						delete reinterpret_cast<plg::vec2*>(ptr);
 						break;
 					}
 					case ValueType::Vector3: {
-						delete reinterpret_cast<Vector3*>(ptr);
+						delete reinterpret_cast<plg::vec3*>(ptr);
 						break;
 					}
 					case ValueType::Vector4: {
-						delete reinterpret_cast<Vector4*>(ptr);
+						delete reinterpret_cast<plg::vec4*>(ptr);
 						break;
 					}
 					case ValueType::Matrix4x4: {
-						delete reinterpret_cast<Matrix4x4*>(ptr);
+						delete reinterpret_cast<plg::mat4x4*>(ptr);
 						break;
 					}
 					default: {
@@ -1578,6 +1800,11 @@ namespace py3lm {
 				switch (retType) {
 					case ValueType::String: {
 						value = new plg::string();
+						a.storage.emplace_back(value, retType);
+						break;
+					}
+					case ValueType::Any: {
+						value = new plg::any();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
@@ -1656,23 +1883,28 @@ namespace py3lm {
 						a.storage.emplace_back(value, retType);
 						break;
 					}
+					case ValueType::ArrayAny: {
+						value = new plg::vector<plg::any>();
+						a.storage.emplace_back(value, retType);
+						break;
+					}
 					case ValueType::Vector2: {
-						value = new plugify::Vector2();
+						value = new plg::vec2();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::Vector3: {
-						value = new plugify::Vector3();
+						value = new plg::vec3();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::Vector4: {
-						value = new plugify::Vector4();
+						value = new plg::vec4();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
 					case ValueType::Matrix4x4: {
-						value = new plugify::Matrix4x4();
+						value = new plg::mat4x4();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
@@ -1757,6 +1989,10 @@ namespace py3lm {
 				auto* const str = ret.GetReturn<plg::string*>();
 				return CreatePyObject(*str);
 			}
+			case ValueType::Any: {
+				auto* const str = ret.GetReturn<plg::any*>();
+				return CreatePyObject(*str);
+			}
 			case ValueType::ArrayBool: {
 				auto* const arr = ret.GetReturn<plg::vector<bool>*>();
 				return CreatePyObjectList<bool>(*arr);
@@ -1817,30 +2053,34 @@ namespace py3lm {
 				auto* const arr = ret.GetReturn<plg::vector<plg::string>*>();
 				return CreatePyObjectList<plg::string>(*arr);
 			}
+			case ValueType::ArrayAny: {
+				auto* const arr = ret.GetReturn<plg::vector<plg::any>*>();
+				return CreatePyObjectList<plg::any>(*arr);
+			}
 			case ValueType::Vector2: {
-				const Vector2 val = ret.GetReturn<Vector2>();
+				const plg::vec2 val = ret.GetReturn<plg::vec2>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Vector3: {
-				Vector3 val;
+				plg::vec3 val;
 				if (ValueUtils::IsHiddenParam(retType)) {
-					val = *ret.GetReturn<Vector3*>();
+					val = *ret.GetReturn<plg::vec3*>();
 				} else {
-					val = ret.GetReturn<Vector3>();
+					val = ret.GetReturn<plg::vec3>();
 				}
 				return CreatePyObject(val);
 			}
 			case ValueType::Vector4: {
-				Vector4 val;
+				plg::vec4 val;
 				if (ValueUtils::IsHiddenParam(retType)) {
-					val = *ret.GetReturn<Vector4*>();
+					val = *ret.GetReturn<plg::vec4*>();
 				} else {
-					val = ret.GetReturn<Vector4>();
+					val = ret.GetReturn<plg::vec4>();
 				}
 				return CreatePyObject(val);
 			}
 			case ValueType::Matrix4x4: {
-				Matrix4x4 val = *ret.GetReturn<Matrix4x4*>();
+				plg::mat4x4 val = *ret.GetReturn<plg::mat4x4*>();
 				return CreatePyObject(val);
 			}
 			default: {
@@ -1969,6 +2209,15 @@ namespace py3lm {
 			}
 			case ValueType::String: {
 				void* const value = CreateValue<plg::string>(pItem);
+				if (!value) {
+					return false;
+				}
+				a.storage.emplace_back(value, paramType.GetType());
+				a.params.AddArgument(value);
+				return true;
+			}
+			case ValueType::Any: {
+				void* const value = CreateValue<plg::any>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2119,8 +2368,17 @@ namespace py3lm {
 				a.params.AddArgument(value);
 				return true;
 			}
+			case ValueType::ArrayAny: {
+				void* const value = CreateArray<plg::any>(pItem);
+				if (!value) {
+					return false;
+				}
+				a.storage.emplace_back(value, paramType.GetType());
+				a.params.AddArgument(value);
+				return true;
+			}
 			case ValueType::Vector2: {
-				void* const value = CreateValue<Vector2>(pItem);
+				void* const value = CreateValue<plg::vec2>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2129,7 +2387,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::Vector3: {
-				void* const value = CreateValue<Vector3>(pItem);
+				void* const value = CreateValue<plg::vec3>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2138,7 +2396,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::Vector4: {
-				void* const value = CreateValue<Vector4>(pItem);
+				void* const value = CreateValue<plg::vec4>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2147,7 +2405,7 @@ namespace py3lm {
 				return true;
 			}
 			case ValueType::Matrix4x4: {
-				void* const value = CreateValue<Matrix4x4>(pItem);
+				void* const value = CreateValue<plg::mat4x4>(pItem);
 				if (!value) {
 					return false;
 				}
@@ -2206,6 +2464,8 @@ namespace py3lm {
 				return PushRefParam(CreateValue<double>(pItem));
 			case ValueType::String:
 				return PushRefParam(CreateValue<plg::string>(pItem));
+			case ValueType::Any:
+				return PushRefParam(CreateValue<plg::any>(pItem));
 			case ValueType::ArrayBool:
 				return PushRefParam(CreateArray<bool>(pItem));
 			case ValueType::ArrayChar8:
@@ -2236,14 +2496,16 @@ namespace py3lm {
 				return PushRefParam(CreateArray<double>(pItem));
 			case ValueType::ArrayString:
 				return PushRefParam(CreateArray<plg::string>(pItem));
+			case ValueType::ArrayAny:
+				return PushRefParam(CreateArray<plg::any>(pItem));
 			case ValueType::Vector2:
-				return PushRefParam(CreateValue<Vector2>(pItem));
+				return PushRefParam(CreateValue<plg::vec2>(pItem));
 			case ValueType::Vector3:
-				return PushRefParam(CreateValue<Vector3>(pItem));
+				return PushRefParam(CreateValue<plg::vec3>(pItem));
 			case ValueType::Vector4:
-				return PushRefParam(CreateValue<Vector4>(pItem));
+				return PushRefParam(CreateValue<plg::vec4>(pItem));
 			case ValueType::Matrix4x4:
-				return PushRefParam(CreateValue<Matrix4x4>(pItem));
+				return PushRefParam(CreateValue<plg::mat4x4>(pItem));
 			default: {
 				const std::string error(std::format("PushObjectAsRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -2284,6 +2546,8 @@ namespace py3lm {
 				return CreatePyObject(*reinterpret_cast<double*>(std::get<0>(a.storage[index])));
 			case ValueType::String:
 				return CreatePyObject(*reinterpret_cast<plg::string*>(std::get<0>(a.storage[index])));
+			case ValueType::Any:
+				return CreatePyObject(*reinterpret_cast<plg::any*>(std::get<0>(a.storage[index])));
 			case ValueType::Pointer:
 				return CreatePyObject(*reinterpret_cast<void**>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayBool:
@@ -2316,14 +2580,16 @@ namespace py3lm {
 				return CreatePyObjectList(*reinterpret_cast<plg::vector<double>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayString:
 				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::string>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayAny:
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::any>*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector2:
-				return CreatePyObject(*reinterpret_cast<Vector2*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*reinterpret_cast<plg::vec2*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector3:
-				return CreatePyObject(*reinterpret_cast<Vector3*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*reinterpret_cast<plg::vec3*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector4:
-				return CreatePyObject(*reinterpret_cast<Vector4*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*reinterpret_cast<plg::vec4*>(std::get<0>(a.storage[index])));
 			case ValueType::Matrix4x4:
-				return CreatePyObject(*reinterpret_cast<Matrix4x4*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*reinterpret_cast<plg::mat4x4*>(std::get<0>(a.storage[index])));
 			default: {
 				const std::string error(std::format("StorageValueToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -2352,7 +2618,7 @@ namespace py3lm {
 
 			if (!PyTuple_Check(args)) {
 				const std::string error(std::format("Function \"{}\" expects a tuple of arguments", method.GetFunctionName()));
-				PyErr_SetString(PyExc_TypeError, error.c_str());
+				SetTypeError(error, args);
 				ret->SetReturn(nullptr);
 				return;
 			}
@@ -2597,11 +2863,76 @@ namespace py3lm {
 
 		Py_DECREF(tracebackModule);
 
+		_typeMap.try_emplace(&PyType_Type, PyAbstractType::Type, "Type");
+		_typeMap.try_emplace(&PyBaseObject_Type, PyAbstractType::BaseObject, "BaseObject");
+		_typeMap.try_emplace(&PyLong_Type, PyAbstractType::Long, "Long");
+		_typeMap.try_emplace(&PyBool_Type, PyAbstractType::Bool, "Bool");
+		_typeMap.try_emplace(&PyEllipsis_Type, PyAbstractType::Ellipsis, "Ellipsis");
+		_typeMap.try_emplace(Py_TYPE(Py_None), PyAbstractType::None, "None");
+		_typeMap.try_emplace(Py_TYPE(Py_NotImplemented), PyAbstractType::NotImplemented, "NotImplemented");
+		_typeMap.try_emplace(&PyByteArrayIter_Type, PyAbstractType::ByteArrayIter, "ByteArrayIter");
+		_typeMap.try_emplace(&PyByteArray_Type, PyAbstractType::ByteArray, "ByteArray");
+		_typeMap.try_emplace(&PyBytesIter_Type, PyAbstractType::BytesIter, "BytesIter");
+		_typeMap.try_emplace(&PyBytes_Type, PyAbstractType::Bytes, "Bytes");
+		_typeMap.try_emplace(&PyCFunction_Type, PyAbstractType::CFunction, "CFunction");
+		_typeMap.try_emplace(&PyCallIter_Type, PyAbstractType::CallIter, "CallIter");
+		_typeMap.try_emplace(&PyCapsule_Type, PyAbstractType::Capsule, "Capsule");
+		_typeMap.try_emplace(&PyCell_Type, PyAbstractType::Cell, "Cell");
+		_typeMap.try_emplace(&PyClassMethod_Type, PyAbstractType::ClassMethod, "ClassMethod");
+		_typeMap.try_emplace(&PyComplex_Type, PyAbstractType::Complex, "Complex");
+		_typeMap.try_emplace(&PyDictItems_Type, PyAbstractType::DictItems, "DictItems");
+		_typeMap.try_emplace(&PyDictIterItem_Type, PyAbstractType::DictIterItem, "DictIterItem");
+		_typeMap.try_emplace(&PyDictIterKey_Type, PyAbstractType::DictIterKey, "DictIterKey");
+		_typeMap.try_emplace(&PyDictIterValue_Type, PyAbstractType::DictIterValue, "DictIterValue");
+		_typeMap.try_emplace(&PyDictKeys_Type, PyAbstractType::DictKeys, "DictKeys");
+		_typeMap.try_emplace(&PyDictProxy_Type, PyAbstractType::DictProxy, "DictProxy");
+		_typeMap.try_emplace(&PyDictValues_Type, PyAbstractType::DictValues, "DictValues");
+		_typeMap.try_emplace(&PyDict_Type, PyAbstractType::Dict, "Dict");
+		_typeMap.try_emplace(&PyEllipsis_Type, PyAbstractType::Ellipsis, "Ellipsis");
+		_typeMap.try_emplace(&PyEnum_Type, PyAbstractType::Enum, "Enum");
+		_typeMap.try_emplace(&PyFilter_Type, PyAbstractType::Filter, "Filter");
+		_typeMap.try_emplace(&PyFloat_Type, PyAbstractType::Float, "Float");
+		_typeMap.try_emplace(&PyFrame_Type, PyAbstractType::Frame, "Frame");
+		_typeMap.try_emplace(&PyFrozenSet_Type, PyAbstractType::FrozenSet, "FrozenSet");
+		_typeMap.try_emplace(&PyFunction_Type, PyAbstractType::Function, "Function");
+		_typeMap.try_emplace(&PyGen_Type, PyAbstractType::Gen, "Gen");
+		_typeMap.try_emplace(&PyInstanceMethod_Type, PyAbstractType::InstanceMethod, "InstanceMethod");
+		_typeMap.try_emplace(&PyListIter_Type, PyAbstractType::ListIter, "ListIter");
+		_typeMap.try_emplace(&PyListRevIter_Type, PyAbstractType::ListRevIter, "ListRevIter");
+		_typeMap.try_emplace(&PyList_Type, PyAbstractType::List, "List");
+		_typeMap.try_emplace(&PyLongRangeIter_Type, PyAbstractType::LongRangeIter, "LongRangeIter");
+		_typeMap.try_emplace(&PyMap_Type, PyAbstractType::Map, "Map");
+		_typeMap.try_emplace(&PyMemoryView_Type, PyAbstractType::MemoryView, "MemoryView");
+		_typeMap.try_emplace(&PyMethod_Type, PyAbstractType::Method, "Method");
+		_typeMap.try_emplace(&PyModule_Type, PyAbstractType::Module, "Module");
+		_typeMap.try_emplace(&PyProperty_Type, PyAbstractType::Property, "Property");
+		_typeMap.try_emplace(&PyRangeIter_Type, PyAbstractType::RangeIter, "RangeIter");
+		_typeMap.try_emplace(&PyRange_Type, PyAbstractType::Range, "Range");
+		_typeMap.try_emplace(&PySeqIter_Type, PyAbstractType::SeqIter, "SeqIter");
+		_typeMap.try_emplace(&PySetIter_Type, PyAbstractType::SetIter, "SetIter");
+		_typeMap.try_emplace(&PySet_Type, PyAbstractType::Set, "Set");
+		_typeMap.try_emplace(&PySlice_Type, PyAbstractType::Slice, "Slice");
+		_typeMap.try_emplace(&PyStaticMethod_Type, PyAbstractType::StaticMethod, "StaticMethod");
+		_typeMap.try_emplace(&PyTraceBack_Type, PyAbstractType::TraceBack, "TraceBack");
+		_typeMap.try_emplace(&PyTupleIter_Type, PyAbstractType::TupleIter, "TupleIter");
+		_typeMap.try_emplace(&PyTuple_Type, PyAbstractType::Tuple, "Tuple");
+		_typeMap.try_emplace(&PyUnicodeIter_Type, PyAbstractType::UnicodeIter, "UnicodeIter");
+		_typeMap.try_emplace(&PyUnicode_Type, PyAbstractType::Unicode, "Unicode");
+		_typeMap.try_emplace(&PyZip_Type, PyAbstractType::Zip, "Zip");
+		_typeMap.try_emplace(&PyStdPrinter_Type, PyAbstractType::StdPrinter, "StdPrinter");
+		_typeMap.try_emplace(&PyCode_Type, PyAbstractType::Code, "STEntry");
+		_typeMap.try_emplace(&PyReversed_Type, PyAbstractType::Reversed, "Reversed");
+		_typeMap.try_emplace(&PyClassMethodDescr_Type, PyAbstractType::ClassMethodDescr, "ClassMethodDescr");
+		_typeMap.try_emplace(&PyGetSetDescr_Type, PyAbstractType::GetSetDescr, "GetSetDescr");
+		_typeMap.try_emplace(&PyWrapperDescr_Type, PyAbstractType::WrapperDescr, "WrapperDescr");
+		_typeMap.try_emplace(&PyMethodDescr_Type, PyAbstractType::MethodDescr, "MethodDescr");
+		_typeMap.try_emplace(&PyMemberDescr_Type, PyAbstractType::MemberDescr, "MemberDescr");
+
 		return InitResultData{};
 	}
 
 	void Python3LanguageModule::Shutdown() {
-		if (Py_IsInitialized()) {			
+		if (Py_IsInitialized()) {
 			if (_formatException) {
 				Py_DECREF(_formatException);
 			}
@@ -2939,7 +3270,7 @@ namespace py3lm {
 		}
 
 		if (!PyFunction_Check(object) && !PyCallable_Check(object)) {
-			PyErr_SetString(PyExc_TypeError, "Not function");
+			SetTypeError("Expected function", object);
 			return std::nullopt;
 		}
 
@@ -2963,7 +3294,7 @@ namespace py3lm {
 		return { funcAddr };
 	}
 
-	PyObject* Python3LanguageModule::CreateVector2Object(const Vector2& vector) {
+	PyObject* Python3LanguageModule::CreateVector2Object(const plg::vec2& vector) {
 		PyObject* const args = PyTuple_New(Py_ssize_t{ 2 });
 		if (!args) {
 			PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
@@ -2987,14 +3318,14 @@ namespace py3lm {
 		return vectorObject;
 	}
 
-	std::optional<Vector2> Python3LanguageModule::Vector2ValueFromObject(PyObject* object) {
+	std::optional<plg::vec2> Python3LanguageModule::Vector2ValueFromObject(PyObject* object) {
 		const int typeResult = PyObject_IsInstance(object, _Vector2TypeObject);
 		if (typeResult == -1) {
 			// Python exception was set by PyObject_IsInstance
 			return std::nullopt;
 		}
 		if (typeResult == 0) {
-			PyErr_SetString(PyExc_TypeError, "Not Vector2");
+			SetTypeError("Expected Vector2", object);
 			return std::nullopt;
 		}
 		auto xValue = GetObjectAttrAsValue<float>(object, "x");
@@ -3007,10 +3338,10 @@ namespace py3lm {
 			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 			return std::nullopt;
 		}
-		return Vector2{ *xValue, *yValue };
+		return plg::vec2{ *xValue, *yValue };
 	}
 
-	PyObject* Python3LanguageModule::CreateVector3Object(const Vector3& vector) {
+	PyObject* Python3LanguageModule::CreateVector3Object(const plg::vec3& vector) {
 		PyObject* const args = PyTuple_New(Py_ssize_t{ 3 });
 		if (!args) {
 			PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
@@ -3040,14 +3371,14 @@ namespace py3lm {
 		return vectorObject;
 	}
 
-	std::optional<Vector3> Python3LanguageModule::Vector3ValueFromObject(PyObject* object) {
+	std::optional<plg::vec3> Python3LanguageModule::Vector3ValueFromObject(PyObject* object) {
 		const int typeResult = PyObject_IsInstance(object, _Vector3TypeObject);
 		if (typeResult == -1) {
 			// Python exception was set by PyObject_IsInstance
 			return std::nullopt;
 		}
 		if (typeResult == 0) {
-			PyErr_SetString(PyExc_TypeError, "Not Vector3");
+			SetTypeError("Expected Vector3", object);
 			return std::nullopt;
 		}
 		auto xValue = GetObjectAttrAsValue<float>(object, "x");
@@ -3065,10 +3396,10 @@ namespace py3lm {
 			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 			return std::nullopt;
 		}
-		return Vector3{ *xValue, *yValue, *zValue };
+		return plg::vec3{ *xValue, *yValue, *zValue };
 	}
 
-	PyObject* Python3LanguageModule::CreateVector4Object(const Vector4& vector) {
+	PyObject* Python3LanguageModule::CreateVector4Object(const plg::vec4& vector) {
 		PyObject* const args = PyTuple_New(Py_ssize_t{ 4 });
 		if (!args) {
 			PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
@@ -3104,14 +3435,14 @@ namespace py3lm {
 		return vectorObject;
 	}
 
-	std::optional<Vector4> Python3LanguageModule::Vector4ValueFromObject(PyObject* object) {
+	std::optional<plg::vec4> Python3LanguageModule::Vector4ValueFromObject(PyObject* object) {
 		const int typeResult = PyObject_IsInstance(object, _Vector4TypeObject);
 		if (typeResult == -1) {
 			// Python exception was set by PyObject_IsInstance
 			return std::nullopt;
 		}
 		if (typeResult == 0) {
-			PyErr_SetString(PyExc_TypeError, "Not Vector4");
+			SetTypeError("Expected Vector4", object);
 			return std::nullopt;
 		}
 		auto xValue = GetObjectAttrAsValue<float>(object, "x");
@@ -3134,10 +3465,10 @@ namespace py3lm {
 			// GetObjectAttrAsValue set error. e.g. AttributeError, TypeError, ValueError
 			return std::nullopt;
 		}
-		return Vector4{ *xValue, *yValue, *zValue, *wValue };
+		return plg::vec4{ *xValue, *yValue, *zValue, *wValue };
 	}
 
-	PyObject* Python3LanguageModule::CreateMatrix4x4Object(const Matrix4x4& matrix) {
+	PyObject* Python3LanguageModule::CreateMatrix4x4Object(const plg::mat4x4& matrix) {
 		PyObject* const elementsObject = PyList_New(Py_ssize_t{ 16 });
 		if (!elementsObject) {
 			PyErr_SetString(PyExc_RuntimeError, "Fail to create Matrix4x4 elements list");
@@ -3252,14 +3583,14 @@ namespace py3lm {
 		return vectorObject;
 	}
 
-	std::optional<Matrix4x4> Python3LanguageModule::Matrix4x4ValueFromObject(PyObject* object) {
+	std::optional<plg::mat4x4> Python3LanguageModule::Matrix4x4ValueFromObject(PyObject* object) {
 		const int typeResult = PyObject_IsInstance(object, _Matrix4x4TypeObject);
 		if (typeResult == -1) {
 			// Python exception was set by PyObject_IsInstance
 			return std::nullopt;
 		}
 		if (typeResult == 0) {
-			PyErr_SetString(PyExc_TypeError, "Not Matrix4x4");
+			SetTypeError("Expected Matrix4x4", object);
 			return std::nullopt;
 		}
 		PyObject* const elementsListObject = PyObject_GetAttrString(object, "elements");
@@ -3277,7 +3608,7 @@ namespace py3lm {
 			PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
 			return std::nullopt;
 		}
-		Matrix4x4 matrix{};
+		plg::mat4x4 matrix{};
 		for (Py_ssize_t i = 0; i < Py_ssize_t{ 4 }; ++i) {
 			PyObject* const elementsRowListObject = PyList_GetItem(elementsListObject, i);
 			if (!elementsRowListObject) [[unlikely]] {
@@ -3429,8 +3760,22 @@ namespace py3lm {
 		}
 
 		Py_DECREF(nameString);
+	}
 
-		return;
+	PythonType Python3LanguageModule::GetObjectType(PyObject* object) const {
+		PyTypeObject* const pytype = Py_TYPE(object);
+		auto it = _typeMap.find(pytype);
+		if (it != _typeMap.end()) {
+			return std::get<PythonType>(*it);
+		}
+		const char* name;
+		if (pytype != nullptr) {
+			PyObject* const typeName = PyType_GetName(pytype);
+			name = PyUnicode_AsUTF8(typeName);
+		} else {
+			name = "Invalid";
+		}
+		return { PyAbstractType::Invalid, name };
 	}
 
 	void Python3LanguageModule::LogError() const {

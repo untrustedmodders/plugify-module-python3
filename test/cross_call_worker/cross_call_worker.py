@@ -30,7 +30,15 @@ def quote_str(s: str):
     return f"'{s}'"
 
 
-def char_str(ch):
+def plain_str(s: str):
+    return f"{s}"
+
+
+def char8_str(ch):
+    return f'{ch}'
+
+
+def char16_str(ch):
     return f'{ord_zero(ch)}'
 
 
@@ -128,6 +136,10 @@ def no_param_return_string():
     return 'Hello World'
 
 
+def no_param_return_any():
+    return [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+
+
 def no_param_return_array_bool():
     return [True, False]
 
@@ -186,6 +198,10 @@ def no_param_return_array_double():
 
 def no_param_return_array_string():
     return ['1st string', '2nd string', '3rd element string (Should be big enough to avoid small string optimization)']
+
+
+def no_param_return_array_any():
+    return [1.0, 2.0, "3rd element string (Should be big enough to avoid small string optimization)", ["lolek", "and", "bolek"], 1]
 
 
 def no_param_return_vector2():
@@ -269,47 +285,36 @@ def param_ref6(a, b, c, d, e, f):
 
 
 def param_ref7(a, b, c, d, e, f, g):
-    return (None, -1000, 3.0, -1.0, Vector4(100.0, 200.0, 300.0, 400.0), [-6, -5, -4, -3], 'Y',
-            'Hello, World!')
+    return None, -1000, 3.0, -1.0, Vector4(100.0, 200.0, 300.0, 400.0), [-6, -5, -4, -3], 'Y', 'Hello, World!'
 
 
 def param_ref8(a, b, c, d, e, f, g, h):
-    return (None, 999, -7.5, 0.123456, Vector4(-100.0, -200.0, -300.0, -400.0), [-6, -5, -4, -3, -2, -1], 'X',
-            'Goodbye, World!', 'A')
+    return None, 999, -7.5, 0.123456, Vector4(-100.0, -200.0, -300.0, -400.0), [-6, -5, -4, -3, -2, -1], 'X', 'Goodbye, World!', 'A'
 
 
 def param_ref9(a, b, c, d, e, f, g, h, k):
-    return (None, -1234, 123.45, -678.9, Vector4(987.65, 432.1, 123.456, 789.123),
-            [-6, -5, -4, -3, -2, -1, 0, 1, 5, 9], 'W', 'Testing, 1 2 3', 'B', 42)
+    return None, -1234, 123.45, -678.9, Vector4(987.65, 432.1, 123.456, 789.123), [-6, -5, -4, -3, -2, -1, 0, 1, 5, 9], 'W', 'Testing, 1 2 3', 'B', 42
 
 
 def param_ref10(a, b, c, d, e, f, g, h, k, l):
-    return (None, 987, -0.123, 456.789, Vector4(-123.456, 0.987, 654.321, -789.123),
-            [-6, -5, -4, -3, -2, -1, 0, 1, 5, 9, 4, -7], 'V', 'Another string', 'C', -444, 0x12345678)
+    return None, 987, -0.123, 456.789, Vector4(-123.456, 0.987, 654.321, -789.123), [-6, -5, -4, -3, -2, -1, 0, 1, 5, 9, 4, -7], 'V', 'Another string', 'C', -444, 0x12345678
 
 
 def param_ref_vectors(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15):
-    return (None,
-            [True],
-            ['a', 'b', 'c'],
-            ['d', 'e', 'f'],
-            [-3, -2, -1, 0, 1, 2, 3],
-            [-4, -3, -2, -1, 0, 1, 2, 3, 4],
-            [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-            [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6],
-            [0, 1, 2, 3, 4, 5, 6, 7],
-            [0, 1, 2, 3, 4, 5, 6, 7, 8],
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            [0, 1, 2],
-            [-12.34, 0.0, 12.34],
-            [-12.345, 0.0, 12.345],
-            ['1', '12', '123', '1234', '12345', '123456'])
+    return None, [True], ['a', 'b', 'c'], ['d', 'e', 'f'], [-3, -2, -1, 0, 1, 2, 3], [-4, -3, -2, -1, 0, 1, 2, 3, 4], [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5], [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6], [0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [0, 1, 2], [-12.34, 0.0, 12.34], [-12.345, 0.0, 12.345], ['1', '12', '123', '1234', '12345', '123456']
 
 
 def param_all_primitives(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14):
     buffer = f'{p1}{p2}{p3}{p4}{p5}{p6}{p7}{p8}{p9}{p10}{p11}{p12}{p13}{p14}'
     return 56
+
+
+def param_variant(p1, p2):
+    buffer = f'{str(p1)}|{str(p2)}'
+
+
+def param_variant_ref(p1, p2):
+    return None, 'Z', [False, 6.28, [1.0, 2.0, 3.0], 0x0, 123456789]
 
 
 def call_func_void(func):
@@ -380,6 +385,10 @@ def call_func_string(func):
     return func()
 
 
+def call_func_any(func):
+    return func()
+
+
 def call_func_bool_vector(func):
     return func()
 
@@ -437,6 +446,10 @@ def call_func_double_vector(func):
 
 
 def call_func_string_vector(func):
+    return func()
+
+
+def call_func_any_vector(func):
     return func()
 
 
@@ -746,7 +759,7 @@ def call_func24(func):
     ret, vec_c, i64, vec_u8, vec4, u64, vec_ptr, d, vec_ptr_2 \
         = func(vec_c, i64, vec_u8, vec4, u64, vec_ptr, d, vec_ptr_2)
 
-    return f'{pod_to_string(ret)}|{vector_to_string(vec_c, char_str)}|{i64}|{vector_to_string(vec_u8)}|{pod_to_string(vec4)}|{u64}|{vector_to_string(vec_ptr, ptr_str)}|{float_str(d)}|{vector_to_string(vec_ptr_2, ptr_str)}'
+    return f'{pod_to_string(ret)}|{vector_to_string(vec_c, char8_str)}|{i64}|{vector_to_string(vec_u8)}|{pod_to_string(vec4)}|{u64}|{vector_to_string(vec_ptr, ptr_str)}|{float_str(d)}|{vector_to_string(vec_ptr_2, ptr_str)}'
 
 
 def call_func25(func):
@@ -909,7 +922,13 @@ def call_func32(func):
     _, i32, u16, vec_i8, vec4, ptr, vec_u32, mat, u64, str_val, i64, vec2, vec_i8_2, b, vec3, u8, vec_c16 \
         = func(i32, u16, vec_i8, vec4, ptr, vec_u32, mat, u64, str_val, i64, vec2, vec_i8_2, b, vec3, u8, vec_c16)
 
-    return f'{i32}|{u16}|{vector_to_string(vec_i8)}|{pod_to_string(vec4)}|{ptr_str(ptr)}|{vector_to_string(vec_u32)}|{pod_to_string(mat)}|{u64}|{str_val}|{i64}|{pod_to_string(vec2)}|{vector_to_string(vec_i8_2)}|{bool_str(b)}|{pod_to_string(vec3)}|{u8}|{vector_to_string(vec_c16, char_str)}'
+    return f'{i32}|{u16}|{vector_to_string(vec_i8)}|{pod_to_string(vec4)}|{ptr_str(ptr)}|{vector_to_string(vec_u32)}|{pod_to_string(mat)}|{u64}|{str_val}|{i64}|{pod_to_string(vec2)}|{vector_to_string(vec_i8_2)}|{bool_str(b)}|{pod_to_string(vec3)}|{u8}|{vector_to_string(vec_c16, char16_str)}'
+
+
+def call_func33(func):
+    variant = 30
+    _, variant_ref = func(variant)
+    return variant_ref
 
 
 def reverse_no_param_return_void():
@@ -923,12 +942,12 @@ def reverse_no_param_return_bool():
 
 def reverse_no_param_return_char8():
     result = pps.cross_call_master.NoParamReturnChar8Callback()
-    return char_str(result)
+    return char8_str(result)
 
 
 def reverse_no_param_return_char16():
     result = pps.cross_call_master.NoParamReturnChar16Callback()
-    return char_str(result)
+    return char16_str(result)
 
 
 def reverse_no_param_return_int8():
@@ -996,6 +1015,11 @@ def reverse_no_param_return_string():
     return result
 
 
+def reverse_no_param_return_any():
+    result = pps.cross_call_master.NoParamReturnAnyCallback()
+    return result
+
+
 def reverse_no_param_return_array_bool():
     result = pps.cross_call_master.NoParamReturnArrayBoolCallback()
     return vector_to_string(result, bool_str)
@@ -1003,12 +1027,12 @@ def reverse_no_param_return_array_bool():
 
 def reverse_no_param_return_array_char8():
     result = pps.cross_call_master.NoParamReturnArrayChar8Callback()
-    return vector_to_string(result, char_str)
+    return vector_to_string(result, char8_str)
 
 
 def reverse_no_param_return_array_char16():
     result = pps.cross_call_master.NoParamReturnArrayChar16Callback()
-    return vector_to_string(result, char_str)
+    return vector_to_string(result, char16_str)
 
 
 def reverse_no_param_return_array_int8():
@@ -1069,6 +1093,11 @@ def reverse_no_param_return_array_double():
 def reverse_no_param_return_array_string():
     result = pps.cross_call_master.NoParamReturnArrayStringCallback()
     return vector_to_string(result, quote_str)
+
+
+def reverse_no_param_return_array_any():
+    result = pps.cross_call_master.NoParamReturnArrayAnyCallback()
+    return vector_to_string(result, plain_str)
 
 
 def reverse_no_param_return_vector2():
@@ -1186,7 +1215,7 @@ def reverse_param_ref_vectors():
         [True], ['A'], ['A'], [-1], [-1], [-1], [-1], [0], [0], [0], [0], [0], [1.0], [1.0], ['Hi']
     )
     p15_formatted = ', '.join([f"'{v}'" for v in p15])
-    return f'{vector_to_string(p1, bool_str)}|{vector_to_string(p2, char_str)}|{vector_to_string(p3, char_str)}|' \
+    return f'{vector_to_string(p1, bool_str)}|{vector_to_string(p2, char8_str)}|{vector_to_string(p3, char16_str)}|' \
            f'{vector_to_string(p4)}|{vector_to_string(p5)}|{vector_to_string(p6)}|{vector_to_string(p7)}|' \
            f'{vector_to_string(p8)}|{vector_to_string(p9)}|{vector_to_string(p10)}|{vector_to_string(p11)}|' \
            f'{vector_to_string(p12, ptr_str)}|{vector_to_string(p13, float_str)}|{vector_to_string(p14)}|' \
@@ -1198,6 +1227,44 @@ def reverse_param_all_primitives():
                                                               200, 50000, 3000000000, 9999999999, 0xfedcbaabcdef,
                                                               0.001, 987654.456789)
     return f'{result}'
+
+
+def reverse_param_variant():
+    p1 = 'my custom string with enough chars'
+    p2 = ['X', 
+        '☢', 
+        -1, 
+        -1000, 
+        -1000000, 
+        -1000000000000, 
+        200, 
+        50000, 
+        3000000000, 
+        9999999999,
+        0xfedcbaabcdef, 
+        0.001, 
+        987654.456789
+        ]
+    pps.cross_call_master.ParamVariantCallback(p1, p2);
+
+
+def reverse_param_variant_ref():
+    _, p1, p2 = pps.cross_call_master.ParamVariantRefCallback('my custom string with enough chars', 
+        ['X', 
+        '☢', 
+        -1, 
+        -1000, 
+        -1000000, 
+        -1000000000000, 
+        200, 
+        50000, 
+        3000000000, 
+        9999999999,
+        0xfedcbaabcdef, 
+        0.001, 
+        987654.456789
+        ]);
+    return f'{vector_to_string(p1)}|{{{bool_str(p2[0])}, {float_str(p2[1])}, {p2[2]}}}'
 
 
 class CallbackHolder:
@@ -1270,6 +1337,10 @@ class CallbackHolder:
         return 'Test string'
 
     @staticmethod
+    def mock_any():
+        return 'A'
+
+    @staticmethod
     def mock_bool_array():
         return [True, False]
 
@@ -1328,6 +1399,10 @@ class CallbackHolder:
     @staticmethod
     def mock_string_array():
         return ['Hello', 'World']
+
+    @staticmethod
+    def mock_any_array():
+        return ['Hello', 3.14, 6.28, 1, 0xdeadbeaf]
 
     @staticmethod
     def mock_vec2():
@@ -1652,6 +1727,12 @@ class CallbackHolder:
         return 1.0, i32, u16, i_vec, v4, p, u_vec, m, u64, s, i64, v2, u8_vec, flag, v3, u8, c_vec
 
 
+    @staticmethod
+    def mock_func33(variant):
+        variant = "MockFunc33";
+        return None, variant
+
+
 def reverse_call_func_void():
     pps.cross_call_master.CallFuncVoidCallback(CallbackHolder.mock_void)
     return ''
@@ -1732,6 +1813,11 @@ def reverse_call_func_string():
     return result
 
 
+def reverse_call_func_any():
+    result = pps.cross_call_master.CallFuncAnyCallback(CallbackHolder.mock_any)
+    return result
+
+
 def reverse_call_func_bool_vector():
     result = pps.cross_call_master.CallFuncBoolVectorCallback(CallbackHolder.mock_bool_array)
     return vector_to_string(result, bool_str)
@@ -1739,12 +1825,12 @@ def reverse_call_func_bool_vector():
 
 def reverse_call_func_char8_vector():
     result = pps.cross_call_master.CallFuncChar8VectorCallback(CallbackHolder.mock_char8_array)
-    return vector_to_string(result, char_str)
+    return vector_to_string(result, char8_str)
 
 
 def reverse_call_func_char16_vector():
     result = pps.cross_call_master.CallFuncChar16VectorCallback(CallbackHolder.mock_char16_array)
-    return vector_to_string(result, char_str)
+    return vector_to_string(result, char16_str)
 
 
 def reverse_call_func_int8_vector():
@@ -1807,6 +1893,11 @@ def reverse_call_func_string_vector():
     return vector_to_string(result, quote_str)
 
 
+def reverse_call_func_any_vector():
+    result = pps.cross_call_master.CallFuncAnyVectorCallback(CallbackHolder.mock_any_array)
+    return vector_to_string(result, plain_str)
+
+
 def reverse_call_func_vec2():
     result = pps.cross_call_master.CallFuncVec2Callback(CallbackHolder.mock_vec2)
     return pod_to_string(result)
@@ -1834,7 +1925,7 @@ def reverse_call_func1():
 
 def reverse_call_func2():
     result = pps.cross_call_master.CallFunc2Callback(CallbackHolder.mock_func2)
-    return char_str(result)
+    return char8_str(result)
 
 
 def reverse_call_func3():
@@ -1987,6 +2078,11 @@ def reverse_call_func32():
     return result
 
 
+def reverse_call_func33():
+    result = pps.cross_call_master.CallFunc33Callback(CallbackHolder.mock_func33)
+    return result
+
+
 reverse_test = {
     'NoParamReturnVoid': reverse_no_param_return_void,
     'NoParamReturnBool': reverse_no_param_return_bool,
@@ -2005,6 +2101,7 @@ reverse_test = {
     'NoParamReturnDouble': reverse_no_param_return_double,
     'NoParamReturnFunction': reverse_no_param_return_function,
     'NoParamReturnString': reverse_no_param_return_string,
+    'NoParamReturnAny': reverse_no_param_return_any,
     'NoParamReturnArrayBool': reverse_no_param_return_array_bool,
     'NoParamReturnArrayChar8': reverse_no_param_return_array_char8,
     'NoParamReturnArrayChar16': reverse_no_param_return_array_char16,
@@ -2020,6 +2117,7 @@ reverse_test = {
     'NoParamReturnArrayFloat': reverse_no_param_return_array_float,
     'NoParamReturnArrayDouble': reverse_no_param_return_array_double,
     'NoParamReturnArrayString': reverse_no_param_return_array_string,
+    'NoParamReturnArrayAny': reverse_no_param_return_array_any,
     'NoParamReturnVector2': reverse_no_param_return_vector2,
     'NoParamReturnVector3': reverse_no_param_return_vector3,
     'NoParamReturnVector4': reverse_no_param_return_vector4,
@@ -2046,6 +2144,8 @@ reverse_test = {
     'ParamRef10': reverse_param_ref10,
     'ParamRefArrays': reverse_param_ref_vectors,
     'ParamAllPrimitives': reverse_param_all_primitives,
+    'ParamVariant': reverse_param_variant,
+    'ParamVariantRef': reverse_param_variant_ref,
     'CallFuncVoid': reverse_call_func_void,
     'CallFuncBool': reverse_call_func_bool,
     'CallFuncChar8': reverse_call_func_char8,
@@ -2062,6 +2162,7 @@ reverse_test = {
     'CallFuncFloat': reverse_call_func_float,
     'CallFuncDouble': reverse_call_func_double,
     'CallFuncString': reverse_call_func_string,
+    'CallFuncAny': reverse_call_func_any,
     'CallFuncBoolVector': reverse_call_func_bool_vector,
     'CallFuncChar8Vector': reverse_call_func_char8_vector,
     'CallFuncChar16Vector': reverse_call_func_char16_vector,
@@ -2077,6 +2178,7 @@ reverse_test = {
     'CallFuncFloatVector': reverse_call_func_float_vector,
     'CallFuncDoubleVector': reverse_call_func_double_vector,
     'CallFuncStringVector': reverse_call_func_string_vector,
+    'CallFuncAnyVector': reverse_call_func_any_vector,
     'CallFuncVec2': reverse_call_func_vec2,
     'CallFuncVec3': reverse_call_func_vec3,
     'CallFuncVec4': reverse_call_func_vec4,
@@ -2113,6 +2215,7 @@ reverse_test = {
     'CallFunc30': reverse_call_func30,
     'CallFunc31': reverse_call_func31,
     'CallFunc32': reverse_call_func32,
+    'CallFunc33': reverse_call_func33,
 }
 
 
