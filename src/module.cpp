@@ -1603,7 +1603,7 @@ namespace py3lm {
 				return MethodExportError{ std::format("{} (Not found '{}' in module)", method.GetName(), method.GetFunctionName())};
 			}
 
-			if (!PyFunction_Check(func)) {
+			if (!PyFunction_Check(func) && !PyCallable_Check(func)) {
 				Py_DECREF(func);
 				return MethodExportError{ std::format("{} ('{}' not function type)", method.GetName(), method.GetFunctionName()) };
 			}
@@ -3269,7 +3269,7 @@ namespace py3lm {
 			return { nullptr };
 		}
 
-		if (!PyFunction_Check(object)) {
+		if (!PyFunction_Check(object) && !PyCallable_Check(object)) {
 			SetTypeError("Expected function", object);
 			return std::nullopt;
 		}
