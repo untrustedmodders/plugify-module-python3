@@ -24,6 +24,7 @@ TYPES_MAP = {
     'double': 'float',
     'function': 'delegate',
     'string': 'str',
+    'any': 'object',
     'bool[]': 'list[bool]',
     'char8[]': 'list[str]',
     'char16[]': 'list[str]',
@@ -39,11 +40,13 @@ TYPES_MAP = {
     'float[]': 'list[float]',
     'double[]': 'list[float]',
     'string[]': 'list[str]',
+    'any[]': 'list[object]',
     'vec2': 'list[Vector2]',
     'vec3': 'list[Vector3]',
     'vec4': 'list[Vector4]',
     'mat4x4': 'list[Matrix4x4]'
 }
+
 
 INVALID_NAMES = {
     'False',   
@@ -83,66 +86,50 @@ INVALID_NAMES = {
     'yield'
 }
 
-def validate_manifest(pplugin):
-    parse_errors = []
-    methods = pplugin.get('exportedMethods')
-    if type(methods) is list:
-        for i, method in enumerate(methods):
-            if type(method) is dict:
-                if type(method.get('type')) is str:
-                    parse_errors += [f'root.exportedMethods[{i}].type not string']
-            else:
-                parse_errors += [f'root.exportedMethods[{i}] not object']
-    else:
-        parse_errors += ['root.exportedMethods not array']
-    return parse_errors
-    
-    
-def gen_delegate(method):
-    return f'Callable[[{gen_params(method["paramTypes"], ParamGen.Types)}], {convert_type(method["retType"])}]'
-    
-    
-def convert_type(param):
-    result = TYPES_MAP[param['type']]
-    if 'delegate' in result:
-        if 'prototype' in param:
-            return gen_delegate(param['prototype'])
-        else:
-            return 'Callable[..., Any]'
+
+def gen_delegate(prototype: dict) -> str:
+    """Generate a delegate type definition."""
+    param_types = prototype.get('paramTypes', [])
+    ret_type = prototype.get('retType', {})
+    return f'Callable[[{gen_params(param_types, ParamGen.Types)}], {convert_type(ret_type)}]'
+
+
+def convert_type(param: dict) -> str:
+    """Convert a JSON-defined type to Python typing."""
+    type_name = param.get('type', '')
+    result = TYPES_MAP.get(type_name)
+    if not result:
+        raise ValueError(f"Unsupported type: {type_name}")
+    if result == 'delegate':
+        return gen_delegate(param.get('prototype')) if 'prototype' in param else 'Callable[..., Any]'
     return result
-    
  
-def generate_name(name):
-    if name in INVALID_NAMES:
-        return name + '_'
-    else:
-        return name
+
+def generate_name(name: str) -> str:
+    """Generate a valid Python variable name."""
+    return f'{name}_' if name in INVALID_NAMES else name
 
 
 class ParamGen(Enum):
+    """Enumeration for parameter generation modes."""
     Types = 1
     Names = 2
     TypesNames = 3
 
 
 def gen_params(params: list[dict], param_gen: ParamGen) -> str:
-    def gen_param(param: dict) -> str:
-        # Check if the generator is ParamGen.Types and convert accordingly
-        return convert_type(param) if param_gen == ParamGen.Types else f'{generate_name(param["name"])}: {convert_type(param)}'
+    """Generate function parameters as strings."""
+    def gen_param(index: int, param: dict) -> str:
+        return convert_type(param) if param_gen == ParamGen.Types else f'{generate_name(param.get("name", f"p{index}"))}: {convert_type(param)}'
 
-    # Use a list to accumulate the results
     result = []
-
     if params:
-        result.append(gen_param(params[0]))  # Add the first parameter
-        for p in params[1:]:  # Loop over the rest of the parameters
-            result.append(f', {gen_param(p)}')
-
-    # Join all parts into a single string
-    return ''.join(result)
+        for i, p in enumerate(params):
+            result.append(gen_param(i, p))
+    return ', '.join(result)
     
     
-def gen_documentation(method: list[dict]) -> str:
+def gen_documentation(method: dict) -> str:
     """
     Generate a Python function documentation string from a JSON block.
 
@@ -153,104 +140,113 @@ def gen_documentation(method: list[dict]) -> str:
         str: The generated documentation string.
     """
     # Extract general details
-    name = method.get("name", "UnnamedFunction")
-    description = method.get("description", "No description provided.")
-    param_types = method.get("paramTypes", [])
-    ret_type = method.get("retType", {}).get("type", "void")
+    name = method.get('name', 'UnnamedFunction')
+    description = method.get('description', 'No description provided.')
+    param_types = method.get('paramTypes', [])
+    ret_type = method.get('retType', {}).get('type', 'void')
 
     # Start building the docstring
-    docstring = f'\n    """\n    {description}\n    Args:\n'
+    docstring = [f'    """\n    {description}\n    Args:\n']
 
     # Add parameters
     for param in param_types:
-        param_name = param.get("name")
-        param_type = param.get("type", "Any")
-        param_desc = param.get("description", "No description available.")
-        docstring += f"        {param_name} ({param_type}): {param_desc}\n"
+        param_name = param.get('name')
+        param_type = param.get('type', 'Any')
+        param_desc = param.get('description', 'No description available.')
+        docstring.append(f'        {param_name} ({param_type}): {param_desc}\n')
 
     # Add return type
-    if ret_type.lower() != "void":
-        ret_desc = method.get("retType", {}).get("description", "No description available.")
-        docstring += f"\n    Returns:\n        {ret_type}: {ret_desc}\n"
+    if ret_type.lower() != 'void':
+        ret_desc = method.get('retType', {}).get('description', 'No description available.')
+        docstring.append(f'\n    Returns:\n        {ret_type}: {ret_desc}\n')
 
     # Add callback prototype if present
     for param in param_types:
-        if param.get("type") == "function" and "prototype" in param:
-            prototype = param["prototype"]
-            proto_name = prototype.get("name", "UnnamedCallback")
-            proto_desc = prototype.get("description", "No description provided.")
-            proto_params = prototype.get("paramTypes", [])
-            proto_ret = prototype.get("retType", {})
+        if param.get('type') == 'function' and 'prototype' in param:
+            prototype = param['prototype']
+            proto_name = prototype.get('name', 'UnnamedCallback')
+            proto_desc = prototype.get('description', 'No description provided.')
+            proto_params = prototype.get('paramTypes', [])
+            proto_ret = prototype.get('retType', {})
 
-            docstring += f"\n    Callback Prototype ({proto_name}):\n        {proto_desc}\n\n"
-            docstring += "        Args:\n"
+            docstring.append(f'\n    Callback Prototype ({proto_name}):\n        {proto_desc}\n\n')
+            docstring.append('        Args:\n')
             for proto_param in proto_params:
-                p_name = proto_param.get("name")
-                p_type = proto_param.get("type", "Any")
-                p_desc = proto_param.get("description", "No description available.")
-                docstring += f"            {p_name} ({p_type}): {p_desc}\n"
+                p_name = proto_param.get('name')
+                p_type = proto_param.get('type', 'Any')
+                p_desc = proto_param.get('description', 'No description available.')
+                docstring.append(f'            {p_name} ({p_type}): {p_desc}\n')
 
             if proto_ret:
-                proto_ret_type = proto_ret.get("type", "void")
-                proto_ret_desc = proto_ret.get("description", "No description available.")
-                docstring += f"\n        Returns:\n            {proto_ret_type}: {proto_ret_desc}\n"
+                proto_ret_type = proto_ret.get('type', 'void')
+                proto_ret_desc = proto_ret.get('description', 'No description available.')
+                docstring.append(f'\n        Returns:\n            {proto_ret_type}: {proto_ret_desc}\n')
 
     # Close docstring
-    docstring += '    """'
+    docstring.append('    """')
 
-    return docstring
+    return ''.join(docstring)
 
     
-def main(manifest_path, output_dir, override):
+def generate_stub(plugin_name: str, pplugin: dict) -> str:
+    """Generate Python stub content."""
+    link = 'https://github.com/untrustedmodders/plugify-module-python3.12/blob/main/generator/generator.py'
+    body = [f'from typing import Callable\nfrom plugify.plugin import Vector2, Vector3, Vector4, Matrix4x4\n\n'
+            f'# Generated from {plugin_name}.pplugin by {link}\n\n']
+    for method in pplugin.get('exportedMethods', []):
+        method_name = method.get('name', None)
+        param_types = method.get('paramTypes', [])
+        ret_type = method.get('retType', {})
+        
+        if not method_name:
+            continue
+        
+        signature = f'def {method_name}({gen_params(param_types, ParamGen.TypesNames)}) -> {convert_type(ret_type)}:'
+        documentation = gen_documentation(method)
+        body.append(f'{signature}\n{documentation}\n    ...\n\n\n')
+    return ''.join(body)
+
+
+def main(manifest_path: str, output_dir: str, override: bool):
+    """Main entry point for the script."""
     if not os.path.isfile(manifest_path):
-        print(f'Manifest file not exists {manifest_path}')
+        print(f'Manifest file does not exist: {manifest_path}')
         return 1
     if not os.path.isdir(output_dir):
-        print(f'Output folder not exists {output_dir}')
+        print(f'Output directory does not exist: {output_dir}')
         return 1
 
     plugin_name = os.path.splitext(os.path.basename(manifest_path))[0]
-    header_dir = os.path.join(output_dir, 'pps')
-    if not os.path.exists(header_dir):
-        os.makedirs(header_dir, exist_ok=True)
-    header_file = os.path.join(header_dir, f'{plugin_name}.pyi')
-    if os.path.isfile(header_file) and not override:
-        print(f'Already exists {header_file}')
+    output_path = os.path.join(output_dir, 'pps', f'{plugin_name}.pyi')
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    if os.path.isfile(output_path) and not override:
+        print(f'Output file already exists: {output_path}. Use --override to overwrite existing file.')
         return 1
 
-    with open(manifest_path, 'r', encoding='utf-8') as fd:
-        pplugin = json.load(fd)
+    try:
+        with open(manifest_path, 'r', encoding='utf-8') as file:
+            pplugin = json.load(file)
 
-    parse_errors = validate_manifest(pplugin)
-    if parse_errors:
-        print('Parse fail:')
-        for error in parse_errors:
-            print(f'  {error}')
+        content = generate_stub(plugin_name, pplugin)
+        
+        with open(output_path, 'w', encoding='utf-8') as file:
+            file.write(content)
+
+    except Exception as e:
+        print(f'An error occurred: {e}')
         return 1
-
-    link = 'https://github.com/untrustedmodders/plugify-module-python3.12/blob/main/generator/generator.py\n'
-
-    content = ('from typing import Callable\n'
-               'from plugify.plugin import Vector2, Vector3, Vector4, Matrix4x4\n'
-               '\n'
-               f'# Generated from {plugin_name}.pplugin by {link} \n\n')
     
-    for method in pplugin['exportedMethods']:
-        content += (f'def {method["name"]}({gen_params(method["paramTypes"], ParamGen.TypesNames)}) -> {convert_type(method["retType"])}:'
-                    f'{gen_documentation(method)}'
-                    '\n    ...\n\n\n')
-
-    with open(header_file, 'w', encoding='utf-8') as fd:
-        fd.write(content)
-
+    print(f'Stub generated at: {output_path}')
     return 0
 
 
 def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('manifest')
-    parser.add_argument('output')
-    parser.add_argument('--override', action='store_true')
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description='Generate Python .pyi stub files for plugin manifests.')
+    parser.add_argument('manifest', help='Path to the plugin manifest file')
+    parser.add_argument('output', help='Output directory for the generated stub')
+    parser.add_argument('--override', action='store_true', help='Override existing files')
     return parser.parse_args()
 
 
