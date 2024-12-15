@@ -309,6 +309,10 @@ def param_all_primitives(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13,
     return 56
 
 
+def param_enum(p1, p2):
+    return p1 + sum(p2)
+
+
 def param_variant(p1, p2):
     buffer = f'{str(p1)}|{str(p2)}'
 
@@ -1229,6 +1233,14 @@ def reverse_param_all_primitives():
     return f'{result}'
 
 
+def reverse_param_enum():
+    e = pps.cross_call_master.Example
+    p1 = e.Forth
+    p2 = [e.First, e.Second, e.Third]
+    result = pps.cross_call_master.ParamEnumCallback(p1, p2);
+    return f'{result}'
+
+
 def reverse_param_variant():
     p1 = 'my custom string with enough chars'
     p2 = ['X', 
@@ -2144,6 +2156,7 @@ reverse_test = {
     'ParamRef10': reverse_param_ref10,
     'ParamRefArrays': reverse_param_ref_vectors,
     'ParamAllPrimitives': reverse_param_all_primitives,
+    'ParamEnum': reverse_param_enum,
     'ParamVariant': reverse_param_variant,
     'ParamVariantRef': reverse_param_variant_ref,
     'CallFuncVoid': reverse_call_func_void,
