@@ -3,7 +3,7 @@ import sys
 import argparse
 import os
 import json
-from enum import Enum
+from enum import IntEnum
 
 
 TYPES_MAP = {
@@ -102,6 +102,11 @@ def convert_type(param: dict) -> str:
         raise ValueError(f"Unsupported type: {type_name}")
     if result == 'delegate':
         return gen_delegate(param.get('prototype')) if 'prototype' in param else 'Callable[..., Any]'
+    elif 'enum' in param:
+        if '[]' in type_name:
+            return f'list[{generate_name(param["enum"].get("name", "UnnamedEnum"))}]'
+        else:
+            return generate_name(param['enum'].get('name', 'UnnamedEnum'))
     return result
  
 
@@ -110,7 +115,7 @@ def generate_name(name: str) -> str:
     return f'{name}_' if name in INVALID_NAMES else name
 
 
-class ParamGen(Enum):
+class ParamGen(IntEnum):
     """Enumeration for parameter generation modes."""
     Types = 1
     Names = 2
@@ -187,24 +192,124 @@ def gen_documentation(method: dict) -> str:
 
     return ''.join(docstring)
 
+
+def gen_enum_body(enum: dict, enum_type: str, enums: set[str]) -> str:
+    """
+    Generates a Python enum definition from the provided enum metadata.
+
+    Args:
+        enum (dict): The JSON dictionary describing the enum.
+        enum_type (str): The underlying type of the enum (not directly used in Python enums).
+        enums (set): A set to track already defined enums to prevent duplicates.
+
+    Returns:
+        str: The generated Python enum code or an empty string if the enum already exists.
+    """
+    # Extract enum name and values
+    enum_name = enum.get('name', 'InvalidEnum')
+    enum_description = enum.get('description', '')
+    enum_values = enum.get('values', [])
+
+    # Check for duplicate enums
+    if enum_name in enums:
+        return ''  # Skip if already generated
+
+    # Add the enum name to the set
+    enums.add(enum_name)
+
+    # Start building the enum definition
+    enum_code = [f"class {enum_name}(IntEnum):"]
+    if enum_description:
+        enum_code.append(f"\t\"\"\"\n\t{enum_description}\n\t\"\"\"")
+
+    # Iterate over the enum values and generate corresponding Python entries
+    for i, value in enumerate(enum_values):
+        name = value.get('name', f'InvalidName_{i}')
+        enum_value = value.get('value', str(i))
+        description = value.get('description', '')
+
+        # Add comment for each value
+        if description:
+            enum_code.append(f"    # {description}")
+        enum_code.append(f"    {name} = {enum_value}")
+
+    # Join the list into a single formatted string
+    return '\n'.join(enum_code)
+
+
+def generate_enum_code(pplugin: dict, enums: set[str]) -> str:
+    """
+    Generate Python enum code from a plugin definition.
+    """
+    # Container for all generated enum code
+    content = []
+
+    def process_enum(enum_data: dict, enum_type: str):
+        """
+        Generate enum code from the given enum data if it hasn't been processed.
+        """
+        enum_code = gen_enum_body(enum_data, enum_type, enums)
+        if enum_code:
+            content.append(enum_code)
+            content.append('\n')
+
+    def process_prototype(prototype: dict):
+        """
+        Recursively process a function prototype for enums.
+        """
+        if 'enum' in prototype.get('retType', {}):
+            process_enum(prototype['retType']['enum'], prototype['retType'].get('type', ''))
+
+        for param in prototype.get('paramTypes', []):
+            if 'enum' in param:
+                process_enum(param['enum'], param.get('type', ''))
+            if 'prototype' in param:  # Process nested prototypes
+                process_prototype(param['prototype'])
+
+    # Main loop: Process all exported methods in the plugin
+    for method in pplugin.get('exportedMethods', []):
+        if 'retType' in method and 'enum' in method['retType']:
+            process_enum(method['retType']['enum'], method['retType'].get('type', ''))
+
+        for param in method.get('paramTypes', []):
+            if 'enum' in param:
+                process_enum(param['enum'], param.get('type', ''))
+            if 'prototype' in param:  # Handle nested function prototypes
+                process_prototype(param['prototype'])
+
+    # Join all generated enums into a single string
+    return '\n'.join(content)
+
     
 def generate_stub(plugin_name: str, pplugin: dict) -> str:
     """Generate Python stub content."""
     link = 'https://github.com/untrustedmodders/plugify-module-python3.12/blob/main/generator/generator.py'
-    body = [f'from typing import Callable\nfrom plugify.plugin import Vector2, Vector3, Vector4, Matrix4x4\n\n'
-            f'# Generated from {plugin_name}.pplugin by {link}\n\n']
+    content = [
+        'from typing import Callable',
+        'from enum import IntEnum',
+        'from plugify.plugin import Vector2, Vector3, Vector4, Matrix4x4\n\n'
+        f'# Generated from {plugin_name}.pplugin by {link}\n\n']
+
+    # Append enum definitions
+    enums = set()
+    content.append(generate_enum_code(pplugin, enums))
+
+    if len(enums) == 0:
+        content.pop(1)
+
     for method in pplugin.get('exportedMethods', []):
-        method_name = method.get('name', None)
+        method_name = method.get('name', 'UnnamedMethod')
         param_types = method.get('paramTypes', [])
         ret_type = method.get('retType', {})
-        
-        if not method_name:
-            continue
-        
+
         signature = f'def {method_name}({gen_params(param_types, ParamGen.TypesNames)}) -> {convert_type(ret_type)}:'
         documentation = gen_documentation(method)
-        body.append(f'{signature}\n{documentation}\n    ...\n\n\n')
-    return ''.join(body)
+        content.append(f'{signature}\n{documentation}\n    ...\n\n')
+
+    if not any('Callable' in s for s in content[1:]):
+        content.pop(0)
+
+    return '\n'.join(content)
 
 
 def main(manifest_path: str, output_dir: str, override: bool):
@@ -216,7 +321,7 @@ def main(manifest_path: str, output_dir: str, override: bool):
         print(f'Output directory does not exist: {output_dir}')
         return 1
 
-    plugin_name = os.path.splitext(os.path.basename(manifest_path))[0]
+    plugin_name = os.path.basename(manifest_path).rsplit('.', 3)[0]
     output_path = os.path.join(output_dir, 'pps', f'{plugin_name}.pyi')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
