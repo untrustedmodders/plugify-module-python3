@@ -132,8 +132,18 @@ def gen_params(params: list[dict], param_gen: ParamGen) -> str:
         for i, p in enumerate(params):
             result.append(gen_param(i, p))
     return ', '.join(result)
-    
-    
+
+
+def gen_return(ret_type: dict, param_types: list[dict]) -> str:
+    if not any('ref' in p and p['ref'] is True for p in param_types):
+        return convert_type(ret_type)
+    result = [convert_type(ret_type)]
+    for p in param_types:
+        if 'ref' in p and p['ref'] is True:
+            result.append(convert_type(p))
+    return f'tuple[{",".join(result)}]'
+
+
 def gen_documentation(method: dict) -> str:
     """
     Generate a Python function documentation string from a JSON block.
@@ -302,9 +312,10 @@ def generate_stub(plugin_name: str, pplugin: dict) -> str:
         param_types = method.get('paramTypes', [])
         ret_type = method.get('retType', {})
 
-        signature = f'def {method_name}({gen_params(param_types, ParamGen.TypesNames)}) -> {convert_type(ret_type)}:'
-        documentation = gen_documentation(method)
-        content.append(f'{signature}\n{documentation}\n    ...\n\n')
+        content.append(f'def {method_name}({gen_params(param_types, ParamGen.TypesNames)}) ->'
+                       f' {gen_return(ret_type, param_types)}:')
+        content.append(gen_documentation(method))
+        content.append(f'    ...\n')
 
     if not any('Callable' in s for s in content[1:]):
         content.pop(0)

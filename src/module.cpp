@@ -278,7 +278,7 @@ namespace py3lm {
 					Py_DECREF(value);
 				} else {
 					PyErr_Clear();
-					SetTypeError("Expected enum", object);
+					SetTypeError("Expected enum with 'value' attribute", object);
 				}
 				return std::nullopt;
 			}
