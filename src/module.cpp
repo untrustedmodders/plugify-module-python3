@@ -2708,18 +2708,15 @@ namespace py3lm {
 		}
 
 
-		void GenerateEnum(MethodRef method, std::unordered_set<std::string>& generatedEnums, PyObject* pluginModule);
+		void GenerateEnum(MethodRef method, PyObject* module);
 
-		void GenerateEnum(PropertyRef paramType, std::unordered_set<std::string>& generatedEnums, PyObject* pluginModule) {
+		void GenerateEnum(PropertyRef paramType, PyObject* module) {
 			auto prototype = paramType.GetPrototype();
 			if (prototype) {
-				GenerateEnum(*prototype, generatedEnums, pluginModule);
+				GenerateEnum(*prototype, module);
 			}
 			const auto enumerator = paramType.GetEnum();
 			if (enumerator) {
-				std::string enumName(enumerator->GetName());
-				if (generatedEnums.contains(enumName))
-					return;
 				const auto values = enumerator->GetValues();
 				if (values.empty())
 					return;
@@ -2727,15 +2724,14 @@ namespace py3lm {
 				for (const auto& value: values) {
 					PyDict_SetItemString(dict, std::string(value.GetName()).c_str(), PyLong_FromLongLong(value.GetValue()));
 				}
-				g_py3lm.RegisterEnum(pluginModule, enumName, dict);
-				generatedEnums.emplace(std::move(enumName));
+				g_py3lm.RegisterEnum(module, std::string(enumerator->GetName()), dict);
 			}
 		}
 
-		void GenerateEnum(MethodRef method, std::unordered_set<std::string>& generatedEnums, PyObject* pluginModule) {
-			GenerateEnum(method.GetReturnType(), generatedEnums, pluginModule);
+		void GenerateEnum(MethodRef method, PyObject* module) {
+			GenerateEnum(method.GetReturnType(), module);
 			for (auto paramType : method.GetParamTypes()) {
-				GenerateEnum(paramType, generatedEnums, pluginModule);
+				GenerateEnum(paramType, module);
 			}
 		}
 	}
@@ -3179,7 +3175,6 @@ namespace py3lm {
 		bool exportResult = true;
 		std::vector<std::string> exportErrors;
 		std::vector<std::tuple<MethodRef, PythonMethodData>> methodsHolders;
-		std::unordered_set<std::string> generatedEnums;
 
 		if (!exportedMethods.empty()) {
 			for (const MethodRef method : exportedMethods) {
@@ -3190,7 +3185,7 @@ namespace py3lm {
 					continue;
 				}
 				methodsHolders.emplace_back(method, std::move(std::get<MethodExportData>(generateResult)));
-				GenerateEnum(method, generatedEnums, pluginModule);
+				GenerateEnum(method, pluginModule);
 			}
 		}
 
@@ -3712,6 +3707,7 @@ namespace py3lm {
 				std::terminate();
 			}
 			PyObject_SetAttrString(moduleObject, method.GetName().data(), methodObject);
+			GenerateEnum(method, moduleObject);
 		}
 
 		return moduleObject;
@@ -3772,7 +3768,13 @@ namespace py3lm {
 		moduleDef.m_clear = nullptr;
 		moduleDef.m_free = nullptr;
 
-		return PyModule_Create(&moduleDef);
+		PyObject* moduleObject = PyModule_Create(&moduleDef);
+
+		for (const auto& [method, _] : plugin.GetMethods()) {
+			GenerateEnum(method, moduleObject);
+		}
+
+		return moduleObject;
 	}
 
 	void Python3LanguageModule::TryCallPluginMethodNoArgs(PluginRef plugin, const std::string& name, const std::string& context) {
@@ -3806,13 +3808,19 @@ namespace py3lm {
 		Py_DECREF(nameString);
 	}
 
-	void Python3LanguageModule::RegisterEnum(PyObject* module, const std::string& enumName, PyObject* constantsDict) {
-		PyObject* enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumName.c_str(), constantsDict);
+	void Python3LanguageModule::RegisterEnum(PyObject* pluginModule, const std::string& enumName, PyObject* constantsDict) {
+		PyObject* enumClass = PyDict_GetItemString(PyModule_GetDict(pluginModule), enumName.c_str());
+		if (enumClass)
+			return;
+
+		enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumName.c_str(), constantsDict);
 
 		Py_DECREF(constantsDict);
 
-		if (enumClass && PyModule_AddObject(module, enumName.c_str(), enumClass) < 0) {
+		if (enumClass && PyModule_AddObject(pluginModule, enumName.c_str(), enumClass) < 0) {
+			LogError();
 			Py_DECREF(enumClass);
+			return;
 		}
 	}
 
