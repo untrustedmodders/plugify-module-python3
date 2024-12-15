@@ -242,13 +242,16 @@ namespace py3lm {
 			return std::nullopt;
 		}
 
+		template<typename T>
+		std::optional<T> GetObjectAttrAsValue(PyObject* object, const char* attr_name);
+
 		template<class ValueType, class CType, CType (*ConvertFunc)(PyObject*)>
 		std::optional<ValueType> ValueFromNumberObject(PyObject* object) {
 			if (PyLong_Check(object)) {
 				const CType castResult = ConvertFunc(object);
 				if (!PyErr_Occurred()) {
-					if (castResult <= static_cast<CType>(std::numeric_limits<ValueType>::max())
-						&& castResult >= static_cast<CType>(std::numeric_limits<ValueType>::min())
+					if (castResult <= static_cast<CType>(std::numeric_limits<ValueType>::max()) &&
+						castResult >= static_cast<CType>(std::numeric_limits<ValueType>::min())
 					) {
 						return { static_cast<ValueType>(castResult) };
 					}
@@ -256,6 +259,30 @@ namespace py3lm {
 				}
 				return std::nullopt;
 			}
+
+			if (PyObject_TypeCheck(object, &PyEnum_Type)) {
+				PyObject* value = PyObject_GetAttrString(object, "value");
+				if (value) {
+					if (PyLong_Check(value)) {
+						const CType castResult = ConvertFunc(value);
+						if (!PyErr_Occurred()) {
+							if (castResult <= static_cast<CType>(std::numeric_limits<ValueType>::max()) &&
+								castResult >= static_cast<CType>(std::numeric_limits<ValueType>::min())
+							) {
+								Py_DECREF(value);
+								return { static_cast<ValueType>(castResult) };
+							}
+							PyErr_SetNone(PyExc_OverflowError);
+						}
+					}
+					Py_DECREF(value);
+				} else {
+					PyErr_Clear();
+					SetTypeError("Expected enum", object);
+				}
+				return std::nullopt;
+			}
+
 			SetTypeError("Expected integer", object);
 			return std::nullopt;
 		}
