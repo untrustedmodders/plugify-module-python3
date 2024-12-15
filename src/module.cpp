@@ -2706,6 +2706,38 @@ namespace py3lm {
 			Py_DECREF(attrObject);
 			return value;
 		}
+
+
+		void GenerateEnum(MethodRef method, std::unordered_set<std::string>& generatedEnums, PyObject* pluginModule);
+
+		void GenerateEnum(PropertyRef paramType, std::unordered_set<std::string>& generatedEnums, PyObject* pluginModule) {
+			auto prototype = paramType.GetPrototype();
+			if (prototype) {
+				GenerateEnum(*prototype, generatedEnums, pluginModule);
+			}
+			const auto enumerator = paramType.GetEnum();
+			if (enumerator) {
+				std::string enumName(enumerator->GetName());
+				if (generatedEnums.contains(enumName))
+					return;
+				const auto values = enumerator->GetValues();
+				if (values.empty())
+					return;
+				PyObject* dict = PyDict_New();
+				for (const auto& value: values) {
+					PyDict_SetItemString(dict, std::string(value.GetName()).c_str(), PyLong_FromLongLong(value.GetValue()));
+				}
+				g_py3lm.RegisterEnum(pluginModule, enumName, dict);
+				generatedEnums.emplace(std::move(enumName));
+			}
+		}
+
+		void GenerateEnum(MethodRef method, std::unordered_set<std::string>& generatedEnums, PyObject* pluginModule) {
+			GenerateEnum(method.GetReturnType(), generatedEnums, pluginModule);
+			for (auto paramType : method.GetParamTypes()) {
+				GenerateEnum(paramType, generatedEnums, pluginModule);
+			}
+		}
 	}
 
 	Python3LanguageModule::Python3LanguageModule() = default;
@@ -2849,6 +2881,12 @@ namespace py3lm {
 			return ErrorData{ "Failed to import plugify.pps python module" };
 		}
 
+		_enumModule = PyImport_ImportModule("enum");
+		if (!_enumModule) {
+			LogError();
+			return ErrorData{ "Failed to import enum python module" };
+		}
+
 		PyObject* const tracebackModule = PyImport_ImportModule("traceback");
 		if (!tracebackModule) {
 			LogError();
@@ -2935,6 +2973,10 @@ namespace py3lm {
 		if (Py_IsInitialized()) {
 			if (_formatException) {
 				Py_DECREF(_formatException);
+			}
+
+			if (_enumModule) {
+				Py_DECREF(_enumModule);
 			}
 
 			if (_ppsModule) {
@@ -3137,6 +3179,7 @@ namespace py3lm {
 		bool exportResult = true;
 		std::vector<std::string> exportErrors;
 		std::vector<std::tuple<MethodRef, PythonMethodData>> methodsHolders;
+		std::unordered_set<std::string> generatedEnums;
 
 		if (!exportedMethods.empty()) {
 			for (const MethodRef method : exportedMethods) {
@@ -3147,6 +3190,7 @@ namespace py3lm {
 					continue;
 				}
 				methodsHolders.emplace_back(method, std::move(std::get<MethodExportData>(generateResult)));
+				GenerateEnum(method, generatedEnums, pluginModule);
 			}
 		}
 
@@ -3760,6 +3804,16 @@ namespace py3lm {
 		}
 
 		Py_DECREF(nameString);
+	}
+
+	void Python3LanguageModule::RegisterEnum(PyObject* module, const std::string& enumName, PyObject* constantsDict) {
+		PyObject* enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumName.c_str(), constantsDict);
+
+		Py_DECREF(constantsDict);
+
+		if (enumClass && PyModule_AddObject(module, enumName.c_str(), enumClass) < 0) {
+			Py_DECREF(enumClass);
+		}
 	}
 
 	PythonType Python3LanguageModule::GetObjectType(PyObject* object) const {

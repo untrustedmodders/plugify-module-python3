@@ -13,6 +13,7 @@
 #include <string>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace py3lm {
 	struct PythonMethodData {
@@ -124,6 +125,7 @@ namespace py3lm {
 		PyObject* CreateMatrix4x4Object(const plg::mat4x4& matrix);
 		std::optional<plg::mat4x4> Matrix4x4ValueFromObject(PyObject* object);
 		PythonType GetObjectType(PyObject* type) const;
+		void RegisterEnum(PyObject* module, const std::string& enumName, PyObject* constantsDict);
 		void LogFatal(std::string_view msg) const;
 		void LogError() const;
 
@@ -149,6 +151,7 @@ namespace py3lm {
 		PyObject* _Vector4TypeObject = nullptr;
 		PyObject* _Matrix4x4TypeObject = nullptr;
 		PyObject* _ppsModule = nullptr;
+		PyObject* _enumModule = nullptr;
 		PyObject* _formatException = nullptr;
 		std::vector<std::vector<PyMethodDef>> _moduleMethods;
 		std::vector<std::unique_ptr<PyModuleDef>> _moduleDefinitions;
