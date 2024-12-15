@@ -220,7 +220,7 @@ def gen_enum_body(enum: dict, enum_type: str, enums: set[str]) -> str:
     # Start building the enum definition
     enum_code = [f"class {enum_name}(IntEnum):"]
     if enum_description:
-        enum_code.append(f"\t\"\"\"\n\t{enum_description}\n\t\"\"\"")
+        enum_code.append(f"    \"\"\"\n    {enum_description}\n    \"\"\"")
 
     # Iterate over the enum values and generate corresponding Python entries
     for i, value in enumerate(enum_values):
