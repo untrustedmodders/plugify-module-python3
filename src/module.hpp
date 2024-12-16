@@ -27,19 +27,6 @@ struct std::hash<plugify::EnumRef> {
 };
 
 namespace py3lm {
-	struct string_hash {
-		using is_transparent = void;
-		size_t operator()(const char *txt) const {
-			return std::hash<std::string_view>{}(txt);
-		}
-		size_t operator()(std::string_view txt) const {
-			return std::hash<std::string_view>{}(txt);
-		}
-		size_t operator()(const std::string &txt) const {
-			return std::hash<std::string>{}(txt);
-		}
-	};
-
 	struct PythonMethodData {
 		plugify::JitCallback jitCallback;
 		PyObject* pythonFunction{};
