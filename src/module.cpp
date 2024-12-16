@@ -4072,7 +4072,6 @@ namespace py3lm {
 	}
 
 	void Python3LanguageModule::RegisterEnum(EnumRef enumerator, PyObject* module) {
-		PyObject* constantsDict = nullptr;
 		PyObject* enumClass = PyDict_GetItemString(PyModule_GetDict(module), enumerator.GetName().data());
 		if (enumClass) {
 			const auto it = _internalEnumMap.find(enumClass);
@@ -4086,7 +4085,7 @@ namespace py3lm {
 		if (values.empty())
 			return;
 
-		constantsDict = PyDict_New();
+		PyObject* constantsDict = PyDict_New();
 		for (const auto& value : values) {
 			PyDict_SetItemString(constantsDict, value.GetName().data(), PyLong_FromLongLong(value.GetValue()));
 		}
