@@ -1313,39 +1313,40 @@ namespace py3lm {
 		}
 
 		PyObject* ParamToEnumObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
+			auto enumerator = paramType.GetEnum();
 			switch (paramType.GetType()) {
 			case ValueType::Int8:
-				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<int8_t>(index));
+				return CreatePyEnumObject(*enumerator, params->GetArgument<int8_t>(index));
 			case ValueType::Int16:
-				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<int16_t>(index));
+				return CreatePyEnumObject(*enumerator, params->GetArgument<int16_t>(index));
 			case ValueType::Int32:
-				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<int32_t>(index));
+				return CreatePyEnumObject(*enumerator, params->GetArgument<int32_t>(index));
 			case ValueType::Int64:
-				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<int64_t>(index));
+				return CreatePyEnumObject(*enumerator, params->GetArgument<int64_t>(index));
 			case ValueType::UInt8:
-				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<uint8_t>(index));
+				return CreatePyEnumObject(*enumerator, params->GetArgument<uint8_t>(index));
 			case ValueType::UInt16:
-				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<uint16_t>(index));
+				return CreatePyEnumObject(*enumerator, params->GetArgument<uint16_t>(index));
 			case ValueType::UInt32:
-				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<uint32_t>(index));
+				return CreatePyEnumObject(*enumerator, params->GetArgument<uint32_t>(index));
 			case ValueType::UInt64:
-				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<uint64_t>(index));
+				return CreatePyEnumObject(*enumerator, params->GetArgument<uint64_t>(index));
 			case ValueType::ArrayInt8:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int8_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<int8_t>*>(index)));
 			case ValueType::ArrayInt16:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int16_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<int16_t>*>(index)));
 			case ValueType::ArrayInt32:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int32_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<int32_t>*>(index)));
 			case ValueType::ArrayInt64:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int64_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<int64_t>*>(index)));
 			case ValueType::ArrayUInt8:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint8_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<uint8_t>*>(index)));
 			case ValueType::ArrayUInt16:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint16_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<uint16_t>*>(index)));
 			case ValueType::ArrayUInt32:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint32_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<uint32_t>*>(index)));
 			case ValueType::ArrayUInt64:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint64_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<uint64_t>*>(index)));
 			default: {
 				const std::string error(std::format("[py3lm] ParamToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
@@ -1356,39 +1357,40 @@ namespace py3lm {
 		}
 
 		PyObject* ParamRefToEnumObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
+			auto enumerator = paramType.GetEnum();
 			switch (paramType.GetType()) {
 			case ValueType::Int8:
-				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<int8_t*>(index)));
+				return CreatePyEnumObject(*enumerator, *(params->GetArgument<int8_t*>(index)));
 			case ValueType::Int16:
-				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<int16_t*>(index)));
+				return CreatePyEnumObject(*enumerator, *(params->GetArgument<int16_t*>(index)));
 			case ValueType::Int32:
-				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<int32_t*>(index)));
+				return CreatePyEnumObject(*enumerator, *(params->GetArgument<int32_t*>(index)));
 			case ValueType::Int64:
-				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<int64_t*>(index)));
+				return CreatePyEnumObject(*enumerator, *(params->GetArgument<int64_t*>(index)));
 			case ValueType::UInt8:
-				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<uint8_t*>(index)));
+				return CreatePyEnumObject(*enumerator, *(params->GetArgument<uint8_t*>(index)));
 			case ValueType::UInt16:
-				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<uint16_t*>(index)));
+				return CreatePyEnumObject(*enumerator, *(params->GetArgument<uint16_t*>(index)));
 			case ValueType::UInt32:
-				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<uint32_t*>(index)));
+				return CreatePyEnumObject(*enumerator, *(params->GetArgument<uint32_t*>(index)));
 			case ValueType::UInt64:
-				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<uint64_t*>(index)));
+				return CreatePyEnumObject(*enumerator, *(params->GetArgument<uint64_t*>(index)));
 			case ValueType::ArrayInt8:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int8_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<int8_t>*>(index)));
 			case ValueType::ArrayInt16:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int16_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<int16_t>*>(index)));
 			case ValueType::ArrayInt32:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int32_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<int32_t>*>(index)));
 			case ValueType::ArrayInt64:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int64_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<int64_t>*>(index)));
 			case ValueType::ArrayUInt8:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint8_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<uint8_t>*>(index)));
 			case ValueType::ArrayUInt16:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint16_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<uint16_t>*>(index)));
 			case ValueType::ArrayUInt32:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint32_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<uint32_t>*>(index)));
 			case ValueType::ArrayUInt64:
-				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint64_t>*>(index)));
+				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<uint64_t>*>(index)));
 			default: {
 				const std::string error(std::format("[py3lm] ParamRefToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
@@ -2864,10 +2866,10 @@ namespace py3lm {
 			BeginExternalCall(retType.GetType(), a);
 
 			using MakeExternalCallFunc = PyObject* (*)(PropertyRef, JitCall::CallingFunc, const ArgsScope&, JitCall::Return&);
-			MakeExternalCallFunc const makeExternalCall = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
-			PyObject* const retObj = makeExternalCall(retType, data.CCast<JitCall::CallingFunc>(), a, r);
+			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
+			PyObject* const retObj = makeExternalCallFunc(retType, data.CCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
-				// MakeExternalCall set error
+				// makeExternalCallFunc set error
 				ret->SetReturn(nullptr);
 				return;
 			}
@@ -2920,10 +2922,10 @@ namespace py3lm {
 			}
 
 			using MakeExternalCallFunc = PyObject* (*)(PropertyRef, JitCall::CallingFunc, const ArgsScope&, JitCall::Return&);
-			MakeExternalCallFunc const makeExternalCall = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
-			PyObject* retObj = makeExternalCall(retType, data.CCast<JitCall::CallingFunc>(), a, r);
+			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
+			PyObject* retObj = makeExternalCallFunc(retType, data.CCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
-				// MakeExternalCall set error
+				// makeExternalCallFunc set error
 				ret->SetReturn(nullptr);
 				return;
 			}
