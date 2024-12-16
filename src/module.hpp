@@ -15,7 +15,31 @@
 #include <unordered_map>
 #include <unordered_set>
 
+template <>
+struct std::hash<plugify::EnumRef> {
+	std::size_t operator()(const plugify::EnumRef& enumerator) const {
+		union {
+			plugify::EnumRef enumerate;
+			std::uintptr_t ptr;
+		} cast{ enumerator };
+		return std::hash<std::uintptr_t>{}(cast.ptr);
+	}
+};
+
 namespace py3lm {
+	struct string_hash {
+		using is_transparent = void;
+		size_t operator()(const char *txt) const {
+			return std::hash<std::string_view>{}(txt);
+		}
+		size_t operator()(std::string_view txt) const {
+			return std::hash<std::string_view>{}(txt);
+		}
+		size_t operator()(const std::string &txt) const {
+			return std::hash<std::string>{}(txt);
+		}
+	};
+
 	struct PythonMethodData {
 		plugify::JitCallback jitCallback;
 		PyObject* pythonFunction{};
@@ -94,6 +118,13 @@ namespace py3lm {
 		const char* name;
 	};
 
+	using PythonInternalMap = std::unordered_map<PyObject*, void*>;
+	using PythonExternalMap = std::unordered_map<void*, PyObject*>;
+	using PythonTypeMap = std::unordered_map<PyTypeObject*, PythonType>;
+	using PythonEnumMap = std::unordered_map<int64_t, PyObject*>;
+	using PythonInternalEnumMap = std::unordered_map<plugify::EnumRef, std::shared_ptr<PythonEnumMap>>;
+	using PythonExternalEnumMap = std::unordered_map<PyObject*, std::shared_ptr<PythonEnumMap>>;
+
 	class Python3LanguageModule final : public plugify::ILanguageModule {
 	public:
 		Python3LanguageModule();
@@ -125,7 +156,9 @@ namespace py3lm {
 		PyObject* CreateMatrix4x4Object(const plg::mat4x4& matrix);
 		std::optional<plg::mat4x4> Matrix4x4ValueFromObject(PyObject* object);
 		PythonType GetObjectType(PyObject* type) const;
-		void RegisterEnum(PyObject* module, const std::string& enumName, PyObject* constantsDict);
+		PyObject* FindEnum(plugify::EnumRef enumerator, int64_t value) const;
+		void RegisterEnum(plugify::EnumRef enumerator, PyObject* module);
+
 		void LogFatal(std::string_view msg) const;
 		void LogError() const;
 
@@ -133,7 +166,7 @@ namespace py3lm {
 		PyObject* FindPythonMethod(plugify::MemAddr addr) const;
 		PyObject* CreateInternalModule(plugify::PluginRef plugin);
 		PyObject* CreateExternalModule(plugify::PluginRef plugin);
-		void TryCallPluginMethodNoArgs(plugify::PluginRef plugin, const std::string& name, const std::string& context);
+		void TryCallPluginMethodNoArgs(plugify::PluginRef plugin, std::string_view name, std::string_view context);
 
 	private:
 		std::shared_ptr<plugify::IPlugifyProvider> _provider;
@@ -168,8 +201,10 @@ namespace py3lm {
 		};
 		std::vector<ExternalHolder> _externalFunctions;
 		std::vector<PythonMethodData> _internalFunctions;
-		std::unordered_map<void*, PyObject*> _externalMap;
-		std::unordered_map<PyObject*, void*> _internalMap;
-		std::unordered_map<PyTypeObject*, PythonType> _typeMap;
+		PythonExternalMap _externalMap;
+		PythonInternalMap _internalMap;
+		PythonTypeMap _typeMap;
+		PythonInternalEnumMap _externalEnumMap;
+		PythonExternalEnumMap _internalEnumMap;
 	};
 }

@@ -260,7 +260,8 @@ namespace py3lm {
 				return std::nullopt;
 			}
 
-			if (PyObject_TypeCheck(object, &PyEnum_Type)) {
+			/// Seems IntEnums should work with validation above, uncomment if necessary
+			/*if (PyObject_TypeCheck(object, &PyEnum_Type)) {
 				PyObject* value = PyObject_GetAttrString(object, "value");
 				if (value) {
 					if (PyLong_Check(value)) {
@@ -281,7 +282,7 @@ namespace py3lm {
 					SetTypeError("Expected enum with 'value' attribute", object);
 				}
 				return std::nullopt;
-			}
+			}*/
 
 			SetTypeError("Expected integer", object);
 			return std::nullopt;
@@ -1289,6 +1290,114 @@ namespace py3lm {
 			return arrayObject;
 		}
 
+		template<typename T>
+		PyObject* CreatePyEnumObject(EnumRef enumerate, const T& value) {
+			return g_py3lm.FindEnum(enumerate, static_cast<int64_t>(value));
+		}
+
+		template<typename T>
+		PyObject* CreatePyEnumObjectList(EnumRef enumerate, const plg::vector<T>& arrayArg) {
+			const auto size = static_cast<Py_ssize_t>(arrayArg.size());
+			PyObject* const arrayObject = PyList_New(size);
+			if (arrayObject) {
+				for (Py_ssize_t i = 0; i < size; ++i) {
+					PyObject* const valueObject = CreatePyEnumObject(enumerate, arrayArg[i]);
+					if (!valueObject) {
+						Py_DECREF(arrayObject);
+						return nullptr;
+					}
+					PyList_SET_ITEM(arrayObject, i, valueObject);
+				}
+			}
+			return arrayObject;
+		}
+
+		PyObject* ParamToEnumObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
+			switch (paramType.GetType()) {
+			case ValueType::Int8:
+				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<int8_t>(index));
+			case ValueType::Int16:
+				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<int16_t>(index));
+			case ValueType::Int32:
+				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<int32_t>(index));
+			case ValueType::Int64:
+				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<int64_t>(index));
+			case ValueType::UInt8:
+				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<uint8_t>(index));
+			case ValueType::UInt16:
+				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<uint16_t>(index));
+			case ValueType::UInt32:
+				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<uint32_t>(index));
+			case ValueType::UInt64:
+				return CreatePyEnumObject(paramType.GetEnum().value(), params->GetArgument<uint64_t>(index));
+			case ValueType::ArrayInt8:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int8_t>*>(index)));
+			case ValueType::ArrayInt16:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int16_t>*>(index)));
+			case ValueType::ArrayInt32:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int32_t>*>(index)));
+			case ValueType::ArrayInt64:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int64_t>*>(index)));
+			case ValueType::ArrayUInt8:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint8_t>*>(index)));
+			case ValueType::ArrayUInt16:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint16_t>*>(index)));
+			case ValueType::ArrayUInt32:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint32_t>*>(index)));
+			case ValueType::ArrayUInt64:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint64_t>*>(index)));
+			default: {
+				const std::string error(std::format("[py3lm] ParamToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
+				g_py3lm.LogFatal(error);
+				std::terminate();
+				return nullptr;
+			}
+			}
+		}
+
+		PyObject* ParamRefToEnumObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
+			switch (paramType.GetType()) {
+			case ValueType::Int8:
+				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<int8_t*>(index)));
+			case ValueType::Int16:
+				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<int16_t*>(index)));
+			case ValueType::Int32:
+				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<int32_t*>(index)));
+			case ValueType::Int64:
+				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<int64_t*>(index)));
+			case ValueType::UInt8:
+				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<uint8_t*>(index)));
+			case ValueType::UInt16:
+				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<uint16_t*>(index)));
+			case ValueType::UInt32:
+				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<uint32_t*>(index)));
+			case ValueType::UInt64:
+				return CreatePyEnumObject(paramType.GetEnum().value(), *(params->GetArgument<uint64_t*>(index)));
+			case ValueType::ArrayInt8:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int8_t>*>(index)));
+			case ValueType::ArrayInt16:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int16_t>*>(index)));
+			case ValueType::ArrayInt32:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int32_t>*>(index)));
+			case ValueType::ArrayInt64:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<int64_t>*>(index)));
+			case ValueType::ArrayUInt8:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint8_t>*>(index)));
+			case ValueType::ArrayUInt16:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint16_t>*>(index)));
+			case ValueType::ArrayUInt32:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint32_t>*>(index)));
+			case ValueType::ArrayUInt64:
+				return CreatePyEnumObjectList(paramType.GetEnum().value(), *(params->GetArgument<const plg::vector<uint64_t>*>(index)));
+			default: {
+				const std::string error(std::format("[py3lm] ParamRefToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
+				g_py3lm.LogFatal(error);
+				std::terminate();
+				return nullptr;
+			}
+			}
+		}
+
 		PyObject* ParamToObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
@@ -1485,7 +1594,10 @@ namespace py3lm {
 							++refParamsCount;
 						}
 						using ParamConvertionFunc = PyObject* (*)(PropertyRef, const JitCallback::Parameters*, uint8_t);
-						ParamConvertionFunc const convertFunc = paramType.IsReference() ? &ParamRefToObject : &ParamToObject;
+						ParamConvertionFunc const convertFunc = paramType.GetEnum() ?
+							(paramType.IsReference() ? &ParamRefToEnumObject : &ParamToEnumObject) :
+							(paramType.IsReference() ? &ParamRefToObject : &ParamToObject);
+						convertFunc(paramType, params, index);
 						PyObject* const arg = convertFunc(paramType, params, index);
 						if (!arg) {
 							// convertFunc may set error
@@ -1503,6 +1615,8 @@ namespace py3lm {
 				}
 			}
 
+			const plugify::PropertyRef retType = method.GetReturnType();
+
 			if (processResult != ParamProcess::NoError) {
 				if (argTuple) {
 					Py_DECREF(argTuple);
@@ -1511,7 +1625,7 @@ namespace py3lm {
 					g_py3lm.LogError();
 				}
 
-				SetFallbackReturn(method.GetReturnType().GetType(), ret);
+				SetFallbackReturn(retType.GetType(), ret);
 
 				return;
 			}
@@ -1527,7 +1641,7 @@ namespace py3lm {
 			if (!result) {
 				g_py3lm.LogError();
 
-				SetFallbackReturn(method.GetReturnType().GetType(), ret);
+				SetFallbackReturn(retType.GetType(), ret);
 
 				return;
 			}
@@ -1540,7 +1654,7 @@ namespace py3lm {
 
 					Py_DECREF(result);
 
-					SetFallbackReturn(method.GetReturnType().GetType(), ret);
+					SetFallbackReturn(retType.GetType(), ret);
 
 					return;
 				}
@@ -1553,7 +1667,7 @@ namespace py3lm {
 
 					Py_DECREF(result);
 
-					SetFallbackReturn(method.GetReturnType().GetType(), ret);
+					SetFallbackReturn(retType.GetType(), ret);
 
 					return;
 				}
@@ -1580,12 +1694,12 @@ namespace py3lm {
 				}
 			}
 
-			if (!SetReturn(returnObject, method.GetReturnType(), ret)) {
+			if (!SetReturn(returnObject, retType, ret)) {
 				if (PyErr_Occurred()) {
 					g_py3lm.LogError();
 				}
 
-				SetFallbackReturn(method.GetReturnType().GetType(), ret);
+				SetFallbackReturn(retType.GetType(), ret);
 			}
 
 			Py_DECREF(result);
@@ -1593,7 +1707,7 @@ namespace py3lm {
 
 		std::tuple<bool, JitCallback> CreateInternalCall(const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, MethodRef method, PyObject* func) {
 			JitCallback callback(jitRuntime);
-			void* const methodAddr = callback.GetJitFunc(method, &InternalCall, reinterpret_cast<void*>(func));
+			void* const methodAddr = callback.GetJitFunc(method, &InternalCall, func);
 			return { methodAddr != nullptr, std::move(callback) };
 		}
 
@@ -1820,8 +1934,7 @@ namespace py3lm {
 			}
 		};
 
-		void BeginExternalCall(MethodRef method, ArgsScope& a) {
-			ValueType retType = method.GetReturnType().GetType();
+		void BeginExternalCall(ValueType retType, ArgsScope& a) {
 			if (ValueUtils::IsHiddenParam(retType)) {
 				void* value;
 				switch (retType) {
@@ -1946,10 +2059,86 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* MakeExternalCall(MethodRef method, JitCall::CallingFunc func, const ArgsScope& a, JitCall::Return& ret) {
+		PyObject* MakeExternalCallWithEnumObject(PropertyRef retType, JitCall::CallingFunc func, const ArgsScope& a, JitCall::Return& ret) {
 			func(a.params.GetDataPtr(), &ret);
-			ValueType retType = method.GetReturnType().GetType();
-			switch (retType) {
+			auto enumerator = retType.GetEnum();
+			switch (retType.GetType()) {
+			case ValueType::Int8: {
+				const int8_t val = ret.GetReturn<int8_t>();
+				return CreatePyEnumObject(*enumerator, val);
+			}
+			case ValueType::Int16: {
+				const int16_t val = ret.GetReturn<int16_t>();
+				return CreatePyEnumObject(*enumerator, val);
+			}
+			case ValueType::Int32: {
+				const int32_t val = ret.GetReturn<int32_t>();
+				return CreatePyEnumObject(*enumerator, val);
+			}
+			case ValueType::Int64: {
+				const int64_t val = ret.GetReturn<int64_t>();
+				return CreatePyEnumObject(*enumerator, val);
+			}
+			case ValueType::UInt8: {
+				const uint8_t val = ret.GetReturn<uint8_t>();
+				return CreatePyEnumObject(*enumerator, val);
+			}
+			case ValueType::UInt16: {
+				const uint16_t val = ret.GetReturn<uint16_t>();
+				return CreatePyEnumObject(*enumerator, val);
+			}
+			case ValueType::UInt32: {
+				const uint32_t val = ret.GetReturn<uint32_t>();
+				return CreatePyEnumObject(*enumerator, val);
+			}
+			case ValueType::UInt64: {
+				const uint64_t val = ret.GetReturn<uint64_t>();
+				return CreatePyEnumObject(*enumerator, val);
+			}
+			case ValueType::ArrayInt8: {
+				auto* const arr = ret.GetReturn<plg::vector<int8_t>*>();
+				return CreatePyEnumObjectList<int8_t>(*enumerator, *arr);
+			}
+			case ValueType::ArrayInt16: {
+				auto* const arr = ret.GetReturn<plg::vector<int16_t>*>();
+				return CreatePyEnumObjectList<int16_t>(*enumerator, *arr);
+			}
+			case ValueType::ArrayInt32: {
+				auto* const arr = ret.GetReturn<plg::vector<int32_t>*>();
+				return CreatePyEnumObjectList<int32_t>(*enumerator, *arr);
+			}
+			case ValueType::ArrayInt64: {
+				auto* const arr = ret.GetReturn<plg::vector<int64_t>*>();
+				return CreatePyEnumObjectList<int64_t>(*enumerator, *arr);
+			}
+			case ValueType::ArrayUInt8: {
+				auto* const arr = ret.GetReturn<plg::vector<uint8_t>*>();
+				return CreatePyEnumObjectList<uint8_t>(*enumerator, *arr);
+			}
+			case ValueType::ArrayUInt16: {
+				auto* const arr = ret.GetReturn<plg::vector<uint16_t>*>();
+				return CreatePyEnumObjectList<uint16_t>(*enumerator, *arr);
+			}
+			case ValueType::ArrayUInt32: {
+				auto* const arr = ret.GetReturn<plg::vector<uint32_t>*>();
+				return CreatePyEnumObjectList<uint32_t>(*enumerator, *arr);
+			}
+			case ValueType::ArrayUInt64: {
+				auto* const arr = ret.GetReturn<plg::vector<uint64_t>*>();
+				return CreatePyEnumObjectList<uint64_t>(*enumerator, *arr);
+			}
+			default: {
+				const std::string error(std::format("MakeExternalCallWithEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(retType.GetType())));
+				PyErr_SetString(PyExc_RuntimeError, error.c_str());
+				return nullptr;
+			}
+			}
+			return nullptr;
+		}
+
+		PyObject* MakeExternalCallWithObject(PropertyRef retType, JitCall::CallingFunc func, const ArgsScope& a, JitCall::Return& ret) {
+			func(a.params.GetDataPtr(), &ret);
+			switch (retType.GetType()) {
 			case ValueType::Void:
 				return Py_None;
 			case ValueType::Bool: {
@@ -2010,7 +2199,7 @@ namespace py3lm {
 			}
 			case ValueType::Function: {
 				void* const val = ret.GetReturn<void*>();
-				return GetOrCreateFunctionObject(method.GetReturnType().GetPrototype().value(), val);
+				return GetOrCreateFunctionObject(retType.GetPrototype().value(), val);
 			}
 			case ValueType::String: {
 				auto* const str = ret.GetReturn<plg::string*>();
@@ -2090,7 +2279,7 @@ namespace py3lm {
 			}
 			case ValueType::Vector3: {
 				plg::vec3 val;
-				if (ValueUtils::IsHiddenParam(retType)) {
+				if (ValueUtils::IsHiddenParam(retType.GetType())) {
 					val = *ret.GetReturn<plg::vec3*>();
 				} else {
 					val = ret.GetReturn<plg::vec3>();
@@ -2099,7 +2288,7 @@ namespace py3lm {
 			}
 			case ValueType::Vector4: {
 				plg::vec4 val;
-				if (ValueUtils::IsHiddenParam(retType)) {
+				if (ValueUtils::IsHiddenParam(retType.GetType())) {
 					val = *ret.GetReturn<plg::vec4*>();
 				} else {
 					val = ret.GetReturn<plg::vec4>();
@@ -2111,12 +2300,11 @@ namespace py3lm {
 				return CreatePyObject(val);
 			}
 			default: {
-				const std::string error(std::format("MakeExternalCall unsupported type {:#x}", static_cast<uint8_t>(retType)));
+				const std::string error(std::format("MakeExternalCallWithObject unsupported type {:#x}", static_cast<uint8_t>(retType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
 				return nullptr;
 			}
 			}
-
 			return nullptr;
 		}
 
@@ -2543,6 +2731,49 @@ namespace py3lm {
 			return false;
 		}
 
+		PyObject* StorageValueToEnumObject(PropertyRef paramType, const ArgsScope& a, uint8_t index) {
+			auto enumerator = paramType.GetEnum();
+			switch (paramType.GetType()) {
+			case ValueType::Int8:
+				return CreatePyEnumObject(*enumerator, *reinterpret_cast<int8_t*>(std::get<0>(a.storage[index])));
+			case ValueType::Int16:
+				return CreatePyEnumObject(*enumerator, *reinterpret_cast<int16_t*>(std::get<0>(a.storage[index])));
+			case ValueType::Int32:
+				return CreatePyEnumObject(*enumerator, *reinterpret_cast<int32_t*>(std::get<0>(a.storage[index])));
+			case ValueType::Int64:
+				return CreatePyEnumObject(*enumerator, *reinterpret_cast<int64_t*>(std::get<0>(a.storage[index])));
+			case ValueType::UInt8:
+				return CreatePyEnumObject(*enumerator, *reinterpret_cast<uint8_t*>(std::get<0>(a.storage[index])));
+			case ValueType::UInt16:
+				return CreatePyEnumObject(*enumerator, *reinterpret_cast<uint16_t*>(std::get<0>(a.storage[index])));
+			case ValueType::UInt32:
+				return CreatePyEnumObject(*enumerator, *reinterpret_cast<uint32_t*>(std::get<0>(a.storage[index])));
+			case ValueType::UInt64:
+				return CreatePyEnumObject(*enumerator, *reinterpret_cast<uint64_t*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayInt8:
+				return CreatePyEnumObjectList(*enumerator, *reinterpret_cast<plg::vector<int8_t>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayInt16:
+				return CreatePyEnumObjectList(*enumerator, *reinterpret_cast<plg::vector<int16_t>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayInt32:
+				return CreatePyEnumObjectList(*enumerator, *reinterpret_cast<plg::vector<int32_t>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayInt64:
+				return CreatePyEnumObjectList(*enumerator, *reinterpret_cast<plg::vector<int64_t>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayUInt8:
+				return CreatePyEnumObjectList(*enumerator, *reinterpret_cast<plg::vector<uint8_t>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayUInt16:
+				return CreatePyEnumObjectList(*enumerator, *reinterpret_cast<plg::vector<uint16_t>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayUInt32:
+				return CreatePyEnumObjectList(*enumerator, *reinterpret_cast<plg::vector<uint32_t>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayUInt64:
+				return CreatePyEnumObjectList(*enumerator, *reinterpret_cast<plg::vector<uint64_t>*>(std::get<0>(a.storage[index])));
+			default: {
+				const std::string error(std::format("StorageValueToObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
+				PyErr_SetString(PyExc_RuntimeError, error.c_str());
+				return nullptr;
+			}
+			}
+		}
+
 		PyObject* StorageValueToObject(PropertyRef paramType, const ArgsScope& a, uint8_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
@@ -2626,11 +2857,15 @@ namespace py3lm {
 		}
 
 		void ExternalCallNoArgs(MethodRef method, MemAddr data, const JitCallback::Parameters* p, uint8_t count, const JitCallback::Return* ret) {
+			const plugify::PropertyRef retType = method.GetReturnType();
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			ArgsScope a(1);
 			JitCall::Return r;
-			BeginExternalCall(method, a);
-			PyObject* const retObj = MakeExternalCall(method, data.CCast<JitCall::CallingFunc>(), a, r);
+			BeginExternalCall(retType.GetType(), a);
+
+			using MakeExternalCallFunc = PyObject* (*)(PropertyRef, JitCall::CallingFunc, const ArgsScope&, JitCall::Return&);
+			MakeExternalCallFunc const makeExternalCall = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
+			PyObject* const retObj = makeExternalCall(retType, data.CCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// MakeExternalCall set error
 				ret->SetReturn(nullptr);
@@ -2661,12 +2896,13 @@ namespace py3lm {
 			}
 
 			Py_ssize_t refParamsCount = 0;
-			const Py_ssize_t paramsStartIndex = plugify::ValueUtils::IsHiddenParam(method.GetReturnType().GetType()) ? 1 : 0;
+			const plugify::PropertyRef retType = method.GetReturnType();
+			const Py_ssize_t paramsStartIndex = plugify::ValueUtils::IsHiddenParam(retType.GetType()) ? 1 : 0;
 
 			ArgsScope a(1 + paramCount);
 			JitCall::Return r;
 
-			BeginExternalCall(method, a);
+			BeginExternalCall(retType.GetType(), a);
 
 			for (Py_ssize_t i = 0; i < size; ++i) {
 				const PropertyRef paramType = paramTypes[i];
@@ -2683,7 +2919,9 @@ namespace py3lm {
 				}
 			}
 
-			PyObject* retObj = MakeExternalCall(method, data.CCast<JitCall::CallingFunc>(), a, r);
+			using MakeExternalCallFunc = PyObject* (*)(PropertyRef, JitCall::CallingFunc, const ArgsScope&, JitCall::Return&);
+			MakeExternalCallFunc const makeExternalCall = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
+			PyObject* retObj = makeExternalCall(retType, data.CCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// MakeExternalCall set error
 				ret->SetReturn(nullptr);
@@ -2702,7 +2940,9 @@ namespace py3lm {
 					if (!paramType.IsReference()) {
 						continue;
 					}
-					PyObject* const value = StorageValueToObject(paramType, a, j++);
+					using StoreValueFunc = PyObject* (*)(PropertyRef, const ArgsScope&, uint8_t);
+					StoreValueFunc const storeValueFunc = paramType.GetEnum() ? &StorageValueToEnumObject : &StorageValueToObject;
+					PyObject* const value = storeValueFunc(paramType, a, j++);
 					if (!value) {
 						// StorageValueToObject set error
 						Py_DECREF(retTuple);
@@ -2734,7 +2974,6 @@ namespace py3lm {
 			return value;
 		}
 
-
 		void GenerateEnum(MethodRef method, PyObject* module);
 
 		void GenerateEnum(PropertyRef paramType, PyObject* module) {
@@ -2744,14 +2983,7 @@ namespace py3lm {
 			}
 			const auto enumerator = paramType.GetEnum();
 			if (enumerator) {
-				const auto values = enumerator->GetValues();
-				if (values.empty())
-					return;
-				PyObject* dict = PyDict_New();
-				for (const auto& value: values) {
-					PyDict_SetItemString(dict, std::string(value.GetName()).c_str(), PyLong_FromLongLong(value.GetValue()));
-				}
-				g_py3lm.RegisterEnum(module, std::string(enumerator->GetName()), dict);
+				g_py3lm.RegisterEnum(*enumerator, module);
 			}
 		}
 
@@ -3062,6 +3294,8 @@ namespace py3lm {
 		_internalFunctions.clear();
 		_externalFunctions.clear();
 		_moduleDefinitions.clear();
+		_externalEnumMap.clear();
+		_internalEnumMap.clear();
 		_moduleMethods.clear();
 		_moduleFunctions.clear();
 		_pythonMethods.clear();
@@ -3077,7 +3311,7 @@ namespace py3lm {
 				moduleObject = CreateExternalModule(plugin);
 			}
 			if (moduleObject) {
-				PyObject_SetAttrString(_ppsModule, std::string(plugin.GetName()).c_str(), moduleObject);
+				PyObject_SetAttrString(_ppsModule, plugin.GetName().data(), moduleObject);
 				Py_DECREF(moduleObject);
 				return;
 			}
@@ -3804,7 +4038,7 @@ namespace py3lm {
 		return moduleObject;
 	}
 
-	void Python3LanguageModule::TryCallPluginMethodNoArgs(PluginRef plugin, const std::string& name, const std::string& context) {
+	void Python3LanguageModule::TryCallPluginMethodNoArgs(PluginRef plugin, std::string_view name, std::string_view context) {
 		const auto it = _pluginsMap.find(plugin.GetId());
 		if (it == _pluginsMap.end()) {
 			_provider->Log(std::format("[py3lm] {}: plugin '{}' not found in map", context, plugin.GetName()), Severity::Error);
@@ -3817,7 +4051,7 @@ namespace py3lm {
 			return;
 		}
 
-		PyObject* const nameString = PyUnicode_DecodeFSDefault(name.c_str());
+		PyObject* const nameString = PyUnicode_DecodeFSDefault(name.data());
 		if (!nameString) {
 			LogError();
 			_provider->Log(std::format("[py3lm] {}: failed to allocate name string", context), Severity::Error);
@@ -3835,20 +4069,59 @@ namespace py3lm {
 		Py_DECREF(nameString);
 	}
 
-	void Python3LanguageModule::RegisterEnum(PyObject* pluginModule, const std::string& enumName, PyObject* constantsDict) {
-		PyObject* enumClass = PyDict_GetItemString(PyModule_GetDict(pluginModule), enumName.c_str());
-		if (enumClass)
+	void Python3LanguageModule::RegisterEnum(EnumRef enumerator, PyObject* module) {
+		PyObject* constantsDict = nullptr;
+		PyObject* enumClass = PyDict_GetItemString(PyModule_GetDict(module), enumerator.GetName().data());
+		if (enumClass) {
+			const auto it = _internalEnumMap.find(enumClass);
+			if (it != _internalEnumMap.end()) {
+				_externalEnumMap.try_emplace(enumerator, it->second);
+			}
+			return;
+		}
+
+		const auto values = enumerator.GetValues();
+		if (values.empty())
 			return;
 
-		enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumName.c_str(), constantsDict);
+		constantsDict = PyDict_New();
+		for (const auto& value : values) {
+			PyDict_SetItemString(constantsDict, value.GetName().data(), PyLong_FromLongLong(value.GetValue()));
+		}
+
+		enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumerator.GetName().data(), constantsDict);
 
 		Py_DECREF(constantsDict);
 
-		if (enumClass && PyModule_AddObject(pluginModule, enumName.c_str(), enumClass) < 0) {
+		if (enumClass && PyModule_AddObject(module, enumerator.GetName().data(), enumClass) < 0) {
 			LogError();
 			Py_DECREF(enumClass);
 			return;
 		}
+
+		auto it = _externalEnumMap.find(enumerator);
+		if (it == _externalEnumMap.end()) {
+			it = _externalEnumMap.emplace(enumerator, std::make_shared<PythonEnumMap>()).first;
+		}
+		auto& enumMap = it->second;
+		for (const auto& value : values) {
+			const int64_t i = value.GetValue();
+			(*enumMap)[i] = PyObject_CallFunction(enumClass, "(i)", i);
+		}
+
+		_internalEnumMap.try_emplace(enumClass, enumMap);
+	}
+
+	PyObject* Python3LanguageModule::FindEnum(EnumRef enumerate, int64_t value) const {
+		const auto it1 = _externalEnumMap.find(enumerate);
+		if (it1 != _externalEnumMap.end()) {
+			const auto it2 = it1->second->find(static_cast<int64_t>(value));
+			if (it2 != it1->second->end()) {
+				return it2->second;
+			}
+		}
+		PyErr_SetString(PyExc_ValueError, "Invalid enum");
+		return nullptr;
 	}
 
 	PythonType Python3LanguageModule::GetObjectType(PyObject* object) const {
