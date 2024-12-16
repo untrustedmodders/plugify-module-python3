@@ -247,6 +247,7 @@ namespace py3lm {
 
 		template<class ValueType, class CType, CType (*ConvertFunc)(PyObject*)>
 		std::optional<ValueType> ValueFromNumberObject(PyObject* object) {
+			// int or IntEnum
 			if (PyLong_Check(object)) {
 				const CType castResult = ConvertFunc(object);
 				if (!PyErr_Occurred()) {
@@ -259,9 +260,8 @@ namespace py3lm {
 				}
 				return std::nullopt;
 			}
-
-			/// Seems IntEnums should work with validation above, uncomment if necessary
-			/*if (PyObject_TypeCheck(object, &PyEnum_Type)) {
+			// Enum
+			else if (PyObject_TypeCheck(object, &PyEnum_Type)) {
 				PyObject* value = PyObject_GetAttrString(object, "value");
 				if (value) {
 					if (PyLong_Check(value)) {
@@ -282,7 +282,7 @@ namespace py3lm {
 					SetTypeError("Expected enum with 'value' attribute", object);
 				}
 				return std::nullopt;
-			}*/
+			}
 
 			SetTypeError("Expected integer", object);
 			return std::nullopt;
@@ -4104,6 +4104,7 @@ namespace py3lm {
 		if (it == _externalEnumMap.end()) {
 			it = _externalEnumMap.emplace(enumerator, std::make_shared<PythonEnumMap>()).first;
 		}
+
 		auto& enumMap = it->second;
 		for (const auto& value : values) {
 			const int64_t i = value.GetValue();
