@@ -4120,6 +4120,8 @@ namespace py3lm {
 			const auto it2 = it1->second->find(static_cast<int64_t>(value));
 			if (it2 != it1->second->end()) {
 				return it2->second;
+			} else {
+				return it1->second->begin()->second;
 			}
 		}
 		PyErr_SetString(PyExc_ValueError, "Invalid enum");
