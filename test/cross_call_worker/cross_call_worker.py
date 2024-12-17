@@ -42,6 +42,10 @@ def char16_str(ch):
     return f'{ord_zero(ch)}'
 
 
+def enum_str(ch):
+    return f'{int(ch)}'
+
+
 def vector_to_string(array, f=None):
     if f is None:
         def f(v):
@@ -311,6 +315,13 @@ def param_all_primitives(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13,
 
 def param_enum(p1, p2):
     return p1 + sum(p2)
+
+
+def param_enum_ref(p1, p2):
+    e = pps.cross_call_master.Example
+    p1 = e.Forth
+    p2 = [e.First, e.Second, Example.Third]
+    return p1 + sum(p2), p1, p2
 
 
 def param_variant(p1, p2):
@@ -935,6 +946,12 @@ def call_func33(func):
     return variant_ref
 
 
+def call_func_enum(func):
+    e = pps.cross_call_master.Example
+    ret, p2 = func(e.Forth, [])
+    return f'{vector_to_string(ret, enum_str)}|{vector_to_string(p2, enum_str)}'
+
+
 def reverse_no_param_return_void():
     pps.cross_call_master.NoParamReturnVoidCallback()
 
@@ -1235,10 +1252,14 @@ def reverse_param_all_primitives():
 
 def reverse_param_enum():
     e = pps.cross_call_master.Example
-    p1 = e.Forth
-    p2 = [e.First, e.Second, e.Third]
-    result = pps.cross_call_master.ParamEnumCallback(p1, p2);
+    result = pps.cross_call_master.ParamEnumCallback(e.Forth, [e.First, e.Second, e.Third]);
     return f'{result}'
+    
+
+def reverse_param_enum_ref():
+    e = pps.cross_call_master.Example
+    result, p1, p2 = pps.cross_call_master.ParamEnumRefCallback(e.First, [e.First, e.First, e.Second]);
+    return f'{result}|{enum_str(p1)}|{vector_to_string(p2, enum_str)}'
 
 
 def reverse_param_variant():
@@ -1743,6 +1764,13 @@ class CallbackHolder:
     def mock_func33(variant):
         variant = "MockFunc33";
         return None, variant
+    
+    
+    @staticmethod
+    def mock_func_enum(p1, p2):
+        e = pps.cross_call_master.Example
+        p2 = [e.First, e.Second, e.Third]
+        return [p1, e.Forth], p2
 
 
 def reverse_call_func_void():
@@ -2095,6 +2123,11 @@ def reverse_call_func33():
     return result
 
 
+def reverse_call_func_enum():
+    result = pps.cross_call_master.CallFuncEnumCallback(CallbackHolder.mock_func_enum)
+    return result
+
+
 reverse_test = {
     'NoParamReturnVoid': reverse_no_param_return_void,
     'NoParamReturnBool': reverse_no_param_return_bool,
@@ -2157,6 +2190,7 @@ reverse_test = {
     'ParamRefArrays': reverse_param_ref_vectors,
     'ParamAllPrimitives': reverse_param_all_primitives,
     'ParamEnum': reverse_param_enum,
+    'ParamEnumRef': reverse_param_enum_ref,
     'ParamVariant': reverse_param_variant,
     'ParamVariantRef': reverse_param_variant_ref,
     'CallFuncVoid': reverse_call_func_void,
@@ -2229,6 +2263,7 @@ reverse_test = {
     'CallFunc31': reverse_call_func31,
     'CallFunc32': reverse_call_func32,
     'CallFunc33': reverse_call_func33,
+    'CallFuncEnum': reverse_call_func_enum,
 }
 
 

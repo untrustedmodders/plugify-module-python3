@@ -1221,13 +1221,13 @@
 			}
 		},
 		{
-			"name": "ParamEnum",
-			"funcName": "param_enum",
+			"name": "ParamEnumRef",
+			"funcName": "param_enum_ref",
 			"paramTypes": [
 				{
 					"name": "p1",
 					"type": "int32",
-					"ref": false,
+					"ref": true,
 					"enum": {
 						"name": "Example",
 						"values": [
@@ -1248,6 +1248,31 @@
 								"value": 4
 							}
 						]
+					}
+				},
+				{
+					"name": "p2",
+					"type": "int32[]",
+					"ref": true,
+					"enum": {
+						"name": "Example"
+					}
+				}
+			],
+			"retType": {
+				"type": "int32"
+			}
+		},
+		{
+			"name": "ParamEnum",
+			"funcName": "param_enum",
+			"paramTypes": [
+				{
+					"name": "p1",
+					"type": "int32",
+					"ref": false,
+					"enum": {
+						"name": "Example"
 					}
 				},
 				{
@@ -4201,6 +4226,47 @@
 						],
 						"retType": {
 							"type": "void"
+						}
+					}
+				}
+			],
+			"retType": {
+				"type": "string"
+			}
+		},
+		{
+			"name": "CallFuncEnum",
+			"funcName": "call_func_enum",
+			"paramTypes": [
+				{
+					"name": "func",
+					"type": "function",
+					"ref": false,
+					"prototype": {
+						"name": "FuncEnum",
+						"paramTypes": [
+							{
+								"name": "p1",
+								"type": "int32",
+								"ref": false,
+								"enum": {
+									"name": "Example"
+								}
+							},
+							{
+								"name": "p2",
+								"type": "int32[]",
+								"ref": true,
+								"enum": {
+									"name": "Example"
+								}
+							}
+						],
+						"retType": {
+							"type": "int32[]",
+							"enum": {
+								"name": "Example"
+							}
 						}
 					}
 				}
