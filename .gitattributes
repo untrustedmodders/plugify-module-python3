@@ -2,3 +2,4 @@ generator/* linguist-vendored
 python3.12/** linguist-vendored
 lib/** linguist-vendored
 
+*.pmodule.in text eol=lf linguist-language=JSON
