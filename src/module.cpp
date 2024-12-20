@@ -10,6 +10,7 @@
 #include <plugify/plugin.hpp>
 #include <plugify/plugin_descriptor.hpp>
 #include <plugify/string.hpp>
+#include <plugify/any.hpp>
 
 using namespace plugify;
 namespace fs = std::filesystem;
