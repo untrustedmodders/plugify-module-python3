@@ -41,10 +41,14 @@ TYPES_MAP = {
     'double[]': 'list[float]',
     'string[]': 'list[str]',
     'any[]': 'list[object]',
-    'vec2': 'list[Vector2]',
-    'vec3': 'list[Vector3]',
-    'vec4': 'list[Vector4]',
-    'mat4x4': 'list[Matrix4x4]'
+    'vec2[]': 'list[Vector2]',
+    'vec3[]': 'list[Vector3]',
+    'vec4[]': 'list[Vector4]',
+    'mat4x4[]': 'list[Matrix4x4]',
+    'vec2': 'Vector2',
+    'vec3': 'Vector3',
+    'vec4': 'Vector4',
+    'mat4x4': 'Matrix4x4'
 }
 
 

@@ -153,7 +153,11 @@ namespace py3lm {
 				std::is_same_v<T, plg::vector<float>> ||
 				std::is_same_v<T, plg::vector<double>> ||
 				std::is_same_v<T, plg::vector<plg::string>> ||
-				std::is_same_v<T, plg::vector<plg::variant<plg::none>>>;
+				std::is_same_v<T, plg::vector<plg::variant<plg::none>>> ||
+				std::is_same_v<T, plg::vector<plg::vec2>> ||
+				std::is_same_v<T, plg::vector<plg::vec3>> ||
+				std::is_same_v<T, plg::vector<plg::vec4>> ||
+				std::is_same_v<T, plg::vector<plg::mat4x4>>;
 
 		template<class T>
 		constexpr bool is_none_type_v =
@@ -598,6 +602,18 @@ namespace py3lm {
 			case ValueType::ArrayAny:
 				ret->ConstructAt<plg::vector<plg::any>>();
 				break;
+			case ValueType::ArrayVector2:
+				ret->ConstructAt<plg::vector<plg::vec2>>();
+				break;
+			case ValueType::ArrayVector3:
+				ret->ConstructAt<plg::vector<plg::vec3>>();
+				break;
+			case ValueType::ArrayVector4:
+				ret->ConstructAt<plg::vector<plg::vec4>>();
+				break;
+			case ValueType::ArrayMatrix4x4:
+				ret->ConstructAt<plg::vector<plg::mat4x4>>();
+				break;
 			case ValueType::Vector2:
 				ret->SetReturn<plg::vec2>({});
 				break;
@@ -817,6 +833,30 @@ namespace py3lm {
 			case ValueType::ArrayAny:
 				if (auto value = ArrayFromObject<plg::any>(result)) {
 					ret->ConstructAt<plg::vector<plg::any>>(std::move(*value));
+					return true;
+				}
+				break;
+			case ValueType::ArrayVector2:
+				if (auto value = ArrayFromObject<plg::vec2>(result)) {
+					ret->ConstructAt<plg::vector<plg::vec2>>(std::move(*value));
+					return true;
+				}
+				break;
+			case ValueType::ArrayVector3:
+				if (auto value = ArrayFromObject<plg::vec3>(result)) {
+					ret->ConstructAt<plg::vector<plg::vec3>>(std::move(*value));
+					return true;
+				}
+				break;
+			case ValueType::ArrayVector4:
+				if (auto value = ArrayFromObject<plg::vec4>(result)) {
+					ret->ConstructAt<plg::vector<plg::vec4>>(std::move(*value));
+					return true;
+				}
+				break;
+			case ValueType::ArrayMatrix4x4:
+				if (auto value = ArrayFromObject<plg::mat4x4>(result)) {
+					ret->ConstructAt<plg::vector<plg::mat4x4>>(std::move(*value));
 					return true;
 				}
 				break;
@@ -1076,6 +1116,34 @@ namespace py3lm {
 			case ValueType::ArrayAny:
 				if (auto value = ArrayFromObject<plg::any>(object)) {
 					auto* const param = params->GetArgument<plg::vector<plg::any>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayVector2:
+				if (auto value = ArrayFromObject<plg::vec2>(object)) {
+					auto* const param = params->GetArgument<plg::vector<plg::vec2>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayVector3:
+				if (auto value = ArrayFromObject<plg::vec3>(object)) {
+					auto* const param = params->GetArgument<plg::vector<plg::vec3>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayVector4:
+				if (auto value = ArrayFromObject<plg::vec4>(object)) {
+					auto* const param = params->GetArgument<plg::vector<plg::vec4>*>(index);
+					*param = std::move(*value);
+					return true;
+				}
+				break;
+			case ValueType::ArrayMatrix4x4:
+				if (auto value = ArrayFromObject<plg::mat4x4>(object)) {
+					auto* const param = params->GetArgument<plg::vector<plg::mat4x4>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
@@ -1469,6 +1537,14 @@ namespace py3lm {
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::string>*>(index)));
 			case ValueType::ArrayAny:
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::any>*>(index)));
+			case ValueType::ArrayVector2:
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec2>*>(index)));
+			case ValueType::ArrayVector3:
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec3>*>(index)));
+			case ValueType::ArrayVector4:
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec4>*>(index)));
+			case ValueType::ArrayMatrix4x4:
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::mat4x4>*>(index)));
 			case ValueType::Vector2:
 				return CreatePyObject(*(params->GetArgument<plg::vec2*>(index)));
 			case ValueType::Vector3:
@@ -1552,6 +1628,14 @@ namespace py3lm {
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::string>*>(index)));
 			case ValueType::ArrayAny:
 				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::any>*>(index)));
+			case ValueType::ArrayVector2:
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec2>*>(index)));
+			case ValueType::ArrayVector3:
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec3>*>(index)));
+			case ValueType::ArrayVector4:
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec4>*>(index)));
+			case ValueType::ArrayMatrix4x4:
+				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::mat4x4>*>(index)));
 			case ValueType::Vector2:
 				return CreatePyObject(*(params->GetArgument<plg::vec2*>(index)));
 			case ValueType::Vector3:
@@ -1910,6 +1994,22 @@ namespace py3lm {
 						delete reinterpret_cast<plg::vector<plg::any>*>(ptr);
 						break;
 					}
+					case ValueType::ArrayVector2: {
+						delete reinterpret_cast<plg::vector<plg::vec2>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayVector3: {
+						delete reinterpret_cast<plg::vector<plg::vec3>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayVector4: {
+						delete reinterpret_cast<plg::vector<plg::vec4>*>(ptr);
+						break;
+					}
+					case ValueType::ArrayMatrix4x4: {
+						delete reinterpret_cast<plg::vector<plg::mat4x4>*>(ptr);
+						break;
+					}
 					case ValueType::Vector2: {
 						delete reinterpret_cast<plg::vec2*>(ptr);
 						break;
@@ -2028,6 +2128,26 @@ namespace py3lm {
 					}
 					case ValueType::ArrayAny: {
 						value = new plg::vector<plg::any>();
+						a.storage.emplace_back(value, retType);
+						break;
+					}
+					case ValueType::ArrayVector2: {
+						value = new plg::vector<plg::vec2>();
+						a.storage.emplace_back(value, retType);
+						break;
+					}
+					case ValueType::ArrayVector3: {
+						value = new plg::vector<plg::vec3>();
+						a.storage.emplace_back(value, retType);
+						break;
+					}
+					case ValueType::ArrayVector4: {
+						value = new plg::vector<plg::vec4>();
+						a.storage.emplace_back(value, retType);
+						break;
+					}
+					case ValueType::ArrayMatrix4x4: {
+						value = new plg::vector<plg::mat4x4>();
 						a.storage.emplace_back(value, retType);
 						break;
 					}
@@ -2275,6 +2395,22 @@ namespace py3lm {
 			case ValueType::ArrayAny: {
 				auto* const arr = ret.GetReturn<plg::vector<plg::any>*>();
 				return CreatePyObjectList<plg::any>(*arr);
+			}
+			case ValueType::ArrayVector2: {
+				auto* const arr = ret.GetReturn<plg::vector<plg::vec2>*>();
+				return CreatePyObjectList<plg::vec2>(*arr);
+			}
+			case ValueType::ArrayVector3: {
+				auto* const arr = ret.GetReturn<plg::vector<plg::vec3>*>();
+				return CreatePyObjectList<plg::vec3>(*arr);
+			}
+			case ValueType::ArrayVector4: {
+				auto* const arr = ret.GetReturn<plg::vector<plg::vec4>*>();
+				return CreatePyObjectList<plg::vec4>(*arr);
+			}
+			case ValueType::ArrayMatrix4x4: {
+				auto* const arr = ret.GetReturn<plg::vector<plg::mat4x4>*>();
+				return CreatePyObjectList<plg::mat4x4>(*arr);
 			}
 			case ValueType::Vector2: {
 				const plg::vec2 val = ret.GetReturn<plg::vec2>();
@@ -2595,6 +2731,42 @@ namespace py3lm {
 				a.params.AddArgument(value);
 				return true;
 			}
+			case ValueType::ArrayVector2: {
+				void* const value = CreateArray<plg::vec2>(pItem);
+				if (!value) {
+					return false;
+				}
+				a.storage.emplace_back(value, paramType.GetType());
+				a.params.AddArgument(value);
+				return true;
+			}
+			case ValueType::ArrayVector3: {
+				void* const value = CreateArray<plg::vec3>(pItem);
+				if (!value) {
+					return false;
+				}
+				a.storage.emplace_back(value, paramType.GetType());
+				a.params.AddArgument(value);
+				return true;
+			}
+			case ValueType::ArrayVector4: {
+				void* const value = CreateArray<plg::vec4>(pItem);
+				if (!value) {
+					return false;
+				}
+				a.storage.emplace_back(value, paramType.GetType());
+				a.params.AddArgument(value);
+				return true;
+			}
+			case ValueType::ArrayMatrix4x4: {
+				void* const value = CreateArray<plg::mat4x4>(pItem);
+				if (!value) {
+					return false;
+				}
+				a.storage.emplace_back(value, paramType.GetType());
+				a.params.AddArgument(value);
+				return true;
+			}
 			case ValueType::Vector2: {
 				void* const value = CreateValue<plg::vec2>(pItem);
 				if (!value) {
@@ -2716,6 +2888,14 @@ namespace py3lm {
 				return PushRefParam(CreateArray<plg::string>(pItem));
 			case ValueType::ArrayAny:
 				return PushRefParam(CreateArray<plg::any>(pItem));
+			case ValueType::ArrayVector2:
+				return PushRefParam(CreateArray<plg::vec2>(pItem));
+			case ValueType::ArrayVector3:
+				return PushRefParam(CreateArray<plg::vec3>(pItem));
+			case ValueType::ArrayVector4:
+				return PushRefParam(CreateArray<plg::vec4>(pItem));
+			case ValueType::ArrayMatrix4x4:
+				return PushRefParam(CreateArray<plg::mat4x4>(pItem));
 			case ValueType::Vector2:
 				return PushRefParam(CreateValue<plg::vec2>(pItem));
 			case ValueType::Vector3:
@@ -2843,6 +3023,14 @@ namespace py3lm {
 				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::string>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayAny:
 				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::any>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayVector2:
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::vec2>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayVector3:
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::vec3>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayVector4:
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::vec4>*>(std::get<0>(a.storage[index])));
+			case ValueType::ArrayMatrix4x4:
+				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::mat4x4>*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector2:
 				return CreatePyObject(*reinterpret_cast<plg::vec2*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector3:
