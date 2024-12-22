@@ -296,6 +296,38 @@
 			}
 		},
 		{
+			"name": "NoParamReturnArrayVector2",
+			"funcName": "no_param_return_array_vector2",
+			"paramTypes": [],
+			"retType": {
+				"type": "vec2[]"
+			}
+		},
+		{
+			"name": "NoParamReturnArrayVector3",
+			"funcName": "no_param_return_array_vector3",
+			"paramTypes": [],
+			"retType": {
+				"type": "vec3[]"
+			}
+		},
+		{
+			"name": "NoParamReturnArrayVector4",
+			"funcName": "no_param_return_array_vector4",
+			"paramTypes": [],
+			"retType": {
+				"type": "vec4[]"
+			}
+		},
+		{
+			"name": "NoParamReturnArrayMatrix4x4",
+			"funcName": "no_param_return_array_matrix4x4",
+			"paramTypes": [],
+			"retType": {
+				"type": "mat4x4[]"
+			}
+		},
+		{
 			"name": "NoParamReturnVector2",
 			"funcName": "no_param_return_vector2",
 			"paramTypes": [],
@@ -2057,6 +2089,90 @@
 			],
 			"retType": {
 				"type": "any[]"
+			}
+		},
+		{
+			"name": "CallFuncVec2Vector",
+			"funcName": "call_func_vec2_vector",
+			"paramTypes": [
+				{
+					"name": "func",
+					"type": "function",
+					"ref": false,
+					"prototype": {
+						"name": "FuncVec2Vector",
+						"paramTypes": [],
+						"retType": {
+							"type": "vec2[]"
+						}
+					}
+				}
+			],
+			"retType": {
+				"type": "vec2[]"
+			}
+		},
+		{
+			"name": "CallFuncVec3Vector",
+			"funcName": "call_func_vec3_vector",
+			"paramTypes": [
+				{
+					"name": "func",
+					"type": "function",
+					"ref": false,
+					"prototype": {
+						"name": "FuncVec3Vector",
+						"paramTypes": [],
+						"retType": {
+							"type": "vec3[]"
+						}
+					}
+				}
+			],
+			"retType": {
+				"type": "vec3[]"
+			}
+		},
+		{
+			"name": "CallFuncVec4Vector",
+			"funcName": "call_func_vec4_vector",
+			"paramTypes": [
+				{
+					"name": "func",
+					"type": "function",
+					"ref": false,
+					"prototype": {
+						"name": "FuncVec4Vector",
+						"paramTypes": [],
+						"retType": {
+							"type": "vec4[]"
+						}
+					}
+				}
+			],
+			"retType": {
+				"type": "vec4[]"
+			}
+		},
+		{
+			"name": "CallFuncMat4x4Vector",
+			"funcName": "call_func_mat4x4_vector",
+			"paramTypes": [
+				{
+					"name": "func",
+					"type": "function",
+					"ref": false,
+					"prototype": {
+						"name": "FuncMat4x4Vector",
+						"paramTypes": [],
+						"retType": {
+							"type": "mat4x4[]"
+						}
+					}
+				}
+			],
+			"retType": {
+				"type": "mat4x4[]"
 			}
 		},
 		{

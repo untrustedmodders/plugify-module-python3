@@ -208,6 +208,57 @@ def no_param_return_array_any():
     return [1.0, 2.0, "3rd element string (Should be big enough to avoid small string optimization)", ["lolek", "and", "bolek"], 1]
 
 
+def no_param_return_array_vector2():
+    return [
+        Vector2(1.1, 2.2),
+        Vector2(-3.3, 4.4),
+        Vector2(5.5, -6.6),
+        Vector2(7.7, 8.8),
+        Vector2(0.0, 0.0),
+    ]
+
+
+def no_param_return_array_vector3():
+    return [
+        Vector3(1.1, 2.2, 3.3),
+        Vector3(-4.4, 5.5, -6.6),
+        Vector3(7.7, 8.8, 9.9),
+        Vector3(0.0, 0.0, 0.0),
+        Vector3(10.1, -11.2, 12.3),
+    ]
+
+
+def no_param_return_array_vector4():
+    return [
+        Vector4(1.1, 2.2, 3.3, 4.4),
+        Vector4(-5.5, 6.6, -7.7, 8.8),
+        Vector4(9.9, 0.0, -1.1, 2.2),
+        Vector4(3.3, 4.4, 5.5, 6.6),
+        Vector4(-7.7, -8.8, 9.9, -10.1),
+    ]
+
+
+def no_param_return_array_matrix4x4():
+    return [
+        # Identity matrix
+        Matrix4x4(),
+        # Example random matrix #1
+        Matrix4x4([
+            [2.0, 3.0, 4.0, 5.0],
+            [6.0, 7.0, 8.0, 9.0],
+            [10.0, 11.0, 12.0, 13.0],
+            [14.0, 15.0, 16.0, 17.0],
+        ]),
+        # Negative matrix
+        Matrix4x4([
+            [-1.0, -2.0, -3.0, -4.0],
+            [-5.0, -6.0, -7.0, -8.0],
+            [-9.0, -10.0, -11.0, -12.0],
+            [-13.0, -14.0, -15.0, -16.0],
+        ])
+    ]
+    
+
 def no_param_return_vector2():
     return Vector2(1.0, 2.0)
 
@@ -465,6 +516,22 @@ def call_func_string_vector(func):
 
 
 def call_func_any_vector(func):
+    return func()
+    
+
+def call_func_vec2_vector(func):
+    return func()
+
+
+def call_func_vec3_vector(func):
+    return func()
+
+
+def call_func_vec4_vector(func):
+    return func()
+
+
+def call_func_mat4x4_vector(func):
     return func()
 
 
@@ -1121,6 +1188,26 @@ def reverse_no_param_return_array_any():
     return vector_to_string(result, plain_str)
 
 
+def reverse_no_param_return_array_vec2():
+    result = pps.cross_call_master.NoParamReturnArrayVec2Callback()
+    return vector_to_string(result)
+    
+
+def reverse_no_param_return_array_vec3():
+    result = pps.cross_call_master.NoParamReturnArrayVec3Callback()
+    return vector_to_string(result)
+
+
+def reverse_no_param_return_array_vec4():
+    result = pps.cross_call_master.NoParamReturnArrayVec4Callback()
+    return vector_to_string(result)
+    
+
+def reverse_no_param_return_array_mat4x4():
+    result = pps.cross_call_master.NoParamReturnArrayMat4x4Callback()
+    return vector_to_string(result)
+
+
 def reverse_no_param_return_vector2():
     result = pps.cross_call_master.NoParamReturnVector2Callback()
     return pod_to_string(result)
@@ -1436,6 +1523,64 @@ class CallbackHolder:
     @staticmethod
     def mock_any_array():
         return ['Hello', 3.14, 6.28, 1, 0xdeadbeaf]
+        
+    @staticmethod
+    def mock_vec2_array():
+        return [
+            Vector2(0.5, -1.2),
+            Vector2(3.4, 7.8),
+            Vector2(-6.7, 2.3),
+            Vector2(8.9, -4.5),
+            Vector2(0.0, 0.0),
+        ]
+
+    @staticmethod
+    def mock_vec3_array():
+        return [
+            Vector3(2.1, 3.2, 4.3),
+            Vector3(-5.4, 6.5, -7.6),
+            Vector3(8.7, 9.8, 0.1),
+            Vector3(1.2, -3.3, 4.4),
+            Vector3(-5.5, 6.6, -7.7),
+        ]
+
+    @staticmethod
+    def mock_vec4_array():
+        return [
+            Vector4(0.1, 1.2, 2.3, 3.4),
+            Vector4(-4.5, 5.6, 6.7, -7.8),
+            Vector4(8.9, -9.0, 10.1, -11.2),
+            Vector4(12.3, 13.4, 14.5, 15.6),
+            Vector4(-16.7, 17.8, 18.9, -19.0),
+        ]
+
+    @staticmethod
+    def mock_mat4x4_array():
+        return [
+            # Identity matrix
+            Matrix4x4(),
+            # Random matrix #1
+            Matrix4x4([
+                [0.5, 1.0, 1.5, 2.0],
+                [2.5, 3.0, 3.5, 4.0],
+                [4.5, 5.0, 5.5, 6.0],
+                [6.5, 7.0, 7.5, 8.0],
+            ]),
+            # Random matrix #2
+            Matrix4x4([
+                [-1.0, -2.0, -3.0, -4.0],
+                [-5.0, -6.0, -7.0, -8.0],
+                [-9.0, -10.0, -11.0, -12.0],
+                [-13.0, -14.0, -15.0, -16.0],
+            ]),
+            # Random matrix #3
+            Matrix4x4([
+                [1.1, 2.2, 3.3, 4.4],
+                [5.5, 6.6, 7.7, 8.8],
+                [9.9, 10.0, 11.1, 12.2],
+                [13.3, 14.4, 15.5, 16.6],
+            ]),
+        ]
 
     @staticmethod
     def mock_vec2():
@@ -1938,6 +2083,26 @@ def reverse_call_func_any_vector():
     return vector_to_string(result, plain_str)
 
 
+def reverse_call_func_vec2_vector():
+    result = pps.cross_call_master.CallFuncVec2VectorCallback(CallbackHolder.mock_vec2_array)
+    return vector_to_string(result, pod_to_string)
+
+
+def reverse_call_func_vec3_vector():
+    result = pps.cross_call_master.CallFuncVec3VectorCallback(CallbackHolder.mock_vec3_array)
+    return vector_to_string(result, pod_to_string)
+
+
+def reverse_call_func_vec4_vector():
+    result = pps.cross_call_master.CallFuncVec4VectorCallback(CallbackHolder.mock_vec4_array)
+    return vector_to_string(result, pod_to_string)
+
+
+def reverse_call_func_mat4x4_vector():
+    result = pps.cross_call_master.CallFuncMat4x4VectorCallback(CallbackHolder.mock_mat4x4_array)
+    return vector_to_string(result, pod_to_string)
+
+
 def reverse_call_func_vec2():
     result = pps.cross_call_master.CallFuncVec2Callback(CallbackHolder.mock_vec2)
     return pod_to_string(result)
@@ -2226,6 +2391,10 @@ reverse_test = {
     'CallFuncDoubleVector': reverse_call_func_double_vector,
     'CallFuncStringVector': reverse_call_func_string_vector,
     'CallFuncAnyVector': reverse_call_func_any_vector,
+    'CallFuncVec2Vector': reverse_call_func_vec2_vector,
+    'CallFuncVec3Vector': reverse_call_func_vec3_vector,
+    'CallFuncVec4Vector': reverse_call_func_vec4_vector,
+    'CallFuncMat4x4Vector': reverse_call_func_mat4x4_vector,
     'CallFuncVec2': reverse_call_func_vec2,
     'CallFuncVec3': reverse_call_func_vec3,
     'CallFuncVec4': reverse_call_func_vec4,
