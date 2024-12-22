@@ -97,7 +97,7 @@ namespace py3lm {
 		WrapperDescr     = 1LL << 61,
 		MethodDescr      = 1LL << 62,
 		MemberDescr      = 1LL << 63,
-		//Super            = 1LL << 64,
+		//Super          = 1LL << 64,
 	};
 
 	struct PythonType {
