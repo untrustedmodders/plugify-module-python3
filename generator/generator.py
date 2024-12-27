@@ -299,7 +299,7 @@ def generate_stub(plugin_name: str, pplugin: dict) -> str:
     """Generate Python stub content."""
     link = 'https://github.com/untrustedmodders/plugify-module-python3.12/blob/main/generator/generator.py'
     content = [
-        'from typing import Callable',
+        'from collections.abc import Callable',
         'from enum import IntEnum',
         'from plugify.plugin import Vector2, Vector3, Vector4, Matrix4x4\n\n'
         f'# Generated from {plugin_name}.pplugin by {link}\n\n']
