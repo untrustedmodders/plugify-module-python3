@@ -13,12 +13,6 @@
 #include <plugify/string.hpp>
 #include <plugify/any.hpp>
 
-#if defined(_MSC_VER)
-#include <intrin.h>
-#pragma intrinsic(_BitScanForward64)
-#pragma intrinsic(_BitScanForward)
-#endif
-
 using namespace plugify;
 namespace fs = std::filesystem;
 
@@ -120,52 +114,14 @@ namespace py3lm {
 		using MethodExportData = PythonMethodData;
 		using MethodExportResult = std::variant<MethodExportError, MethodExportData>;
 
-		// Find the least significant set bit index in an integer
-#if defined(_MSC_VER) // For MSVC
-		uintmax_t LeastSetBitIdx(uintmax_t value) {
-			unsigned long index;
-			if constexpr (sizeof(value) == sizeof(int)) {
-				if (_BitScanForward(&index, value)) {
-					return index;
-				}
-			} else {
-				if (_BitScanForward64(&index, value)) {
-					return index;
-				}
-			}
-			return 0; // Shouldn't happen if value != 0
-		}
-#elif defined(__GNUC__) || defined(__clang__) // For GCC/Clang
-		constexpr uintmax_t LeastSetBitIdx(uintmax_t value) {
-			if constexpr (sizeof(value) == sizeof(long)) {
-				return __builtin_ctzl(value);
-			} else if constexpr (sizeof(value) == sizeof(int)) {
-				return __builtin_ctz(value);
-			} else {
-				return __builtin_ctzll(value);
-			}
-		}
-#else
-	#error "Unsupported compiler: No intrinsic available for finding least significant set bit index."
-#endif
-
 		// Function to find the index of the flipped bit
 		template<size_t N>
 		constexpr size_t FindBitSetIndex(const std::bitset<N>& bitset) {
-			static_assert(MaxPyTypes % 64 == 0, "N must be divisible by 64");
-
-			constexpr size_t ChunkSize = 64;
-			constexpr size_t NumChunks = N / ChunkSize;
-
-			for (size_t i = 0; i < NumChunks; ++i) {
-				const auto shift = (i * ChunkSize);
-				const auto chunk = (bitset >> shift).to_ullong();
-				if (chunk != 0) {
-					return LeastSetBitIdx(chunk) + shift;
-				}
+			for (size_t i = 0; i < bitset.size(); ++i) {
+				if (bitset[i])
+					return i;
 			}
-
-			return 0;
+			return static_cast<size_t>(-1);
 		}
 
 		template<class T>
@@ -442,7 +398,9 @@ namespace py3lm {
 						PyObject* const valueObject = PyList_GetItem(object, i);
 						if (valueObject) {
 							auto [valueType, _] = g_py3lm.GetObjectType(valueObject);
-							flags.set(static_cast<size_t>(valueType));
+							if (valueType != PyAbstractType::Invalid) {
+								flags.set(static_cast<size_t>(valueType));
+							}
 							continue;
 						}
 						return std::nullopt;

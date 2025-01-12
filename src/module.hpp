@@ -33,8 +33,6 @@ namespace py3lm {
 	};
 
 	enum class PyAbstractType : size_t {
-		Invalid = 0,
-
 		Type,
 		BaseObject,
 		Long,
@@ -105,7 +103,9 @@ namespace py3lm {
 		Vector4,
 		Matrix4x4,
 
-		Max = 128
+		Max = Matrix4x4,
+
+		Invalid = static_cast<size_t>(-1)
 	};
 
 	constexpr auto MaxPyTypes = static_cast<size_t>(PyAbstractType::Max);
