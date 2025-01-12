@@ -2,6 +2,7 @@
 #include <array>
 #include <climits>
 #include <cuchar>
+#include <bitset>
 #include <module_export.h>
 #include <plugify/compat_format.hpp>
 #include <plugify/log.hpp>
@@ -11,6 +12,12 @@
 #include <plugify/plugin_descriptor.hpp>
 #include <plugify/string.hpp>
 #include <plugify/any.hpp>
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+#pragma intrinsic(_BitScanForward64)
+#pragma intrinsic(_BitScanForward)
+#endif
 
 using namespace plugify;
 namespace fs = std::filesystem;
@@ -113,24 +120,52 @@ namespace py3lm {
 		using MethodExportData = PythonMethodData;
 		using MethodExportResult = std::variant<MethodExportError, MethodExportData>;
 
-		template<typename E>
-		constexpr std::underlying_type_t<E> CastEnumToIntegral(E e) noexcept {
-			return static_cast<std::underlying_type_t<E>>(e);
+		// Find the least significant set bit index in an integer
+#if defined(_MSC_VER) // For MSVC
+		uintmax_t LeastSetBitIdx(uintmax_t value) {
+			unsigned long index;
+			if constexpr (sizeof(value) == sizeof(int)) {
+				if (_BitScanForward(&index, value)) {
+					return index;
+				}
+			} else {
+				if (_BitScanForward64(&index, value)) {
+					return index;
+				}
+			}
+			return 0; // Shouldn't happen if value != 0
 		}
-
-		constexpr PyAbstractType operator|(PyAbstractType lhs, PyAbstractType rhs) noexcept {
-			return static_cast<PyAbstractType>(CastEnumToIntegral(lhs) | CastEnumToIntegral(rhs));
+#elif defined(__GNUC__) || defined(__clang__) // For GCC/Clang
+		constexpr uintmax_t LeastSetBitIdx(uintmax_t value) {
+			if constexpr (sizeof(value) == sizeof(long)) {
+				return __builtin_ctzl(value);
+			} else if constexpr (sizeof(value) == sizeof(int)) {
+				return __builtin_ctz(value);
+			} else {
+				return __builtin_ctzll(value);
+			}
 		}
+#else
+	#error "Unsupported compiler: No intrinsic available for finding least significant set bit index."
+#endif
 
-		constexpr PyAbstractType& operator|=(PyAbstractType& lhs, PyAbstractType rhs) noexcept {
-			lhs = lhs | rhs;
-			return lhs;
-		}
+		// Function to find the index of the flipped bit
+		template<size_t N>
+		constexpr size_t FindBitSetIndex(const std::bitset<N>& bitset) {
+			static_assert(MaxPyTypes % 64 == 0, "N must be divisible by 64");
 
-		template<typename E>
-		constexpr bool ContainsOnlyOneBitSet(E e) noexcept {
-			const auto flag = CastEnumToIntegral(e);
-			return (flag != 0) && ((flag & (flag - 1)) == 0);
+			constexpr size_t ChunkSize = 64;
+			constexpr size_t NumChunks = N / ChunkSize;
+
+			for (size_t i = 0; i < NumChunks; ++i) {
+				const auto shift = (i * ChunkSize);
+				const auto chunk = (bitset >> shift).to_ullong();
+				if (chunk != 0) {
+					return LeastSetBitIdx(chunk) + shift;
+				}
+			}
+
+			return 0;
 		}
 
 		template<class T>
@@ -402,20 +437,18 @@ namespace py3lm {
 					if (size == 0) {
 						return plg::vector<int64_t>();
 					}
-					std::vector<const char*> typeNames;
-					PyAbstractType flag = PyAbstractType::Invalid;
-					typeNames.reserve(static_cast<size_t>(size));
+					std::bitset<MaxPyTypes> flags;
 					for (Py_ssize_t i = 0; i < size; i++) {
 						PyObject* const valueObject = PyList_GetItem(object, i);
 						if (valueObject) {
-							auto [valueType, valueName] = g_py3lm.GetObjectType(valueObject);
-							flag |= valueType;
-							typeNames.emplace_back(valueName);
+							auto [valueType, _] = g_py3lm.GetObjectType(valueObject);
+							flags.set(static_cast<size_t>(valueType));
 							continue;
 						}
 						return std::nullopt;
 					}
-					if (ContainsOnlyOneBitSet(flag)) {
+					if (flags.count() == 1) {
+						const auto flag = static_cast<PyAbstractType>(FindBitSetIndex(flags));
 						switch (flag) {
 							case PyAbstractType::Long: {
 								if (auto array = ArrayFromObject<int64_t>(object)) {
@@ -441,20 +474,59 @@ namespace py3lm {
 								}
 								return std::nullopt;
 							}
+							case PyAbstractType::Vector2: {
+								if (auto array = ArrayFromObject<plg::vec2>(object)) {
+									return std::move(*array);
+								}
+								return std::nullopt;
+							}
+							case PyAbstractType::Vector3: {
+								if (auto array = ArrayFromObject<plg::vec3>(object)) {
+									return std::move(*array);
+								}
+								return std::nullopt;
+							}
+							case PyAbstractType::Vector4: {
+								if (auto array = ArrayFromObject<plg::vec4>(object)) {
+									return std::move(*array);
+								}
+								return std::nullopt;
+							}
+							case PyAbstractType::Matrix4x4: {
+								if (auto array = ArrayFromObject<plg::mat4x4>(object)) {
+									return std::move(*array);
+								}
+								return std::nullopt;
+							}
 							default:
 								goto failure;
 						}
 					} else {
 					failure:
-						std::string error = std::format("List should contains same types, but contains: [{}]", typeNames[0]);
-						for (auto it = std::next(typeNames.begin()); it != typeNames.end(); ++it) {
-							std::format_to(std::back_inserter(error), ", {}", *it);
+						std::string error("List should contains same types, but contains: [");
+						bool first = true;
+						for (Py_ssize_t i = 0; i < size; i++) {
+							PyObject* const valueObject = PyList_GetItem(object, i);
+							auto [_, valueName] = g_py3lm.GetObjectType(valueObject);
+							if (first) {
+								std::format_to(std::back_inserter(error), "'{}", valueName);
+								first = false;
+							} else {
+								std::format_to(std::back_inserter(error), "', '{}", valueName);
+							}
 						}
+						error += "']";
 						PyErr_SetString(PyExc_TypeError, error.c_str());
 						return std::nullopt;
 					}
 					break;
 				}
+				case PyAbstractType::Vector2:
+					return g_py3lm.Vector2ValueFromObject(object);
+				case PyAbstractType::Vector3:
+					return g_py3lm.Vector3ValueFromObject(object);
+				case PyAbstractType::Vector4:
+					return g_py3lm.Vector4ValueFromObject(object);
 				default:
 					const std::string error(std::format("An any argument not supports python type: {} for marshalling.", name));
 					PyErr_SetString(PyExc_TypeError, error.c_str());
@@ -3411,6 +3483,12 @@ namespace py3lm {
 		_typeMap.try_emplace(&PyWrapperDescr_Type, PyAbstractType::WrapperDescr, "WrapperDescr");
 		_typeMap.try_emplace(&PyMethodDescr_Type, PyAbstractType::MethodDescr, "MethodDescr");
 		_typeMap.try_emplace(&PyMemberDescr_Type, PyAbstractType::MemberDescr, "MemberDescr");
+		_typeMap.try_emplace(&PySuper_Type, PyAbstractType::Super, "Super");
+
+		_typeMap.try_emplace(Py_TYPE(_Vector2TypeObject), PyAbstractType::Vector2, "Vector2");
+		_typeMap.try_emplace(Py_TYPE(_Vector3TypeObject), PyAbstractType::Vector3, "Vector3");
+		_typeMap.try_emplace(Py_TYPE(_Vector4TypeObject), PyAbstractType::Vector4, "Vector4");
+		_typeMap.try_emplace(Py_TYPE(_Matrix4x4TypeObject), PyAbstractType::Matrix4x4, "Matrix4x4");
 
 		return InitResultData{};
 	}
