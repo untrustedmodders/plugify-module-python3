@@ -923,7 +923,7 @@ namespace py3lm {
 			return false;
 		}
 
-		bool SetRefParam(PyObject* object, PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
+		bool SetRefParam(PyObject* object, PropertyRef paramType, const JitCallback::Parameters* params, size_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				if (auto value = ValueFromObject<bool>(object)) {
@@ -1410,7 +1410,7 @@ namespace py3lm {
 			return arrayObject;
 		}
 
-		PyObject* ParamToEnumObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
+		PyObject* ParamToEnumObject(PropertyRef paramType, const JitCallback::Parameters* params, size_t index) {
 			auto enumerator = paramType.GetEnum();
 			switch (paramType.GetType()) {
 			case ValueType::Int8:
@@ -1454,7 +1454,7 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* ParamRefToEnumObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
+		PyObject* ParamRefToEnumObject(PropertyRef paramType, const JitCallback::Parameters* params, size_t index) {
 			auto enumerator = paramType.GetEnum();
 			switch (paramType.GetType()) {
 			case ValueType::Int8:
@@ -1498,7 +1498,7 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* ParamToObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
+		PyObject* ParamToObject(PropertyRef paramType, const JitCallback::Parameters* params, size_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				return CreatePyObject(params->GetArgument<bool>(index));
@@ -1591,7 +1591,7 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* ParamRefToObject(PropertyRef paramType, const JitCallback::Parameters* params, uint8_t index) {
+		PyObject* ParamRefToObject(PropertyRef paramType, const JitCallback::Parameters* params, size_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				return CreatePyObject(*(params->GetArgument<bool*>(index)));
@@ -1682,7 +1682,7 @@ namespace py3lm {
 			}
 		}
 
-		void InternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* params, const uint8_t count, const JitCallback::Return* ret) {
+		void InternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* params, const size_t count, const JitCallback::Return* ret) {
 			PyObject* const func = data.RCast<PyObject*>();
 
 			enum class ParamProcess {
@@ -1693,8 +1693,8 @@ namespace py3lm {
 			ParamProcess processResult = ParamProcess::NoError;
 
 			const auto paramTypes = method.GetParamTypes();
-			uint8_t paramsCount = static_cast<uint8_t>(paramTypes.size());
-			uint8_t refParamsCount = 0;
+			size_t paramsCount = paramTypes.size();
+			size_t refParamsCount = 0;
 
 			PyObject* argTuple = nullptr;
 			if (paramsCount) {
@@ -1704,12 +1704,12 @@ namespace py3lm {
 					PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
 				}
 				else {
-					for (uint8_t index = 0; index < paramsCount; ++index) {
+					for (size_t index = 0; index < paramsCount; ++index) {
 						const PropertyRef paramType = paramTypes[index];
 						if (paramType.IsReference()) {
 							++refParamsCount;
 						}
-						using ParamConvertionFunc = PyObject* (*)(PropertyRef, const JitCallback::Parameters*, uint8_t);
+						using ParamConvertionFunc = PyObject* (*)(PropertyRef, const JitCallback::Parameters*, size_t);
 						ParamConvertionFunc const convertFunc = paramType.GetEnum() ?
 							(paramType.IsReference() ? &ParamRefToEnumObject : &ParamToEnumObject) :
 							(paramType.IsReference() ? &ParamRefToObject : &ParamToObject);
@@ -1788,12 +1788,12 @@ namespace py3lm {
 					return;
 				}
 	
-				for (uint8_t index = 0, k = 0; index < paramsCount; ++index) {
+				for (size_t index = 0, k = 0; index < paramsCount; ++index) {
 					const PropertyRef paramType = paramTypes[index];
 					if (!paramType.IsReference()) {
 						continue;
 					}
-					if (!SetRefParam(PyTuple_GET_ITEM(result, Py_ssize_t{ 1 + k }), paramType, params, index)) {
+					if (!SetRefParam(PyTuple_GET_ITEM(result, static_cast<Py_ssize_t>(1 + k)), paramType, params, index)) {
 						// SetRefParam may set error
 						if (PyErr_Occurred()) {
 							g_py3lm.LogError();
@@ -1886,7 +1886,7 @@ namespace py3lm {
 			JitCall::Parameters params;
 			std::vector<std::pair<void*, ValueType>> storage; // used to store array temp memory
 
-			explicit ArgsScope(uint8_t size) : params(size) {
+			explicit ArgsScope(size_t size) : params(size) {
 				storage.reserve(size);
 			}
 
@@ -2684,7 +2684,7 @@ namespace py3lm {
 			return false;
 		}
 
-		PyObject* StorageValueToEnumObject(PropertyRef paramType, const ArgsScope& a, uint8_t index) {
+		PyObject* StorageValueToEnumObject(PropertyRef paramType, const ArgsScope& a, size_t index) {
 			auto enumerator = paramType.GetEnum();
 			switch (paramType.GetType()) {
 			case ValueType::Int8:
@@ -2727,7 +2727,7 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* StorageValueToObject(PropertyRef paramType, const ArgsScope& a, uint8_t index) {
+		PyObject* StorageValueToObject(PropertyRef paramType, const ArgsScope& a, size_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				return CreatePyObject(*reinterpret_cast<bool*>(std::get<0>(a.storage[index])));
@@ -2817,7 +2817,7 @@ namespace py3lm {
 			}
 		}
 
-		void ExternalCallNoArgs(MethodRef method, MemAddr data, const JitCallback::Parameters* p, uint8_t count, const JitCallback::Return* ret) {
+		void ExternalCallNoArgs(MethodRef method, MemAddr data, const JitCallback::Parameters* p, size_t count, const JitCallback::Return* ret) {
 			const plugify::PropertyRef retType = method.GetReturnType();
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			ArgsScope a(1);
@@ -2835,7 +2835,7 @@ namespace py3lm {
 			ret->SetReturn(retObj);
 		}
 
-		void ExternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* p, uint8_t count, const JitCallback::Return* ret) {
+		void ExternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* p, size_t count, const JitCallback::Return* ret) {
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			const auto args = p->GetArgument<PyObject*>(1);
 
@@ -2847,7 +2847,7 @@ namespace py3lm {
 			}
 
 			const auto paramTypes = method.GetParamTypes();
-			const auto paramCount = static_cast<uint8_t>(paramTypes.size());
+			const auto paramCount = paramTypes.size();
 			const Py_ssize_t size = PyTuple_Size(args);
 			if (size != static_cast<Py_ssize_t>(paramCount)) {
 				const std::string error(std::format("Wrong number of parameters, {} when {} required.", size, paramCount));
@@ -2901,7 +2901,7 @@ namespace py3lm {
 					if (!paramType.IsReference()) {
 						continue;
 					}
-					using StoreValueFunc = PyObject* (*)(PropertyRef, const ArgsScope&, uint8_t);
+					using StoreValueFunc = PyObject* (*)(PropertyRef, const ArgsScope&, size_t);
 					StoreValueFunc const storeValueFunc = paramType.GetEnum() ? &StorageValueToEnumObject : &StorageValueToObject;
 					PyObject* const value = storeValueFunc(paramType, a, j++);
 					if (!value) {
