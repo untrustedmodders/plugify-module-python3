@@ -13,6 +13,8 @@
 #include <plugify/string.hpp>
 #include <plugify/any.hpp>
 
+#define LOG_PREFIX "[PY3LM] "
+
 using namespace plugify;
 namespace fs = std::filesystem;
 
@@ -457,27 +459,24 @@ namespace py3lm {
 								return std::nullopt;
 							}
 							default:
-								goto failure;
+								break;
 						}
-					} else {
-					failure:
-						std::string error("List should contains same types, but contains: [");
-						bool first = true;
-						for (Py_ssize_t i = 0; i < size; i++) {
-							PyObject* const valueObject = PyList_GetItem(object, i);
-							auto [_, valueName] = g_py3lm.GetObjectType(valueObject);
-							if (first) {
-								std::format_to(std::back_inserter(error), "'{}", valueName);
-								first = false;
-							} else {
-								std::format_to(std::back_inserter(error), "', '{}", valueName);
-							}
-						}
-						error += "']";
-						PyErr_SetString(PyExc_TypeError, error.c_str());
-						return std::nullopt;
 					}
-					break;
+					std::string error("List should contains supported types, but contains: [");
+					bool first = true;
+					for (Py_ssize_t i = 0; i < size; i++) {
+						PyObject* const valueObject = PyList_GetItem(object, i);
+						auto [_, valueName] = g_py3lm.GetObjectType(valueObject);
+						if (first) {
+							std::format_to(std::back_inserter(error), "'{}", valueName);
+							first = false;
+						} else {
+							std::format_to(std::back_inserter(error), "', '{}", valueName);
+						}
+					}
+					error += "']";
+					PyErr_SetString(PyExc_TypeError, error.c_str());
+					return std::nullopt;
 				}
 				case PyAbstractType::Vector2:
 					return g_py3lm.Vector2ValueFromObject(object);
@@ -657,7 +656,7 @@ namespace py3lm {
 				ret->SetReturn<plg::mat4x4>({});
 				break;
 			default: {
-				const std::string error(std::format("[py3lm] SetFallbackReturn unsupported type {:#x}", static_cast<uint8_t>(retType)));
+				const std::string error(std::format(LOG_PREFIX "SetFallbackReturn unsupported type {:#x}", static_cast<uint8_t>(retType)));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 			}
@@ -915,7 +914,7 @@ namespace py3lm {
 				}
 				break;
 			default: {
-				const std::string error(std::format("[py3lm] SetReturn unsupported type {:#x}", static_cast<uint8_t>(retType.GetType())));
+				const std::string error(std::format(LOG_PREFIX "SetReturn unsupported type {:#x}", static_cast<uint8_t>(retType.GetType())));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 			}
@@ -1207,7 +1206,7 @@ namespace py3lm {
 				}
 				break;
 			default: {
-				const std::string error(std::format("[py3lm] SetRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
+				const std::string error(std::format(LOG_PREFIX "SetRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 			}
@@ -1390,17 +1389,17 @@ namespace py3lm {
 		}
 
 		template<typename T>
-		PyObject* CreatePyEnumObject(EnumRef enumerate, const T& value) {
-			return g_py3lm.FindEnum(enumerate, static_cast<int64_t>(value));
+		PyObject* CreatePyEnumObject(EnumRef enumerator, const T& value) {
+			return g_py3lm.FindEnum(enumerator, static_cast<int64_t>(value));
 		}
 
 		template<typename T>
-		PyObject* CreatePyEnumObjectList(EnumRef enumerate, const plg::vector<T>& arrayArg) {
+		PyObject* CreatePyEnumObjectList(EnumRef enumerator, const plg::vector<T>& arrayArg) {
 			const auto size = static_cast<Py_ssize_t>(arrayArg.size());
 			PyObject* const arrayObject = PyList_New(size);
 			if (arrayObject) {
 				for (Py_ssize_t i = 0; i < size; ++i) {
-					PyObject* const valueObject = CreatePyEnumObject(enumerate, arrayArg[i]);
+					PyObject* const valueObject = CreatePyEnumObject(enumerator, arrayArg[i]);
 					if (!valueObject) {
 						Py_DECREF(arrayObject);
 						return nullptr;
@@ -1447,7 +1446,7 @@ namespace py3lm {
 			case ValueType::ArrayUInt64:
 				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<uint64_t>*>(index)));
 			default: {
-				const std::string error(std::format("[py3lm] ParamToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
+				const std::string error(std::format(LOG_PREFIX "ParamToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 				return nullptr;
@@ -1491,7 +1490,7 @@ namespace py3lm {
 			case ValueType::ArrayUInt64:
 				return CreatePyEnumObjectList(*enumerator, *(params->GetArgument<const plg::vector<uint64_t>*>(index)));
 			default: {
-				const std::string error(std::format("[py3lm] ParamRefToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
+				const std::string error(std::format(LOG_PREFIX "ParamRefToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 				return nullptr;
@@ -1584,7 +1583,7 @@ namespace py3lm {
 			case ValueType::Matrix4x4:
 				return CreatePyObject(*(params->GetArgument<plg::mat4x4*>(index)));
 			default: {
-				const std::string error(std::format("[py3lm] ParamToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
+				const std::string error(std::format(LOG_PREFIX "ParamToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 				return nullptr;
@@ -1675,7 +1674,7 @@ namespace py3lm {
 			case ValueType::Matrix4x4:
 				return CreatePyObject(*(params->GetArgument<plg::mat4x4*>(index)));
 			default: {
-				const std::string error(std::format("[py3lm] ParamRefToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
+				const std::string error(std::format(LOG_PREFIX "ParamRefToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
 				std::terminate();
 				return nullptr;
@@ -1747,8 +1746,6 @@ namespace py3lm {
 				return;
 			}
 
-			const bool hasRefParams = refParamsCount != 0;
-
 			PyObject* const result = PyObject_CallObject(func, argTuple);
 
 			if (argTuple) {
@@ -1762,6 +1759,8 @@ namespace py3lm {
 
 				return;
 			}
+
+			const bool hasRefParams = refParamsCount != 0;
 
 			if (hasRefParams) {
 				if (!PyTuple_CheckExact(result)) {
@@ -1788,11 +1787,7 @@ namespace py3lm {
 
 					return;
 				}
-			}
-
-			PyObject* const returnObject = hasRefParams ? PyTuple_GET_ITEM(result, Py_ssize_t{ 0 }) : result;
-
-			if (hasRefParams) {
+	
 				for (uint8_t index = 0, k = 0; index < paramsCount; ++index) {
 					const PropertyRef paramType = paramTypes[index];
 					if (!paramType.IsReference()) {
@@ -1810,6 +1805,8 @@ namespace py3lm {
 					}
 				}
 			}
+
+			PyObject* const returnObject = hasRefParams ? PyTuple_GET_ITEM(result, Py_ssize_t{ 0 }) : result;
 
 			if (!SetReturn(returnObject, retType, ret)) {
 				if (PyErr_Occurred()) {
@@ -2057,7 +2054,7 @@ namespace py3lm {
 						break;
 					}
 					default: {
-						const std::string error(std::format("[py3lm] ArgsScope unhandled type {:#x}", static_cast<uint8_t>(type)));
+						const std::string error(std::format(LOG_PREFIX "ArgsScope unhandled type {:#x}", static_cast<uint8_t>(type)));
 						g_py3lm.LogFatal(error);
 						std::terminate();
 						break;
@@ -2202,7 +2199,7 @@ namespace py3lm {
 						break;
 					}
 					default:
-						const std::string error(std::format("[py3lm] BeginExternalCall unsupported type {:#x}", static_cast<uint8_t>(retType)));
+						const std::string error(std::format(LOG_PREFIX "BeginExternalCall unsupported type {:#x}", static_cast<uint8_t>(retType)));
 						g_py3lm.LogFatal(error);
 						std::terminate();
 						break;
@@ -2478,361 +2475,104 @@ namespace py3lm {
 		}
 
 		bool PushObjectAsParam(PropertyRef paramType, PyObject* pItem, ArgsScope& a) {
+			const auto PushValParam = [&a](auto&& value) {
+				if (!value) {
+					return false;
+				}
+				a.params.AddArgument(*value);
+				return true;
+			};
+			const auto PushRefParam = [&paramType, &a](void* value) {
+				if (!value) {
+					return false;
+				}
+				a.storage.emplace_back(value, paramType.GetType());
+				a.params.AddArgument(value);
+				return true;
+			};
 			switch (paramType.GetType()) {
-			case ValueType::Bool: {
-				const auto value = ValueFromObject<bool>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(*value);
-				return true;
-			}
-			case ValueType::Char8: {
-				const auto value = ValueFromObject<char>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(*value);
-				return true;
-			}
-			case ValueType::Char16: {
-				const auto value = ValueFromObject<char16_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(static_cast<short>(*value));
-				return true;
-			}
-			case ValueType::Int8: {
-				const auto value = ValueFromObject<int8_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(*value);
-				return true;
-			}
-			case ValueType::Int16: {
-				const auto value = ValueFromObject<int16_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(*value);
-				return true;
-			}
-			case ValueType::Int32: {
-				const auto value = ValueFromObject<int32_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(*value);
-				return true;
-			}
-			case ValueType::Int64: {
-				const auto value = ValueFromObject<int64_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(*value);
-				return true;
-			}
-			case ValueType::UInt8: {
-				const auto value = ValueFromObject<uint8_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(static_cast<int8_t>(*value));
-				return true;
-			}
-			case ValueType::UInt16: {
-				const auto value = ValueFromObject<uint16_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(static_cast<int16_t>(*value));
-				return true;
-			}
-			case ValueType::UInt32: {
-				const auto value = ValueFromObject<uint32_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(static_cast<int32_t>(*value));
-				return true;
-			}
-			case ValueType::UInt64: {
-				const auto value = ValueFromObject<uint64_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(static_cast<int64_t>(*value));
-				return true;
-			}
-			case ValueType::Pointer: {
-				const auto value = ValueFromObject<void*>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(reinterpret_cast<void*>(*value));
-				return true;
-			}
-			case ValueType::Float: {
-				const auto value = ValueFromObject<float>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(*value);
-				return true;
-			}
-			case ValueType::Double: {
-				const auto value = ValueFromObject<double>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(*value);
-				return true;
-			}
-			case ValueType::String: {
-				void* const value = CreateValue<plg::string>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::Any: {
-				void* const value = CreateValue<plg::any>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::Function: {
-				const auto value = GetOrCreateFunctionValue(paramType.GetPrototype().value(), pItem);
-				if (!value) {
-					return false;
-				}
-				a.params.AddArgument(reinterpret_cast<void*>(*value));
-				return true;
-			}
-			case ValueType::ArrayBool: {
-				void* const value = CreateArray<bool>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayChar8: {
-				void* const value = CreateArray<char>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayChar16: {
-				void* const value = CreateArray<char16_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayInt8: {
-				void* const value = CreateArray<int8_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayInt16: {
-				void* const value = CreateArray<int16_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayInt32: {
-				void* const value = CreateArray<int32_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayInt64: {
-				void* const value = CreateArray<int64_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayUInt8: {
-				void* const value = CreateArray<uint8_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayUInt16: {
-				void* const value = CreateArray<uint16_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayUInt32: {
-				void* const value = CreateArray<uint32_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayUInt64: {
-				void* const value = CreateArray<uint64_t>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayPointer: {
-				void* const value = CreateArray<void*>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayFloat: {
-				void* const value = CreateArray<float>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayDouble: {
-				void* const value = CreateArray<double>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayString: {
-				void* const value = CreateArray<plg::string>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayAny: {
-				void* const value = CreateArray<plg::any>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayVector2: {
-				void* const value = CreateArray<plg::vec2>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayVector3: {
-				void* const value = CreateArray<plg::vec3>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayVector4: {
-				void* const value = CreateArray<plg::vec4>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::ArrayMatrix4x4: {
-				void* const value = CreateArray<plg::mat4x4>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::Vector2: {
-				void* const value = CreateValue<plg::vec2>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::Vector3: {
-				void* const value = CreateValue<plg::vec3>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::Vector4: {
-				void* const value = CreateValue<plg::vec4>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
-			case ValueType::Matrix4x4: {
-				void* const value = CreateValue<plg::mat4x4>(pItem);
-				if (!value) {
-					return false;
-				}
-				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
-				return true;
-			}
+				case ValueType::Bool:
+					return PushValParam(ValueFromObject<bool>(pItem));
+				case ValueType::Char8:
+					return PushValParam(ValueFromObject<char>(pItem));
+				case ValueType::Char16:
+					return PushValParam(ValueFromObject<char16_t>(pItem));
+				case ValueType::Int8:
+					return PushValParam(ValueFromObject<int8_t>(pItem));
+				case ValueType::Int16:
+					return PushValParam(ValueFromObject<int16_t>(pItem));
+				case ValueType::Int32:
+					return PushValParam(ValueFromObject<int32_t>(pItem));
+				case ValueType::Int64:
+					return PushValParam(ValueFromObject<int64_t>(pItem));
+				case ValueType::UInt8:
+					return PushValParam(ValueFromObject<uint8_t>(pItem));
+				case ValueType::UInt16:
+					return PushValParam(ValueFromObject<uint16_t>(pItem));
+				case ValueType::UInt32:
+					return PushValParam(ValueFromObject<uint32_t>(pItem));
+				case ValueType::UInt64:
+					return PushValParam(ValueFromObject<uint64_t>(pItem));
+				case ValueType::Pointer:
+					return PushValParam(ValueFromObject<void*>(pItem));
+				case ValueType::Float:
+					return PushValParam(ValueFromObject<float>(pItem));
+				case ValueType::Double:
+					return PushValParam(ValueFromObject<double>(pItem));
+				case ValueType::String:
+					return PushRefParam(CreateValue<plg::string>(pItem));
+				case ValueType::Any:
+					return PushRefParam(CreateValue<plg::any>(pItem));
+				case ValueType::Function:
+					return PushValParam(GetOrCreateFunctionValue(paramType.GetPrototype().value(), pItem));
+				case ValueType::ArrayBool:
+					return PushRefParam(CreateArray<bool>(pItem));
+				case ValueType::ArrayChar8:
+					return PushRefParam(CreateArray<char>(pItem));
+				case ValueType::ArrayChar16:
+					return PushRefParam(CreateArray<char16_t>(pItem));
+				case ValueType::ArrayInt8:
+					return PushRefParam(CreateArray<int8_t>(pItem));
+				case ValueType::ArrayInt16:
+					return PushRefParam(CreateArray<int16_t>(pItem));
+				case ValueType::ArrayInt32:
+					return PushRefParam(CreateArray<int32_t>(pItem));
+				case ValueType::ArrayInt64:
+					return PushRefParam(CreateArray<int64_t>(pItem));
+				case ValueType::ArrayUInt8:
+					return PushRefParam(CreateArray<uint8_t>(pItem));
+				case ValueType::ArrayUInt16:
+					return PushRefParam(CreateArray<uint16_t>(pItem));
+				case ValueType::ArrayUInt32:
+					return PushRefParam(CreateArray<uint32_t>(pItem));
+				case ValueType::ArrayUInt64:
+					return PushRefParam(CreateArray<uint64_t>(pItem));
+				case ValueType::ArrayPointer:
+					return PushRefParam(CreateArray<void*>(pItem));
+				case ValueType::ArrayFloat:
+					return PushRefParam(CreateArray<float>(pItem));
+				case ValueType::ArrayDouble:
+					return PushRefParam(CreateArray<double>(pItem));
+				case ValueType::ArrayString:
+					return PushRefParam(CreateArray<plg::string>(pItem));
+				case ValueType::ArrayAny:
+					return PushRefParam(CreateArray<plg::any>(pItem));
+				case ValueType::ArrayVector2:
+					return PushRefParam(CreateArray<plg::vec2>(pItem));
+				case ValueType::ArrayVector3:
+					return PushRefParam(CreateArray<plg::vec3>(pItem));
+				case ValueType::ArrayVector4:
+					return PushRefParam(CreateArray<plg::vec4>(pItem));
+				case ValueType::ArrayMatrix4x4:
+					return PushRefParam(CreateArray<plg::mat4x4>(pItem));
+				case ValueType::Vector2:
+					return PushRefParam(CreateValue<plg::vec2>(pItem));
+				case ValueType::Vector3:
+					return PushRefParam(CreateValue<plg::vec3>(pItem));
+				case ValueType::Vector4:
+					return PushRefParam(CreateValue<plg::vec4>(pItem));
+				case ValueType::Matrix4x4:
+					return PushRefParam(CreateValue<plg::mat4x4>(pItem));
 			default: {
 				const std::string error(std::format("PushObjectAsParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -3086,7 +2826,7 @@ namespace py3lm {
 
 			using MakeExternalCallFunc = PyObject* (*)(PropertyRef, JitCall::CallingFunc, const ArgsScope&, JitCall::Return&);
 			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
-			PyObject* const retObj = makeExternalCallFunc(retType, data.CCast<JitCall::CallingFunc>(), a, r);
+			PyObject* const retObj = makeExternalCallFunc(retType, data.RCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// makeExternalCallFunc set error
 				ret->SetReturn(nullptr);
@@ -3142,7 +2882,7 @@ namespace py3lm {
 
 			using MakeExternalCallFunc = PyObject* (*)(PropertyRef, JitCall::CallingFunc, const ArgsScope&, JitCall::Return&);
 			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
-			PyObject* retObj = makeExternalCallFunc(retType, data.CCast<JitCall::CallingFunc>(), a, r);
+			PyObject* retObj = makeExternalCallFunc(retType, data.RCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// makeExternalCallFunc set error
 				ret->SetReturn(nullptr);
@@ -3198,7 +2938,7 @@ namespace py3lm {
 		void GenerateEnum(MethodRef method, PyObject* module);
 
 		void GenerateEnum(PropertyRef paramType, PyObject* module) {
-			auto prototype = paramType.GetPrototype();
+			const auto prototype = paramType.GetPrototype();
 			if (prototype) {
 				GenerateEnum(*prototype, module);
 			}
@@ -3543,7 +3283,7 @@ namespace py3lm {
 				return;
 			}
 		}
-		_provider->Log(std::format("[py3lm] Fail to export '{}' plugin methods", plugin.GetName()), Severity::Error);
+		_provider->Log(std::format(LOG_PREFIX "Fail to export '{}' plugin methods", plugin.GetName()), Severity::Error);
 	}
 
 	LoadResult Python3LanguageModule::OnPluginLoad(PluginRef plugin) {
@@ -3558,17 +3298,17 @@ namespace py3lm {
 		if (lastDotPos == std::string::npos) {
 			return ErrorData{ "Incorrect entry point: not have any dot '.' character" };
 		}
-		std::string_view className(entryPoint.begin() + (lastDotPos + 1), entryPoint.end());
+		std::string_view className(entryPoint.begin() + static_cast<ptrdiff_t>(lastDotPos + 1), entryPoint.end());
 		if (className.empty()) {
 			return ErrorData{ "Incorrect entry point: empty class name part" };
 		}
-		std::string_view modulePathRel(entryPoint.begin(), entryPoint.begin() + lastDotPos);
+		std::string_view modulePathRel(entryPoint.begin(), entryPoint.begin() + static_cast<ptrdiff_t>(lastDotPos));
 		if (modulePathRel.empty()) {
 			return ErrorData{ "Incorrect entry point: empty module path part" };
 		}
 
 		const fs::path baseFolder(plugin.GetBaseDir());
-		auto modulePath = std::string(modulePathRel);
+		std::string modulePath(modulePathRel);
 		ReplaceAll(modulePath, ".", { static_cast<char>(fs::path::preferred_separator) });
 		fs::path filePathRelative = modulePath;
 		filePathRelative.replace_extension(".py");
@@ -3583,12 +3323,12 @@ namespace py3lm {
 		std::string moduleName = filePathRelative.generic_string();
 		ReplaceAll(moduleName, "/", ".");
 
-		_provider->Log(std::format("[py3lm] Load plugin module '{}'", moduleName), Severity::Verbose);
+		_provider->Log(std::format(LOG_PREFIX "Load plugin module '{}'", moduleName), Severity::Verbose);
 
 		PyObject* const pluginModule = PyImport_ImportModule(moduleName.c_str());
 		if (!pluginModule) {
 			LogError();
-			return ErrorData{ std::format("Failed to import {} module", moduleName) };
+			return ErrorData{ std::format("Failed to import '{}' module", moduleName) };
 		}
 
 		PyObject* const classNameString = PyUnicode_FromStringAndSize(className.data(), static_cast<Py_ssize_t>(className.size()));
@@ -3660,7 +3400,6 @@ namespace py3lm {
 		}
 
 		const auto exportedMethods = plugin.GetDescriptor().GetExportedMethods();
-		bool exportResult = true;
 		std::vector<std::string> exportErrors;
 		std::vector<std::tuple<MethodRef, PythonMethodData>> methodsHolders;
 
@@ -3668,7 +3407,6 @@ namespace py3lm {
 			for (const MethodRef method : exportedMethods) {
 				MethodExportResult generateResult = GenerateMethodExport(method, _jitRuntime, pluginModule, pluginInstance);
 				if (auto* data = std::get_if<MethodExportError>(&generateResult)) {
-					exportResult = false;
 					exportErrors.emplace_back(std::move(*data));
 					continue;
 				}
@@ -3677,7 +3415,7 @@ namespace py3lm {
 			}
 		}
 
-		if (!exportResult) {
+		if (!exportErrors.empty()) {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
 			std::string errorString = "Methods export error(s): " + exportErrors[0];
@@ -4191,7 +3929,7 @@ namespace py3lm {
 		for (const auto& [method, addr] : plugin.GetMethods()) {
 			PyObject* const methodObject = FindPythonMethod(addr);
 			if (!methodObject) {
-				_provider->Log(std::format("[py3lm] Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
+				_provider->Log(std::format(LOG_PREFIX "Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
 				std::terminate();
 			}
 			PyObject_SetAttrString(moduleObject, method.GetName().data(), methodObject);
@@ -4268,20 +4006,20 @@ namespace py3lm {
 	void Python3LanguageModule::TryCallPluginMethodNoArgs(PluginRef plugin, std::string_view name, std::string_view context) {
 		const auto it = _pluginsMap.find(plugin.GetId());
 		if (it == _pluginsMap.end()) {
-			_provider->Log(std::format("[py3lm] {}: plugin '{}' not found in map", context, plugin.GetName()), Severity::Error);
+			_provider->Log(std::format(LOG_PREFIX "{}: plugin '{}' not found in map", context, plugin.GetName()), Severity::Error);
 			return;
 		}
 
 		const auto& pluginData = std::get<PluginData>(*it);
 		if (!pluginData._instance) {
-			_provider->Log(std::format("[py3lm] {}: null plugin instance", context), Severity::Error);
+			_provider->Log(std::format(LOG_PREFIX "{}: null plugin instance", context), Severity::Error);
 			return;
 		}
 
 		PyObject* const nameString = PyUnicode_DecodeFSDefault(name.data());
 		if (!nameString) {
 			LogError();
-			_provider->Log(std::format("[py3lm] {}: failed to allocate name string", context), Severity::Error);
+			_provider->Log(std::format(LOG_PREFIX "{}: failed to allocate name string", context), Severity::Error);
 			return;
 		}
 
@@ -4289,7 +4027,7 @@ namespace py3lm {
 			PyObject* const returnObject = PyObject_CallMethodNoArgs(pluginData._instance, nameString);
 			if (!returnObject) {
 				LogError();
-				_provider->Log(std::format("[py3lm] {}: call '{}' failed", context, name), Severity::Error);
+				_provider->Log(std::format(LOG_PREFIX "{}: call '{}' failed", context, name), Severity::Error);
 			}
 		}
 
@@ -4339,8 +4077,8 @@ namespace py3lm {
 		_internalEnumMap.try_emplace(enumClass, enumMap);
 	}
 
-	PyObject* Python3LanguageModule::FindEnum(EnumRef enumerate, int64_t value) const {
-		const auto it1 = _externalEnumMap.find(enumerate);
+	PyObject* Python3LanguageModule::FindEnum(EnumRef enumerator, int64_t value) const {
+		const auto it1 = _externalEnumMap.find(enumerator);
 		if (it1 != _externalEnumMap.end()) {
 			const auto it2 = it1->second->find(static_cast<int64_t>(value));
 			if (it2 != it1->second->end()) {
