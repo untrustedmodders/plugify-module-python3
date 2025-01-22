@@ -2952,6 +2952,26 @@ namespace py3lm {
 				GenerateEnum(paramType, module);
 			}
 		}
+
+		PyObject* CustomPrint(PyObject* self, PyObject* args, PyObject* kwargs) {
+			PyObject* sep = PyUnicode_FromString(" ");
+			PyObject* end = PyUnicode_FromString("\n");
+
+			static std::array kwlist = { const_cast<char*>("sep"), const_cast<char*>("end"), (char*)nullptr };
+			if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO", kwlist.data(), &sep, &end)) {
+				return nullptr;
+			}
+
+			PyObject* message = PyUnicode_Join(sep, args);
+			if (!message) {
+				return nullptr;
+			}
+
+			g_py3lm.GetProvider()->Log(PyUnicode_AsString(message), plugify::Severity::None);
+
+			Py_DECREF(message);
+			Py_RETURN_NONE;
+		}
 	}
 
 	Python3LanguageModule::Python3LanguageModule() = default;
@@ -3100,6 +3120,28 @@ namespace py3lm {
 			LogError();
 			return ErrorData{ "Failed to import enum python module" };
 		}
+
+		PyObject* const builtinsModule = PyImport_ImportModule("builtins");
+		if (!builtinsModule) {
+			LogError();
+			return ErrorData{ "Failed to import builtins python module" };
+		}
+
+		static PyMethodDef method = { "print", reinterpret_cast<PyCFunction>(&CustomPrint), METH_VARARGS | METH_KEYWORDS, "Plugify print" };
+		PyObject* const customPrintFunc = PyCFunction_NewEx(&method, nullptr, nullptr);
+		if (!customPrintFunc) {
+			Py_DECREF(builtinsModule);
+			return ErrorData{ "Failed to create function object from function pointer" };
+		}
+
+		if (PyObject_SetAttrString(builtinsModule, "print", customPrintFunc) < 0) {
+			Py_DECREF(customPrintFunc);
+			Py_DECREF(builtinsModule);
+			return ErrorData{ "Failed to import builtins.print python module" };
+		}
+
+		Py_DECREF(customPrintFunc);
+		Py_DECREF(builtinsModule);
 
 		PyObject* const tracebackModule = PyImport_ImportModule("traceback");
 		if (!tracebackModule) {
