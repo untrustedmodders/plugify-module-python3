@@ -3420,6 +3420,9 @@ namespace py3lm {
 	void Python3LanguageModule::ResolveRequiredModule(std::string_view moduleName) {
 		if (moduleName.starts_with("plugify.pps.") && moduleName.size() > 12) {
 			std::string_view pluginName = moduleName.substr(12);
+			if (const auto pos = moduleName.find('.'); pos != std::string::npos) {
+				pluginName = pluginName.substr(0, pos);
+			}
 			PluginOpt plugin = _provider->FindPlugin(pluginName);
 			if (plugin && plugin->GetState() == PluginState::Loaded) {
 				TryCreateModule(*plugin, false);
