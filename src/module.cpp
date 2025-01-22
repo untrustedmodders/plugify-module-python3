@@ -30,9 +30,9 @@ namespace py3lm {
 			}
 		}
 
-		bool IsStaticMethod(PyObject* obj) {
-			if (PyCFunction_Check(obj)) {
-				PyCFunctionObject* cfunc = reinterpret_cast<PyCFunctionObject*>(obj);
+		bool IsStaticMethod(PyObject* object) {
+			if (PyCFunction_Check(object)) {
+				PyCFunctionObject* const cfunc = reinterpret_cast<PyCFunctionObject*>(object);
 				if (cfunc->m_ml && (cfunc->m_ml->ml_flags & METH_STATIC)) {
 					return true;
 				}
@@ -46,7 +46,7 @@ namespace py3lm {
 		// -1		Encoding error
 		// -2		Invalid multibyte sequence
 		// -3		Surrogate pair
-		std::pair<short, char16_t> ConvertUtf8ToUtf16(std::span<const char> sequence) {
+		std::pair<short, char16_t> ConvertUtf8ToUtf16(std::string_view sequence) {
 			const auto c8toc16 = [](char ch) -> char16_t { return static_cast<char16_t>(static_cast<uint8_t>(ch)); };
 
 			if (sequence.empty()) {
@@ -173,7 +173,7 @@ namespace py3lm {
 		template<>
 		std::optional<bool> ValueFromObject(PyObject* object) {
 			if (PyBool_Check(object)) {
-				return { object == Py_True };
+				return object == Py_True;
 			}
 			SetTypeError("Expected boolean", object);
 			return std::nullopt;
@@ -184,12 +184,12 @@ namespace py3lm {
 			if (PyUnicode_Check(object)) {
 				const Py_ssize_t length = PyUnicode_GetLength(object);
 				if (length == 0) {
-					return { 0 };
+					return 0;
 				}
 				if (length == 1) {
 					char ch = PyUnicode_AsUTF8(object)[0];
 					if ((ch & 0x80) == 0) {
-						return { ch };
+						return ch;
 					}
 					// Can't pass multibyte character
 					PyErr_SetString(PyExc_ValueError, "Multibyte character");
@@ -208,18 +208,16 @@ namespace py3lm {
 			if (PyUnicode_Check(object)) {
 				const Py_ssize_t length = PyUnicode_GetLength(object);
 				if (length == 0) {
-					return { 0 };
+					return 0;
 				}
 				if (length == 1) {
-					Py_ssize_t size{};
-					const char* const buffer = PyUnicode_AsUTF8AndSize(object, &size);
-					auto [rc, ch] = ConvertUtf8ToUtf16({ buffer, static_cast<std::size_t>(size) });
+					auto [rc, ch] = ConvertUtf8ToUtf16(PyUnicode_AsString(object));
 					switch (rc) {
 					case 0:
 					case 1:
 					case 2:
 					case 3:
-						return { ch };
+						return ch;
 					case -3:
 						PyErr_SetString(PyExc_ValueError, "Surrogate pair");
 						break;
@@ -243,16 +241,14 @@ namespace py3lm {
 		template<typename T>
 		std::optional<T> GetObjectAttrAsValue(PyObject* object, const char* attr_name);
 
-		template<class ValueType, class CType, CType (*ConvertFunc)(PyObject*)>
+		template<class ValueType, class CType, CType (*ConvertFunc)(PyObject*)> requires(std::is_signed_v<ValueType> || std::is_unsigned_v<ValueType>)
 		std::optional<ValueType> ValueFromNumberObject(PyObject* object) {
 			// int or IntEnum
 			if (PyLong_Check(object)) {
 				const CType castResult = ConvertFunc(object);
 				if (!PyErr_Occurred()) {
-					if (castResult <= static_cast<CType>(std::numeric_limits<ValueType>::max()) &&
-						castResult >= static_cast<CType>(std::numeric_limits<ValueType>::min())
-					) {
-						return { static_cast<ValueType>(castResult) };
+					if (IsInRange<CType, ValueType>(castResult)) {
+						return static_cast<ValueType>(castResult);
 					}
 					PyErr_SetNone(PyExc_OverflowError);
 				}
@@ -265,11 +261,9 @@ namespace py3lm {
 					if (PyLong_Check(value)) {
 						const CType castResult = ConvertFunc(value);
 						if (!PyErr_Occurred()) {
-							if (castResult <= static_cast<CType>(std::numeric_limits<ValueType>::max()) &&
-								castResult >= static_cast<CType>(std::numeric_limits<ValueType>::min())
-							) {
+							if (IsInRange<CType, ValueType>(castResult)) {
 								Py_DECREF(value);
-								return { static_cast<ValueType>(castResult) };
+								return static_cast<ValueType>(castResult);
 							}
 							PyErr_SetNone(PyExc_OverflowError);
 						}
@@ -283,6 +277,22 @@ namespace py3lm {
 			}
 
 			SetTypeError("Expected integer", object);
+			return std::nullopt;
+		}
+
+		template<class ValueType> requires(std::is_floating_point_v<ValueType>)
+		std::optional<ValueType> ValueFromFloatObject(PyObject* object) {
+			if (PyFloat_Check(object)) {
+				const double castResult = PyFloat_AS_DOUBLE(object);
+				if (!PyErr_Occurred()) {
+					if (IsInRange<double, ValueType>(castResult)) {
+						return castResult;
+					}
+					PyErr_SetNone(PyExc_OverflowError);
+				}
+				return std::nullopt;
+			}
+			SetTypeError("Expected float", object);
 			return std::nullopt;
 		}
 
@@ -345,28 +355,18 @@ namespace py3lm {
 
 		template<>
 		std::optional<float> ValueFromObject(PyObject* object) {
-			if (PyFloat_Check(object)) {
-				return static_cast<float>(PyFloat_AS_DOUBLE(object));
-			}
-			SetTypeError("Expected float", object);
-			return std::nullopt;
+			return ValueFromFloatObject<float>(object);
 		}
 
 		template<>
 		std::optional<double> ValueFromObject(PyObject* object) {
-			if (PyFloat_Check(object)) {
-				return PyFloat_AS_DOUBLE(object);
-			}
-			SetTypeError("Expected float", object);
-			return std::nullopt;
+			return ValueFromFloatObject<double>(object);
 		}
 
 		template<>
 		std::optional<plg::string> ValueFromObject(PyObject* object) {
 			if (PyUnicode_Check(object)) {
-				Py_ssize_t size{};
-				const char* const buffer = PyUnicode_AsUTF8AndSize(object, &size);
-				return plg::string(buffer, buffer + size);
+				return PyUnicode_AsString(object);
 			}
 			SetTypeError("Expected string", object);
 			return std::nullopt;
@@ -386,9 +386,7 @@ namespace py3lm {
 				case PyAbstractType::Float:
 					return PyFloat_AS_DOUBLE(object);
 				case PyAbstractType::Unicode: {
-					Py_ssize_t size{};
-					const char* const buffer = PyUnicode_AsUTF8AndSize(object, &size);
-					return plg::string(buffer, buffer + size);
+					return PyUnicode_AsString(object);
 				}
 				case PyAbstractType::List: {
 					const Py_ssize_t size = PyList_Size(object);
@@ -1330,22 +1328,22 @@ namespace py3lm {
 		}
 
 		template<>
-		PyObject* CreatePyObject(const plg::invalid& value) {
+		PyObject* CreatePyObject(const plg::invalid&) {
 			return nullptr;
 		}
 
 		template<>
-		PyObject* CreatePyObject(const plg::none& value) {
+		PyObject* CreatePyObject(const plg::none&) {
 			return nullptr;
 		}
 
 		template<>
-		PyObject* CreatePyObject(const plg::variant<plg::none>& value) {
+		PyObject* CreatePyObject(const plg::variant<plg::none>&) {
 			return nullptr;
 		}
 
 		template<>
-		PyObject* CreatePyObject(const plg::function& value) {
+		PyObject* CreatePyObject(const plg::function&) {
 			return nullptr;
 		}
 
@@ -1682,7 +1680,7 @@ namespace py3lm {
 			}
 		}
 
-		void InternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* params, const size_t count, const JitCallback::Return* ret) {
+		void InternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* params, const size_t, const JitCallback::Return* ret) {
 			PyObject* const func = data.RCast<PyObject*>();
 
 			enum class ParamProcess {
@@ -1698,7 +1696,7 @@ namespace py3lm {
 
 			PyObject* argTuple = nullptr;
 			if (paramsCount) {
-				argTuple = PyTuple_New(paramsCount);
+				argTuple = PyTuple_New(static_cast<Py_ssize_t>(paramsCount));
 				if (!argTuple) {
 					processResult = ParamProcess::ErrorWithException;
 					PyErr_SetString(PyExc_RuntimeError, "Fail to create arguments tuple");
@@ -1720,7 +1718,7 @@ namespace py3lm {
 							processResult = PyErr_Occurred() ? ParamProcess::ErrorWithException : ParamProcess::Error;
 							break;
 						}
-						if (PyTuple_SetItem(argTuple, index, arg) != 0) {
+						if (PyTuple_SetItem(argTuple, static_cast<Py_ssize_t>(index), arg) != 0) {
 							Py_DECREF(arg);
 							// PyTuple_SetItem set error
 							processResult = ParamProcess::ErrorWithException;
@@ -1787,7 +1785,7 @@ namespace py3lm {
 
 					return;
 				}
-	
+
 				for (size_t index = 0, k = 0; index < paramsCount; ++index) {
 					const PropertyRef paramType = paramTypes[index];
 					if (!paramType.IsReference()) {
@@ -1833,7 +1831,7 @@ namespace py3lm {
 				const auto& funcName = method.GetFunctionName();
 				if (const auto pos = funcName.find('.'); pos != std::string::npos) {
 					className = funcName.substr(0, pos);
-					methodName = std::string(funcName.begin() + (pos + 1), funcName.end());
+					methodName = std::string(funcName.begin() + static_cast<ptrdiff_t>(pos + 1), funcName.end());
 				}
 				else {
 					methodName = funcName;
@@ -2290,7 +2288,7 @@ namespace py3lm {
 			func(a.params.GetDataPtr(), &ret);
 			switch (retType.GetType()) {
 			case ValueType::Void:
-				return Py_None;
+				Py_RETURN_NONE;
 			case ValueType::Bool: {
 				const bool val = ret.GetReturn<bool>();
 				return CreatePyObject(val);
@@ -2817,7 +2815,7 @@ namespace py3lm {
 			}
 		}
 
-		void ExternalCallNoArgs(MethodRef method, MemAddr data, const JitCallback::Parameters* p, size_t count, const JitCallback::Return* ret) {
+		void ExternalCallNoArgs(MethodRef method, MemAddr data, const JitCallback::Parameters*, size_t, const JitCallback::Return* ret) {
 			const plugify::PropertyRef retType = method.GetReturnType();
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			ArgsScope a(1);
@@ -2835,7 +2833,7 @@ namespace py3lm {
 			ret->SetReturn(retObj);
 		}
 
-		void ExternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* p, size_t count, const JitCallback::Return* ret) {
+		void ExternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* p, size_t, const JitCallback::Return* ret) {
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			const auto args = p->GetArgument<PyObject*>(1);
 
@@ -2896,7 +2894,7 @@ namespace py3lm {
 
 				PyTuple_SET_ITEM(retTuple, k++, retObj); // retObj ref taken by tuple
 
-				for (Py_ssize_t i = 0, j = paramsStartIndex; i < paramCount; ++i) {
+				for (Py_ssize_t i = 0, j = paramsStartIndex; i < size; ++i) {
 					const PropertyRef paramType = paramTypes[i];
 					if (!paramType.IsReference()) {
 						continue;
@@ -3418,7 +3416,7 @@ namespace py3lm {
 		if (!exportErrors.empty()) {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
-			std::string errorString = "Methods export error(s): " + exportErrors[0];
+			std::string errorString("Methods export error(s): " + exportErrors[0]);
 			for (auto it = std::next(exportErrors.begin()); it != exportErrors.end(); ++it) {
 				std::format_to(std::back_inserter(errorString), ", {}", *it);
 			}
@@ -3531,7 +3529,7 @@ namespace py3lm {
 
 	std::optional<void*> Python3LanguageModule::GetOrCreateFunctionValue(MethodRef method, PyObject* object) {
 		if (object == Py_None) {
-			return { nullptr };
+			return nullptr;
 		}
 
 		if (!PyFunction_Check(object) && !PyCallable_Check(object)) {
@@ -3540,7 +3538,7 @@ namespace py3lm {
 		}
 
 		if (void* const funcAddr = FindInternal(object)) {
-			return { funcAddr };
+			return funcAddr;
 		}
 
 		auto [result, callback] = CreateInternalCall(_jitRuntime, method, object);
@@ -3556,7 +3554,7 @@ namespace py3lm {
 		_internalFunctions.emplace_back(std::move(callback), object);
 		AddToFunctionsMap(funcAddr, object);
 
-		return { funcAddr };
+		return funcAddr;
 	}
 
 	PyObject* Python3LanguageModule::CreateVector2Object(const plg::vec2& vector) {
@@ -3907,7 +3905,7 @@ namespace py3lm {
 					matrix.data[static_cast<size_t>(i * Py_ssize_t{ 4 } + j)] = *mValue;
 				}
 		}
-		return { std::move(matrix) };
+		return matrix;
 	}
 
 	PyObject* Python3LanguageModule::FindPythonMethod(MemAddr addr) const {
