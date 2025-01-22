@@ -1,3 +1,6 @@
+import ast
+import os
+import importlib.util
 from copy import deepcopy
 
 
@@ -166,3 +169,71 @@ class Matrix4x4:
 
     def to_list(self):
         return deepcopy(self.elements)
+
+
+def extract_required_modules(module_path, visited=None):
+    """
+    Recursively extract all imported modules and their fully qualified names.
+
+    Args:
+        module_path (str): Path to the Python module file to analyze.
+        visited (set): A set of visited modules to prevent circular dependencies.
+
+    Returns:
+        set: A set of fully qualified names of all imports.
+    """
+    if visited is None:
+        visited = set()
+
+    # Avoid processing the same module multiple times
+    if module_path in visited:
+        return set()
+
+    visited.add(module_path)
+
+    required_modules = set()
+
+    try:
+        with open(module_path, "r", encoding="utf-8") as file:
+            tree = ast.parse(file.read(), filename=module_path)
+    except Exception as e:
+        print(f"Error parsing {module_path}: {e}")
+        return required_modules
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            # Handle `import module_name`
+            for alias in node.names:
+                required_modules.add(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            # Handle `from module_name import ...`
+            if node.module:
+                for alias in node.names:
+                    # Create fully qualified name: module_name.symbol_name
+                    required_modules.add(f"{node.module}.{alias.name}")
+
+    def find_module_path(module_name):
+        """
+        Locate the file path of a given module name.
+
+        Args:
+            module_name (str): The name of the module to find.
+
+        Returns:
+            str or None: The full path to the module file, or None if not found.
+        """
+        spec = importlib.util.find_spec(module_name)
+        if spec and spec.origin:
+            return spec.origin
+        return None
+
+    # Recursively find dependencies for each imported module
+    all_dependencies = set(required_modules)
+    for module_name in required_modules:
+        # Extract the base module name (e.g., "os.path" -> "os")
+        base_module = module_name.split('.')[0]
+        module_file = find_module_path(base_module)
+        if module_file and os.path.isfile(module_file):
+            all_dependencies.update(extract_imports_recursively(module_file, visited))
+
+    return all_dependencies

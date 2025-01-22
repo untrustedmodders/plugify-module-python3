@@ -29,6 +29,47 @@ namespace py3lm {
 				start_pos += to.length();
 			}
 		}
+		
+		std::string_view PyUnicode_AsString(PyObject* object) {
+			Py_ssize_t size{};
+			const char *buffer = PyUnicode_AsUTF8AndSize(object, &size);
+			if (buffer) {
+				return { buffer, static_cast<size_t>(size) };
+			}
+			return {};
+		}
+
+		int IsEmptyModule(PyObject* module) {
+			if (!module || !PyModule_Check(module)) {
+				return -1;
+			}
+
+			PyObject* const moduleDict = PyModule_GetDict(module);
+			if (!moduleDict || !PyDict_Check(moduleDict)) {
+				return -1;
+			}
+
+			using namespace std::literals::string_view_literals;
+
+			constexpr std::array defaultAttrs = {
+					"__name__"sv, "__doc__"sv, "__package__"sv, "__loader__"sv, "__spec__"sv, "__file__"sv, "__cached__"sv
+			};
+
+			PyObject *key, *value;
+			Py_ssize_t pos = 0;
+
+			while (PyDict_Next(moduleDict, &pos, &key, &value)) {
+				std::string_view attribute = PyUnicode_AsString(key);
+				if (!std::any_of(defaultAttrs.begin(), defaultAttrs.end(),
+					 [&attribute](const std::string_view& attr) {
+						 return attribute == attr;
+					 })) {
+					return 0; // Not empty
+				}
+			}
+
+			return 1; // Empty
+		}
 
 		bool IsStaticMethod(PyObject* object) {
 			if (PyCFunction_Check(object)) {
@@ -3134,6 +3175,13 @@ namespace py3lm {
 			return ErrorData{ "Failed to find plugify.plugin.Matrix4x4 type" };
 		}
 
+		_ExtractRequiredModulesObject = PyObject_GetAttrString(plugifyPluginModule, "extract_required_modules");
+		if (!_ExtractRequiredModulesObject || !PyCallable_Check(_ExtractRequiredModulesObject)) {
+			Py_DECREF(plugifyPluginModule);
+			LogError();
+			return ErrorData{ "Failed to find plugify.plugin.extract_required_modules function" };
+		}
+
 		Py_DECREF(plugifyPluginModule);
 
 		_ppsModule = PyImport_ImportModule("plugify.pps");
@@ -3288,6 +3336,10 @@ namespace py3lm {
 				Py_DECREF(_Matrix4x4TypeObject);
 			}
 
+			if (_ExtractRequiredModulesObject) {
+				Py_DECREF(_ExtractRequiredModulesObject);
+			}
+
 			if (_PluginTypeObject) {
 				Py_DECREF(_PluginTypeObject);
 			}
@@ -3321,6 +3373,7 @@ namespace py3lm {
 		_Vector3TypeObject = nullptr;
 		_Vector4TypeObject = nullptr;
 		_Matrix4x4TypeObject = nullptr;
+		_ExtractRequiredModulesObject = nullptr;
 		_PluginTypeObject = nullptr;
 		_PluginInfoTypeObject = nullptr;
 		_internalMap.clear();
@@ -3338,19 +3391,70 @@ namespace py3lm {
 		_provider.reset();
 	}
 
-	void Python3LanguageModule::OnMethodExport(PluginRef plugin) {
-		if (_ppsModule) {
-			PyObject* moduleObject = CreateInternalModule(plugin);
-			if (!moduleObject) {
-				moduleObject = CreateExternalModule(plugin);
-			}
-			if (moduleObject) {
-				PyObject_SetAttrString(_ppsModule, plugin.GetName().data(), moduleObject);
-				Py_DECREF(moduleObject);
+	void Python3LanguageModule::TryCreateModule(plugify::PluginRef plugin, bool empty) {
+		// TODO: replace by PyObject_GetOptionalAttrString in 3.13
+		if (PyObject_HasAttrString(_ppsModule, plugin.GetName().data())) {
+			if (empty) {
+				PyObject* const moduleObject = PyObject_GetAttrString(_ppsModule, plugin.GetName().data());
+				if (!IsEmptyModule(moduleObject)) {
+					return;
+				}
+			} else {
 				return;
 			}
 		}
-		_provider->Log(std::format(LOG_PREFIX "Fail to export '{}' plugin methods", plugin.GetName()), Severity::Error);
+		PyObject* moduleObject = CreateInternalModule(plugin);
+		if (!moduleObject) {
+			moduleObject = CreateExternalModule(plugin);
+		}
+		if (moduleObject) {
+			PyObject_SetAttrString(_ppsModule, plugin.GetName().data(), moduleObject);
+			Py_DECREF(moduleObject);
+		}
+	}
+
+	void Python3LanguageModule::OnMethodExport(PluginRef plugin) {
+		TryCreateModule(plugin, true);
+	}
+
+	void Python3LanguageModule::ResolveRequiredModule(std::string_view moduleName) {
+		if (moduleName.starts_with("plugify.pps.") && moduleName.size() > 12) {
+			std::string_view pluginName = moduleName.substr(12);
+			PluginOpt plugin = _provider->FindPlugin(pluginName);
+			if (plugin && plugin->GetState() == PluginState::Loaded) {
+				TryCreateModule(*plugin, false);
+			} else {
+				PyObject* moduleObject = PyModule_New(pluginName.data());
+				PyObject_SetAttrString(_ppsModule, pluginName.data(), moduleObject);
+			}
+		}
+	}
+
+	std::vector<std::string> Python3LanguageModule::ExtractRequiredModules(const std::string& modulePath) {
+		std::vector<std::string> requiredModules;
+		PyObject* args = PyTuple_Pack(1, PyUnicode_FromString(modulePath.c_str()));
+		PyObject* result = PyObject_CallObject(_ExtractRequiredModulesObject, args);
+
+		if (result) {
+			if (PySet_Check(result)) {
+				PyObject* iterator = PyObject_GetIter(result);
+				PyObject* object;
+
+				while ((object = PyIter_Next(iterator))) {
+					std::string_view moduleName = PyUnicode_AsString(object);
+					if (!moduleName.empty()) {
+						requiredModules.emplace_back(moduleName);
+					}
+					Py_DECREF(object);
+				}
+				Py_DECREF(iterator);
+			}
+			Py_DECREF(result);
+		} else {
+			LogError();
+		}
+
+		return requiredModules;
 	}
 
 	LoadResult Python3LanguageModule::OnPluginLoad(PluginRef plugin) {
@@ -3391,6 +3495,10 @@ namespace py3lm {
 		ReplaceAll(moduleName, "/", ".");
 
 		_provider->Log(std::format(LOG_PREFIX "Load plugin module '{}'", moduleName), Severity::Verbose);
+
+		for (const auto& requiredModule : ExtractRequiredModules(filePath.string())) {
+			ResolveRequiredModule(requiredModule);
+		}
 
 		PyObject* const pluginModule = PyImport_ImportModule(moduleName.c_str());
 		if (!pluginModule) {

@@ -155,7 +155,10 @@ namespace py3lm {
 		PythonType GetObjectType(PyObject* type) const;
 		PyObject* GetEnumObject(plugify::EnumRef enumerator, int64_t value) const;
 		void CreateEnumObject(plugify::EnumRef enumerator, PyObject* module);
+		void ResolveRequiredModule(std::string_view moduleName);
+		std::vector<std::string> ExtractRequiredModules(const std::string& modulePath);
 
+		const std::shared_ptr<plugify::IPlugifyProvider>& GetProvider() const { return _provider; }
 		void LogFatal(std::string_view msg) const;
 		void LogError() const;
 
@@ -163,6 +166,7 @@ namespace py3lm {
 		PyObject* FindPythonMethod(plugify::MemAddr addr) const;
 		PyObject* CreateInternalModule(plugify::PluginRef plugin);
 		PyObject* CreateExternalModule(plugify::PluginRef plugin);
+		void TryCreateModule(plugify::PluginRef plugin, bool empty);
 		void TryCallPluginMethodNoArgs(plugify::PluginRef plugin, std::string_view name, std::string_view context);
 
 	private:
@@ -180,6 +184,7 @@ namespace py3lm {
 		PyObject* _Vector3TypeObject = nullptr;
 		PyObject* _Vector4TypeObject = nullptr;
 		PyObject* _Matrix4x4TypeObject = nullptr;
+		PyObject* _ExtractRequiredModulesObject = nullptr;
 		PyObject* _ppsModule = nullptr;
 		PyObject* _enumModule = nullptr;
 		PyObject* _formatException = nullptr;
