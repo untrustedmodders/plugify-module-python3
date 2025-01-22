@@ -112,6 +112,33 @@ namespace py3lm {
 			return { 3, { c16toc8(((ch16 & 0b1111000000000000) >> 12) | 0b11100000), c16toc8(((ch16 & 0b111111000000) >> 6) | 0b10000000), c16toc8((ch16 & 0b111111) | 0b10000000), '\0' } };
 		}
 
+		// Generic function to check if value is in range of type N
+		template<typename T, typename U = T>
+		bool IsInRange(T value) {
+			if constexpr (std::is_same_v<U, T>) {
+				return true;
+			} else if constexpr (std::is_floating_point_v<T> && std::is_floating_point_v<U>) {
+				// Handle floating-point range checks
+				return value >= static_cast<T>(-std::numeric_limits<U>::infinity()) &&
+					   value <= static_cast<T>(std::numeric_limits<U>::infinity());
+			} else if constexpr (std::is_signed_v<T> == std::is_signed_v<U>) {
+				// Both T and N are signed or unsigned
+				return value >= static_cast<T>(std::numeric_limits<U>::min()) &&
+					   value <= static_cast<T>(std::numeric_limits<U>::max());
+			} else if constexpr (std::is_unsigned_v<T> && std::is_signed_v<U>) {
+				// T is unsigned, N is signed
+				if (value > static_cast<T>(std::numeric_limits<U>::max())) {
+					return false;
+				}
+			} else if constexpr (std::is_signed_v<T> && std::is_unsigned_v<U>) {
+				// T is signed, N is unsigned
+				if (value < 0 || static_cast<std::make_unsigned_t<T>>(value) > std::numeric_limits<U>::max()) {
+					return false;
+				}
+			}
+			return true;
+		}
+
 		using MethodExportError = std::string;
 		using MethodExportData = PythonMethodData;
 		using MethodExportResult = std::variant<MethodExportError, MethodExportData>;
