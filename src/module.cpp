@@ -1390,7 +1390,7 @@ namespace py3lm {
 
 		template<typename T>
 		PyObject* CreatePyEnumObject(EnumRef enumerator, const T& value) {
-			return g_py3lm.FindEnum(enumerator, static_cast<int64_t>(value));
+			return g_py3lm.GetEnumObject(enumerator, static_cast<int64_t>(value));
 		}
 
 		template<typename T>
@@ -2944,7 +2944,7 @@ namespace py3lm {
 			}
 			const auto enumerator = paramType.GetEnum();
 			if (enumerator) {
-				g_py3lm.RegisterEnum(*enumerator, module);
+				g_py3lm.CreateEnumObject(*enumerator, module);
 			}
 		}
 
@@ -4034,7 +4034,7 @@ namespace py3lm {
 		Py_DECREF(nameString);
 	}
 
-	void Python3LanguageModule::RegisterEnum(EnumRef enumerator, PyObject* module) {
+	void Python3LanguageModule::CreateEnumObject(plugify::EnumRef enumerator, PyObject* module) {
 		PyObject* enumClass = PyDict_GetItemString(PyModule_GetDict(module), enumerator.GetName().data());
 		if (enumClass) {
 			const auto it = _internalEnumMap.find(enumClass);
@@ -4077,15 +4077,18 @@ namespace py3lm {
 		_internalEnumMap.try_emplace(enumClass, enumMap);
 	}
 
-	PyObject* Python3LanguageModule::FindEnum(EnumRef enumerator, int64_t value) const {
+	PyObject* Python3LanguageModule::GetEnumObject(EnumRef enumerator, int64_t value) const {
 		const auto it1 = _externalEnumMap.find(enumerator);
 		if (it1 != _externalEnumMap.end()) {
+			PyObject* object;
 			const auto it2 = it1->second->find(static_cast<int64_t>(value));
 			if (it2 != it1->second->end()) {
-				return it2->second;
+				object = it2->second;
 			} else {
-				return it1->second->begin()->second;
+				object = it1->second->begin()->second;
 			}
+			Py_INCREF(object);
+			return object;
 		}
 		PyErr_SetString(PyExc_ValueError, "Invalid enum");
 		return nullptr;
@@ -4108,9 +4111,7 @@ namespace py3lm {
 	}
 
 	void Python3LanguageModule::LogError() const {
-		PyObject* ptype = nullptr;
-		PyObject* pvalue = nullptr;
-		PyObject* ptraceback = nullptr;
+		PyObject *ptype, *pvalue, *ptraceback;
 		PyErr_Fetch(&ptype, &pvalue, &ptraceback);
 		std::string result;
 		if (!pvalue) {

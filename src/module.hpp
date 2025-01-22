@@ -119,8 +119,8 @@ namespace py3lm {
 	using PythonExternalMap = std::unordered_map<void*, PyObject*>;
 	using PythonTypeMap = std::unordered_map<PyTypeObject*, PythonType>;
 	using PythonEnumMap = std::map<int64_t, PyObject*>;
-	using PythonInternalEnumMap = std::unordered_map<plugify::EnumRef, std::shared_ptr<PythonEnumMap>>;
-	using PythonExternalEnumMap = std::unordered_map<PyObject*, std::shared_ptr<PythonEnumMap>>;
+	using PythonExternalEnumMap = std::unordered_map<plugify::EnumRef, std::shared_ptr<PythonEnumMap>>;
+	using PythonInternalEnumMap = std::unordered_map<PyObject*, std::shared_ptr<PythonEnumMap>>;
 
 	class Python3LanguageModule final : public plugify::ILanguageModule {
 	public:
@@ -153,8 +153,8 @@ namespace py3lm {
 		PyObject* CreateMatrix4x4Object(const plg::mat4x4& matrix);
 		std::optional<plg::mat4x4> Matrix4x4ValueFromObject(PyObject* object);
 		PythonType GetObjectType(PyObject* type) const;
-		PyObject* FindEnum(plugify::EnumRef enumerator, int64_t value) const;
-		void RegisterEnum(plugify::EnumRef enumerator, PyObject* module);
+		PyObject* GetEnumObject(plugify::EnumRef enumerator, int64_t value) const;
+		void CreateEnumObject(plugify::EnumRef enumerator, PyObject* module);
 
 		void LogFatal(std::string_view msg) const;
 		void LogError() const;
@@ -201,7 +201,7 @@ namespace py3lm {
 		PythonExternalMap _externalMap;
 		PythonInternalMap _internalMap;
 		PythonTypeMap _typeMap;
-		PythonInternalEnumMap _externalEnumMap;
-		PythonExternalEnumMap _internalEnumMap;
+		PythonExternalEnumMap _externalEnumMap;
+		PythonInternalEnumMap _internalEnumMap;
 	};
 }
