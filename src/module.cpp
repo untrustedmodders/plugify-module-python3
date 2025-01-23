@@ -1748,7 +1748,22 @@ namespace py3lm {
 			}
 		}
 
+		struct GILLock {
+			GILLock() {
+				_state = PyGILState_Ensure();
+			}
+
+			~GILLock() {
+				PyGILState_Release(_state);
+			}
+
+		private:
+			PyGILState_STATE _state;
+		};
+
 		void InternalCall(MethodRef method, MemAddr data, const JitCallback::Parameters* params, const size_t, const JitCallback::Return* ret) {
+			GILLock lock{};
+
 			PyObject* const func = data.RCast<PyObject*>();
 
 			enum class ParamProcess {
@@ -3499,6 +3514,8 @@ namespace py3lm {
 
 		_provider->Log(std::format(LOG_PREFIX "Load plugin module '{}'", moduleName), Severity::Verbose);
 
+		GILLock lock{};
+
 		for (const auto& requiredModule : ExtractRequiredModules(filePath.string())) {
 			ResolveRequiredModule(requiredModule);
 		}
@@ -4194,6 +4211,8 @@ namespace py3lm {
 			_provider->Log(std::format(LOG_PREFIX "{}: null plugin instance", context), Severity::Error);
 			return;
 		}
+
+		GILLock lock{};
 
 		PyObject* const nameString = PyUnicode_DecodeFSDefault(name.data());
 		if (!nameString) {
