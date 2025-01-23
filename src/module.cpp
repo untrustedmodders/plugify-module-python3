@@ -1885,7 +1885,7 @@ namespace py3lm {
 			Py_DECREF(result);
 		}
 
-		std::tuple<bool, JitCallback> CreateInternalCall(const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, MethodRef method, PyObject* func) {
+		std::pair<bool, JitCallback> CreateInternalCall(const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, MethodRef method, PyObject* func) {
 			JitCallback callback(jitRuntime);
 			void* const methodAddr = callback.GetJitFunc(method, &InternalCall, func);
 			return { methodAddr != nullptr, std::move(callback) };
@@ -3579,7 +3579,7 @@ namespace py3lm {
 
 		const auto exportedMethods = plugin.GetDescriptor().GetExportedMethods();
 		std::vector<std::string> exportErrors;
-		std::vector<std::tuple<MethodRef, PythonMethodData>> methodsHolders;
+		std::vector<std::pair<MethodRef, PythonMethodData>> methodsHolders;
 
 		if (!exportedMethods.empty()) {
 			for (const MethodRef method : exportedMethods) {
@@ -3722,6 +3722,7 @@ namespace py3lm {
 		}
 
 		auto [result, callback] = CreateInternalCall(_jitRuntime, method, object);
+
 		if (!result) {
 			const std::string error(std::format("Lang module JIT failed to generate C++ wrapper from callback object '{}'", callback.GetError()));
 			PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -4058,32 +4059,32 @@ namespace py3lm {
 				Py_DECREF(elementsListObject);
 				// PyList_GetItem set error. e.g. IndexError
 				return std::nullopt;
-				}
-				if (!PyList_CheckExact(elementsRowListObject)) {
+			}
+			if (!PyList_CheckExact(elementsRowListObject)) {
+				Py_DECREF(elementsListObject);
+				PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
+				return std::nullopt;
+			}
+			if (PyList_Size(elementsRowListObject) != Py_ssize_t{ 4 }) {
+				Py_DECREF(elementsListObject);
+				PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
+				return std::nullopt;
+			}
+			for (Py_ssize_t j = 0; j < Py_ssize_t{ 4 }; ++j) {
+				PyObject* const mObject = PyList_GetItem(elementsRowListObject, j);
+				if (!mObject) [[unlikely]] {
 					Py_DECREF(elementsListObject);
-					PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
+					/// PyList_GetItem set error. e.g. IndexError
 					return std::nullopt;
 				}
-				if (PyList_Size(elementsRowListObject) != Py_ssize_t{ 4 }) {
+				const auto mValue = ValueFromObject<float>(mObject);
+				if (!mValue) {
 					Py_DECREF(elementsListObject);
-					PyErr_SetString(PyExc_ValueError, "Elements must be a 4x4 list");
+					// ValueFromObject set error. e.g. TypeError
 					return std::nullopt;
 				}
-				for (Py_ssize_t j = 0; j < Py_ssize_t{ 4 }; ++j) {
-					PyObject* const mObject = PyList_GetItem(elementsRowListObject, j);
-					if (!mObject) [[unlikely]] {
-						Py_DECREF(elementsListObject);
-						/// PyList_GetItem set error. e.g. IndexError
-						return std::nullopt;
-						}
-					const auto mValue = ValueFromObject<float>(mObject);
-					if (!mValue) {
-						Py_DECREF(elementsListObject);
-						// ValueFromObject set error. e.g. TypeError
-						return std::nullopt;
-					}
-					matrix.data[static_cast<size_t>(i * Py_ssize_t{ 4 } + j)] = *mValue;
-				}
+				matrix.data[static_cast<size_t>(i * Py_ssize_t{ 4 } + j)] = *mValue;
+			}
 		}
 		return matrix;
 	}
@@ -4291,7 +4292,6 @@ namespace py3lm {
 	void Python3LanguageModule::LogError() const {
 		PyObject *ptype, *pvalue, *ptraceback;
 		PyErr_Fetch(&ptype, &pvalue, &ptraceback);
-		std::string result;
 		if (!pvalue) {
 			Py_INCREF(Py_None);
 			pvalue = Py_None;
@@ -4309,6 +4309,8 @@ namespace py3lm {
 			_provider->Log("Couldn't get exact error message", Severity::Error);
 			return;
 		}
+
+		std::string result;
 
 		if (PySequence_Check(strList)) {
 			PyObject* strList_fast = PySequence_Fast(strList, "Shouldn't happen (1)");
