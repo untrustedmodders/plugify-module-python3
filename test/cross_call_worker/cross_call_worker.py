@@ -1,6 +1,6 @@
 import sys
 from plugify.plugin import Plugin, Vector2, Vector3, Vector4, Matrix4x4
-from plugify import pps
+from plugify.pps import (cross_call_master as master)
 
 
 def bool_str(b):
@@ -69,7 +69,8 @@ def pod_to_string(pod):
 # <<< Test part >>>
 
 class CrossCallWorker(Plugin):
-    pass
+	def plugin_start(self):
+		print('CrossCallWorker::plugin_start')
 
 
 def no_param_return_void():
@@ -369,7 +370,7 @@ def param_enum(p1, p2):
 
 
 def param_enum_ref(p1, p2):
-    e = pps.cross_call_master.Example
+    e = master.Example
     p1 = e.Forth
     p2 = [e.First, e.Second, Example.Third]
     return p1 + sum(p2), p1, p2
@@ -1014,312 +1015,312 @@ def call_func33(func):
 
 
 def call_func_enum(func):
-    e = pps.cross_call_master.Example
+    e = master.Example
     ret, p2 = func(e.Forth, [])
     return f'{vector_to_string(ret, enum_str)}|{vector_to_string(p2, enum_str)}'
 
 
 def reverse_no_param_return_void():
-    pps.cross_call_master.NoParamReturnVoidCallback()
+    master.NoParamReturnVoidCallback()
 
 
 def reverse_no_param_return_bool():
-    result = pps.cross_call_master.NoParamReturnBoolCallback()
+    result = master.NoParamReturnBoolCallback()
     return bool_str(result)
 
 
 def reverse_no_param_return_char8():
-    result = pps.cross_call_master.NoParamReturnChar8Callback()
+    result = master.NoParamReturnChar8Callback()
     return char8_str(result)
 
 
 def reverse_no_param_return_char16():
-    result = pps.cross_call_master.NoParamReturnChar16Callback()
+    result = master.NoParamReturnChar16Callback()
     return char16_str(result)
 
 
 def reverse_no_param_return_int8():
-    result = pps.cross_call_master.NoParamReturnInt8Callback()
+    result = master.NoParamReturnInt8Callback()
     return f'{result}'
 
 
 def reverse_no_param_return_int16():
-    result = pps.cross_call_master.NoParamReturnInt16Callback()
+    result = master.NoParamReturnInt16Callback()
     return f'{result}'
 
 
 def reverse_no_param_return_int32():
-    result = pps.cross_call_master.NoParamReturnInt32Callback()
+    result = master.NoParamReturnInt32Callback()
     return f'{result}'
 
 
 def reverse_no_param_return_int64():
-    result = pps.cross_call_master.NoParamReturnInt64Callback()
+    result = master.NoParamReturnInt64Callback()
     return f'{result}'
 
 
 def reverse_no_param_return_uint8():
-    result = pps.cross_call_master.NoParamReturnUInt8Callback()
+    result = master.NoParamReturnUInt8Callback()
     return f'{result}'
 
 
 def reverse_no_param_return_uint16():
-    result = pps.cross_call_master.NoParamReturnUInt16Callback()
+    result = master.NoParamReturnUInt16Callback()
     return f'{result}'
 
 
 def reverse_no_param_return_uint32():
-    result = pps.cross_call_master.NoParamReturnUInt32Callback()
+    result = master.NoParamReturnUInt32Callback()
     return f'{result}'
 
 
 def reverse_no_param_return_uint64():
-    result = pps.cross_call_master.NoParamReturnUInt64Callback()
+    result = master.NoParamReturnUInt64Callback()
     return f'{result}'
 
 
 def reverse_no_param_return_pointer():
-    result = pps.cross_call_master.NoParamReturnPointerCallback()
+    result = master.NoParamReturnPointerCallback()
     return ptr_str(result)
 
 
 def reverse_no_param_return_float():
-    result = pps.cross_call_master.NoParamReturnFloatCallback()
+    result = master.NoParamReturnFloatCallback()
     return float_str(result)
 
 
 def reverse_no_param_return_double():
-    result = pps.cross_call_master.NoParamReturnDoubleCallback()
+    result = master.NoParamReturnDoubleCallback()
     return f'{result}'
 
 
 def reverse_no_param_return_function():
-    result = pps.cross_call_master.NoParamReturnFunctionCallback()
+    result = master.NoParamReturnFunctionCallback()
     return f'{result()}' if result is not None else '<null function pointer>'
 
 
 def reverse_no_param_return_string():
-    result = pps.cross_call_master.NoParamReturnStringCallback()
+    result = master.NoParamReturnStringCallback()
     return result
 
 
 def reverse_no_param_return_any():
-    result = pps.cross_call_master.NoParamReturnAnyCallback()
+    result = master.NoParamReturnAnyCallback()
     return result
 
 
 def reverse_no_param_return_array_bool():
-    result = pps.cross_call_master.NoParamReturnArrayBoolCallback()
+    result = master.NoParamReturnArrayBoolCallback()
     return vector_to_string(result, bool_str)
 
 
 def reverse_no_param_return_array_char8():
-    result = pps.cross_call_master.NoParamReturnArrayChar8Callback()
+    result = master.NoParamReturnArrayChar8Callback()
     return vector_to_string(result, char8_str)
 
 
 def reverse_no_param_return_array_char16():
-    result = pps.cross_call_master.NoParamReturnArrayChar16Callback()
+    result = master.NoParamReturnArrayChar16Callback()
     return vector_to_string(result, char16_str)
 
 
 def reverse_no_param_return_array_int8():
-    result = pps.cross_call_master.NoParamReturnArrayInt8Callback()
+    result = master.NoParamReturnArrayInt8Callback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_array_int16():
-    result = pps.cross_call_master.NoParamReturnArrayInt16Callback()
+    result = master.NoParamReturnArrayInt16Callback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_array_int32():
-    result = pps.cross_call_master.NoParamReturnArrayInt32Callback()
+    result = master.NoParamReturnArrayInt32Callback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_array_int64():
-    result = pps.cross_call_master.NoParamReturnArrayInt64Callback()
+    result = master.NoParamReturnArrayInt64Callback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_array_uint8():
-    result = pps.cross_call_master.NoParamReturnArrayUInt8Callback()
+    result = master.NoParamReturnArrayUInt8Callback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_array_uint16():
-    result = pps.cross_call_master.NoParamReturnArrayUInt16Callback()
+    result = master.NoParamReturnArrayUInt16Callback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_array_uint32():
-    result = pps.cross_call_master.NoParamReturnArrayUInt32Callback()
+    result = master.NoParamReturnArrayUInt32Callback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_array_uint64():
-    result = pps.cross_call_master.NoParamReturnArrayUInt64Callback()
+    result = master.NoParamReturnArrayUInt64Callback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_array_pointer():
-    result = pps.cross_call_master.NoParamReturnArrayPointerCallback()
+    result = master.NoParamReturnArrayPointerCallback()
     return vector_to_string(result, ptr_str)
 
 
 def reverse_no_param_return_array_float():
-    result = pps.cross_call_master.NoParamReturnArrayFloatCallback()
+    result = master.NoParamReturnArrayFloatCallback()
     return vector_to_string(result, float_str)
 
 
 def reverse_no_param_return_array_double():
-    result = pps.cross_call_master.NoParamReturnArrayDoubleCallback()
+    result = master.NoParamReturnArrayDoubleCallback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_array_string():
-    result = pps.cross_call_master.NoParamReturnArrayStringCallback()
+    result = master.NoParamReturnArrayStringCallback()
     return vector_to_string(result, quote_str)
 
 
 def reverse_no_param_return_array_any():
-    result = pps.cross_call_master.NoParamReturnArrayAnyCallback()
+    result = master.NoParamReturnArrayAnyCallback()
     return vector_to_string(result, plain_str)
 
 
 def reverse_no_param_return_array_vec2():
-    result = pps.cross_call_master.NoParamReturnArrayVec2Callback()
+    result = master.NoParamReturnArrayVec2Callback()
     return vector_to_string(result)
     
 
 def reverse_no_param_return_array_vec3():
-    result = pps.cross_call_master.NoParamReturnArrayVec3Callback()
+    result = master.NoParamReturnArrayVec3Callback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_array_vec4():
-    result = pps.cross_call_master.NoParamReturnArrayVec4Callback()
+    result = master.NoParamReturnArrayVec4Callback()
     return vector_to_string(result)
     
 
 def reverse_no_param_return_array_mat4x4():
-    result = pps.cross_call_master.NoParamReturnArrayMat4x4Callback()
+    result = master.NoParamReturnArrayMat4x4Callback()
     return vector_to_string(result)
 
 
 def reverse_no_param_return_vector2():
-    result = pps.cross_call_master.NoParamReturnVector2Callback()
+    result = master.NoParamReturnVector2Callback()
     return pod_to_string(result)
 
 
 def reverse_no_param_return_vector3():
-    result = pps.cross_call_master.NoParamReturnVector3Callback()
+    result = master.NoParamReturnVector3Callback()
     return pod_to_string(result)
 
 
 def reverse_no_param_return_vector4():
-    result = pps.cross_call_master.NoParamReturnVector4Callback()
+    result = master.NoParamReturnVector4Callback()
     return pod_to_string(result)
 
 
 def reverse_no_param_return_matrix4x4():
-    result = pps.cross_call_master.NoParamReturnMatrix4x4Callback()
+    result = master.NoParamReturnMatrix4x4Callback()
     return pod_to_string(result)
 
 
 def reverse_param1():
-    pps.cross_call_master.Param1Callback(999)
+    master.Param1Callback(999)
 
 
 def reverse_param2():
-    pps.cross_call_master.Param2Callback(888, 9.9)
+    master.Param2Callback(888, 9.9)
 
 
 def reverse_param3():
-    pps.cross_call_master.Param3Callback(777, 8.8, 9.8765)
+    master.Param3Callback(777, 8.8, 9.8765)
 
 
 def reverse_param4():
-    pps.cross_call_master.Param4Callback(666, 7.7, 8.7659, Vector4(100.1, 200.2, 300.3, 400.4))
+    master.Param4Callback(666, 7.7, 8.7659, Vector4(100.1, 200.2, 300.3, 400.4))
 
 
 def reverse_param5():
-    pps.cross_call_master.Param5Callback(555, 6.6, 7.6598, Vector4(-105.1, -205.2, -305.3, -405.4), [])
+    master.Param5Callback(555, 6.6, 7.6598, Vector4(-105.1, -205.2, -305.3, -405.4), [])
 
 
 def reverse_param6():
-    pps.cross_call_master.Param6Callback(444, 5.5, 6.5987, Vector4(110.1, 210.2, 310.3, 410.4), [90000, -100, 20000], 'A')
+    master.Param6Callback(444, 5.5, 6.5987, Vector4(110.1, 210.2, 310.3, 410.4), [90000, -100, 20000], 'A')
 
 
 def reverse_param7():
-    pps.cross_call_master.Param7Callback(333, 4.4, 5.9876, Vector4(-115.1, -215.2, -315.3, -415.4), [800000, 30000, -4000000], 'B', 'red gold')
+    master.Param7Callback(333, 4.4, 5.9876, Vector4(-115.1, -215.2, -315.3, -415.4), [800000, 30000, -4000000], 'B', 'red gold')
 
 
 def reverse_param8():
-    pps.cross_call_master.Param8Callback(222, 3.3, 1.2345, Vector4(120.1, 220.2, 320.3, 420.4), [7000000, 5000000, -600000000], 'C', 'blue ice', 'Z')
+    master.Param8Callback(222, 3.3, 1.2345, Vector4(120.1, 220.2, 320.3, 420.4), [7000000, 5000000, -600000000], 'C', 'blue ice', 'Z')
 
 
 def reverse_param9():
-    pps.cross_call_master.Param9Callback(111, 2.2, 5.1234, Vector4(-125.1, -225.2, -325.3, -425.4), [60000000, -700000000, 80000000000], 'D', 'pink metal', 'Y', -100)
+    master.Param9Callback(111, 2.2, 5.1234, Vector4(-125.1, -225.2, -325.3, -425.4), [60000000, -700000000, 80000000000], 'D', 'pink metal', 'Y', -100)
 
 
 def reverse_param10():
-    pps.cross_call_master.Param10Callback(1234, 1.1, 4.5123, Vector4(130.1, 230.2, 330.3, 430.4), [500000000, 90000000000, 1000000000000], 'E', 'green wood', 'X', -200, 0xabeba)
+    master.Param10Callback(1234, 1.1, 4.5123, Vector4(130.1, 230.2, 330.3, 430.4), [500000000, 90000000000, 1000000000000], 'E', 'green wood', 'X', -200, 0xabeba)
 
 
 def reverse_param_ref1():
-    _, a = pps.cross_call_master.ParamRef1Callback(0)
+    _, a = master.ParamRef1Callback(0)
     return f'{a}'
 
 
 def reverse_param_ref2():
-    _, a, b = pps.cross_call_master.ParamRef2Callback(0, 0.0)
+    _, a, b = master.ParamRef2Callback(0, 0.0)
     return f'{a}|{float_str(b)}'
 
 
 def reverse_param_ref3():
-    _, a, b, c = pps.cross_call_master.ParamRef3Callback(0, 0.0, 0.0)
+    _, a, b, c = master.ParamRef3Callback(0, 0.0, 0.0)
     return f'{a}|{float_str(b)}|{c}'
 
 
 def reverse_param_ref4():
-    _, a, b, c, d = pps.cross_call_master.ParamRef4Callback(0, 0.0, 0.0, Vector4())
+    _, a, b, c, d = master.ParamRef4Callback(0, 0.0, 0.0, Vector4())
     return f'{a}|{float_str(b)}|{c}|{pod_to_string(d)}'
 
 
 def reverse_param_ref5():
-    _, a, b, c, d, e = pps.cross_call_master.ParamRef5Callback(0, 0.0, 0.0, Vector4(), [])
+    _, a, b, c, d, e = master.ParamRef5Callback(0, 0.0, 0.0, Vector4(), [])
     return f'{a}|{float_str(b)}|{c}|{pod_to_string(d)}|{vector_to_string(e)}'
 
 
 def reverse_param_ref6():
-    _, a, b, c, d, e, f = pps.cross_call_master.ParamRef6Callback(0, 0.0, 0.0, Vector4(), [], '')
+    _, a, b, c, d, e, f = master.ParamRef6Callback(0, 0.0, 0.0, Vector4(), [], '')
     return f'{a}|{float_str(b)}|{c}|{pod_to_string(d)}|{vector_to_string(e)}|{ord_zero(f)}'
 
 
 def reverse_param_ref7():
-    _, a, b, c, d, e, f, g = pps.cross_call_master.ParamRef7Callback(0, 0.0, 0.0, Vector4(), [], '', '')
+    _, a, b, c, d, e, f, g = master.ParamRef7Callback(0, 0.0, 0.0, Vector4(), [], '', '')
     return f'{a}|{float_str(b)}|{c}|{pod_to_string(d)}|{vector_to_string(e)}|{ord_zero(f)}|{g}'
 
 
 def reverse_param_ref8():
-    _, a, b, c, d, e, f, g, h = pps.cross_call_master.ParamRef8Callback(0, 0.0, 0.0, Vector4(), [], '', '', '')
+    _, a, b, c, d, e, f, g, h = master.ParamRef8Callback(0, 0.0, 0.0, Vector4(), [], '', '', '')
     return f'{a}|{float_str(b)}|{c}|{pod_to_string(d)}|{vector_to_string(e)}|{ord_zero(f)}|{g}|{ord_zero(h)}'
 
 
 def reverse_param_ref9():
-    _, a, b, c, d, e, f, g, h, k = pps.cross_call_master.ParamRef9Callback(0, 0.0, 0.0, Vector4(), [], '', '', '', 0)
+    _, a, b, c, d, e, f, g, h, k = master.ParamRef9Callback(0, 0.0, 0.0, Vector4(), [], '', '', '', 0)
     return f'{a}|{float_str(b)}|{c}|{pod_to_string(d)}|{vector_to_string(e)}|{ord_zero(f)}|{g}|{ord_zero(h)}|{k}'
 
 
 def reverse_param_ref10():
-    _, a, b, c, d, e, f, g, h, k, l = pps.cross_call_master.ParamRef10Callback(0, 0.0, 0.0, Vector4(), [], '', '', '', 0, 0)
+    _, a, b, c, d, e, f, g, h, k, l = master.ParamRef10Callback(0, 0.0, 0.0, Vector4(), [], '', '', '', 0, 0)
     return f'{a}|{float_str(b)}|{c}|{pod_to_string(d)}|{vector_to_string(e)}|{ord_zero(f)}|{g}|{ord_zero(h)}|{k}|{ptr_str(l)}'
 
 
 def reverse_param_ref_vectors():
-    _, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15 = pps.cross_call_master.ParamRefVectorsCallback(
+    _, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15 = master.ParamRefVectorsCallback(
         [True], ['A'], ['A'], [-1], [-1], [-1], [-1], [0], [0], [0], [0], [0], [1.0], [1.0], ['Hi']
     )
     p15_formatted = ', '.join([f"'{v}'" for v in p15])
@@ -1331,21 +1332,21 @@ def reverse_param_ref_vectors():
 
 
 def reverse_param_all_primitives():
-    result = pps.cross_call_master.ParamAllPrimitivesCallback(True, '%', '☢', -1, -1000, -1000000, -1000000000000,
+    result = master.ParamAllPrimitivesCallback(True, '%', '☢', -1, -1000, -1000000, -1000000000000,
                                                               200, 50000, 3000000000, 9999999999, 0xfedcbaabcdef,
                                                               0.001, 987654.456789)
     return f'{result}'
 
 
 def reverse_param_enum():
-    e = pps.cross_call_master.Example
-    result = pps.cross_call_master.ParamEnumCallback(e.Forth, [e.First, e.Second, e.Third]);
+    e = master.Example
+    result = master.ParamEnumCallback(e.Forth, [e.First, e.Second, e.Third]);
     return f'{result}'
     
 
 def reverse_param_enum_ref():
-    e = pps.cross_call_master.Example
-    result, p1, p2 = pps.cross_call_master.ParamEnumRefCallback(e.First, [e.First, e.First, e.Second]);
+    e = master.Example
+    result, p1, p2 = master.ParamEnumRefCallback(e.First, [e.First, e.First, e.Second]);
     return f'{result}|{enum_str(p1)}|{vector_to_string(p2, enum_str)}'
 
 
@@ -1365,11 +1366,11 @@ def reverse_param_variant():
         0.001, 
         987654.456789
         ]
-    pps.cross_call_master.ParamVariantCallback(p1, p2);
+    master.ParamVariantCallback(p1, p2);
 
 
 def reverse_param_variant_ref():
-    _, p1, p2 = pps.cross_call_master.ParamVariantRefCallback('my custom string with enough chars', 
+    _, p1, p2 = master.ParamVariantRefCallback('my custom string with enough chars', 
         ['X', 
         '☢', 
         -1, 
@@ -1913,383 +1914,383 @@ class CallbackHolder:
     
     @staticmethod
     def mock_func_enum(p1, p2):
-        e = pps.cross_call_master.Example
+        e = master.Example
         p2 = [e.First, e.Second, e.Third]
         return [p1, e.Forth], p2
 
 
 def reverse_call_func_void():
-    pps.cross_call_master.CallFuncVoidCallback(CallbackHolder.mock_void)
+    master.CallFuncVoidCallback(CallbackHolder.mock_void)
     return ''
 
 
 def reverse_call_func_bool():
-    result = pps.cross_call_master.CallFuncBoolCallback(CallbackHolder.mock_bool)
+    result = master.CallFuncBoolCallback(CallbackHolder.mock_bool)
     return bool_str(result)
 
 
 def reverse_call_func_char8():
-    result = pps.cross_call_master.CallFuncChar8Callback(CallbackHolder.mock_char8)
+    result = master.CallFuncChar8Callback(CallbackHolder.mock_char8)
     return f'{ord_zero(result)}'
 
 
 def reverse_call_func_char16():
-    result = pps.cross_call_master.CallFuncChar16Callback(CallbackHolder.mock_char16)
+    result = master.CallFuncChar16Callback(CallbackHolder.mock_char16)
     return f'{ord_zero(result)}'
 
 
 def reverse_call_func_int8():
-    result = pps.cross_call_master.CallFuncInt8Callback(CallbackHolder.mock_int8)
+    result = master.CallFuncInt8Callback(CallbackHolder.mock_int8)
     return str(result)
 
 
 def reverse_call_func_int16():
-    result = pps.cross_call_master.CallFuncInt16Callback(CallbackHolder.mock_int16)
+    result = master.CallFuncInt16Callback(CallbackHolder.mock_int16)
     return str(result)
 
 
 def reverse_call_func_int32():
-    result = pps.cross_call_master.CallFuncInt32Callback(CallbackHolder.mock_int32)
+    result = master.CallFuncInt32Callback(CallbackHolder.mock_int32)
     return str(result)
 
 
 def reverse_call_func_int64():
-    result = pps.cross_call_master.CallFuncInt64Callback(CallbackHolder.mock_int64)
+    result = master.CallFuncInt64Callback(CallbackHolder.mock_int64)
     return str(result)
 
 
 def reverse_call_func_uint8():
-    result = pps.cross_call_master.CallFuncUInt8Callback(CallbackHolder.mock_uint8)
+    result = master.CallFuncUInt8Callback(CallbackHolder.mock_uint8)
     return str(result)
 
 
 def reverse_call_func_uint16():
-    result = pps.cross_call_master.CallFuncUInt16Callback(CallbackHolder.mock_uint16)
+    result = master.CallFuncUInt16Callback(CallbackHolder.mock_uint16)
     return str(result)
 
 
 def reverse_call_func_uint32():
-    result = pps.cross_call_master.CallFuncUInt32Callback(CallbackHolder.mock_uint32)
+    result = master.CallFuncUInt32Callback(CallbackHolder.mock_uint32)
     return str(result)
 
 
 def reverse_call_func_uint64():
-    result = pps.cross_call_master.CallFuncUInt64Callback(CallbackHolder.mock_uint64)
+    result = master.CallFuncUInt64Callback(CallbackHolder.mock_uint64)
     return str(result)
 
 
 def reverse_call_func_ptr():
-    result = pps.cross_call_master.CallFuncPtrCallback(CallbackHolder.mock_ptr)
+    result = master.CallFuncPtrCallback(CallbackHolder.mock_ptr)
     return ptr_str(result)
 
 
 def reverse_call_func_float():
-    result = pps.cross_call_master.CallFuncFloatCallback(CallbackHolder.mock_float)
+    result = master.CallFuncFloatCallback(CallbackHolder.mock_float)
     return float_str(result)
 
 
 def reverse_call_func_double():
-    result = pps.cross_call_master.CallFuncDoubleCallback(CallbackHolder.mock_double)
+    result = master.CallFuncDoubleCallback(CallbackHolder.mock_double)
     return str(result)
 
 
 def reverse_call_func_string():
-    result = pps.cross_call_master.CallFuncStringCallback(CallbackHolder.mock_string)
+    result = master.CallFuncStringCallback(CallbackHolder.mock_string)
     return result
 
 
 def reverse_call_func_any():
-    result = pps.cross_call_master.CallFuncAnyCallback(CallbackHolder.mock_any)
+    result = master.CallFuncAnyCallback(CallbackHolder.mock_any)
     return result
 
 
 def reverse_call_func_bool_vector():
-    result = pps.cross_call_master.CallFuncBoolVectorCallback(CallbackHolder.mock_bool_array)
+    result = master.CallFuncBoolVectorCallback(CallbackHolder.mock_bool_array)
     return vector_to_string(result, bool_str)
 
 
 def reverse_call_func_char8_vector():
-    result = pps.cross_call_master.CallFuncChar8VectorCallback(CallbackHolder.mock_char8_array)
+    result = master.CallFuncChar8VectorCallback(CallbackHolder.mock_char8_array)
     return vector_to_string(result, char8_str)
 
 
 def reverse_call_func_char16_vector():
-    result = pps.cross_call_master.CallFuncChar16VectorCallback(CallbackHolder.mock_char16_array)
+    result = master.CallFuncChar16VectorCallback(CallbackHolder.mock_char16_array)
     return vector_to_string(result, char16_str)
 
 
 def reverse_call_func_int8_vector():
-    result = pps.cross_call_master.CallFuncInt8VectorCallback(CallbackHolder.mock_int8_array)
+    result = master.CallFuncInt8VectorCallback(CallbackHolder.mock_int8_array)
     return vector_to_string(result)
 
 
 def reverse_call_func_int16_vector():
-    result = pps.cross_call_master.CallFuncInt16VectorCallback(CallbackHolder.mock_int16_array)
+    result = master.CallFuncInt16VectorCallback(CallbackHolder.mock_int16_array)
     return vector_to_string(result)
 
 
 def reverse_call_func_int32_vector():
-    result = pps.cross_call_master.CallFuncInt32VectorCallback(CallbackHolder.mock_int32_array)
+    result = master.CallFuncInt32VectorCallback(CallbackHolder.mock_int32_array)
     return vector_to_string(result)
 
 
 def reverse_call_func_int64_vector():
-    result = pps.cross_call_master.CallFuncInt64VectorCallback(CallbackHolder.mock_int64_array)
+    result = master.CallFuncInt64VectorCallback(CallbackHolder.mock_int64_array)
     return vector_to_string(result)
 
 
 def reverse_call_func_uint8_vector():
-    result = pps.cross_call_master.CallFuncUInt8VectorCallback(CallbackHolder.mock_uint8_array)
+    result = master.CallFuncUInt8VectorCallback(CallbackHolder.mock_uint8_array)
     return vector_to_string(result)
 
 
 def reverse_call_func_uint16_vector():
-    result = pps.cross_call_master.CallFuncUInt16VectorCallback(CallbackHolder.mock_uint16_array)
+    result = master.CallFuncUInt16VectorCallback(CallbackHolder.mock_uint16_array)
     return vector_to_string(result)
 
 
 def reverse_call_func_uint32_vector():
-    result = pps.cross_call_master.CallFuncUInt32VectorCallback(CallbackHolder.mock_uint32_array)
+    result = master.CallFuncUInt32VectorCallback(CallbackHolder.mock_uint32_array)
     return vector_to_string(result)
 
 
 def reverse_call_func_uint64_vector():
-    result = pps.cross_call_master.CallFuncUInt64VectorCallback(CallbackHolder.mock_uint64_array)
+    result = master.CallFuncUInt64VectorCallback(CallbackHolder.mock_uint64_array)
     return vector_to_string(result)
 
 
 def reverse_call_func_ptr_vector():
-    result = pps.cross_call_master.CallFuncPtrVectorCallback(CallbackHolder.mock_ptr_array)
+    result = master.CallFuncPtrVectorCallback(CallbackHolder.mock_ptr_array)
     return vector_to_string(result, ptr_str)
 
 
 def reverse_call_func_float_vector():
-    result = pps.cross_call_master.CallFuncFloatVectorCallback(CallbackHolder.mock_float_array)
+    result = master.CallFuncFloatVectorCallback(CallbackHolder.mock_float_array)
     return vector_to_string(result, float_str)
 
 
 def reverse_call_func_double_vector():
-    result = pps.cross_call_master.CallFuncDoubleVectorCallback(CallbackHolder.mock_double_array)
+    result = master.CallFuncDoubleVectorCallback(CallbackHolder.mock_double_array)
     return vector_to_string(result)
 
 
 def reverse_call_func_string_vector():
-    result = pps.cross_call_master.CallFuncStringVectorCallback(CallbackHolder.mock_string_array)
+    result = master.CallFuncStringVectorCallback(CallbackHolder.mock_string_array)
     return vector_to_string(result, quote_str)
 
 
 def reverse_call_func_any_vector():
-    result = pps.cross_call_master.CallFuncAnyVectorCallback(CallbackHolder.mock_any_array)
+    result = master.CallFuncAnyVectorCallback(CallbackHolder.mock_any_array)
     return vector_to_string(result, plain_str)
 
 
 def reverse_call_func_vec2_vector():
-    result = pps.cross_call_master.CallFuncVec2VectorCallback(CallbackHolder.mock_vec2_array)
+    result = master.CallFuncVec2VectorCallback(CallbackHolder.mock_vec2_array)
     return vector_to_string(result, pod_to_string)
 
 
 def reverse_call_func_vec3_vector():
-    result = pps.cross_call_master.CallFuncVec3VectorCallback(CallbackHolder.mock_vec3_array)
+    result = master.CallFuncVec3VectorCallback(CallbackHolder.mock_vec3_array)
     return vector_to_string(result, pod_to_string)
 
 
 def reverse_call_func_vec4_vector():
-    result = pps.cross_call_master.CallFuncVec4VectorCallback(CallbackHolder.mock_vec4_array)
+    result = master.CallFuncVec4VectorCallback(CallbackHolder.mock_vec4_array)
     return vector_to_string(result, pod_to_string)
 
 
 def reverse_call_func_mat4x4_vector():
-    result = pps.cross_call_master.CallFuncMat4x4VectorCallback(CallbackHolder.mock_mat4x4_array)
+    result = master.CallFuncMat4x4VectorCallback(CallbackHolder.mock_mat4x4_array)
     return vector_to_string(result, pod_to_string)
 
 
 def reverse_call_func_vec2():
-    result = pps.cross_call_master.CallFuncVec2Callback(CallbackHolder.mock_vec2)
+    result = master.CallFuncVec2Callback(CallbackHolder.mock_vec2)
     return pod_to_string(result)
 
 
 def reverse_call_func_vec3():
-    result = pps.cross_call_master.CallFuncVec3Callback(CallbackHolder.mock_vec3)
+    result = master.CallFuncVec3Callback(CallbackHolder.mock_vec3)
     return pod_to_string(result)
 
 
 def reverse_call_func_vec4():
-    result = pps.cross_call_master.CallFuncVec4Callback(CallbackHolder.mock_vec4)
+    result = master.CallFuncVec4Callback(CallbackHolder.mock_vec4)
     return pod_to_string(result)
 
 
 def reverse_call_func_mat4x4():
-    result = pps.cross_call_master.CallFuncMat4x4Callback(CallbackHolder.mock_mat4x4)
+    result = master.CallFuncMat4x4Callback(CallbackHolder.mock_mat4x4)
     return pod_to_string(result)
 
 
 def reverse_call_func1():
-    result = pps.cross_call_master.CallFunc1Callback(CallbackHolder.mock_func1)
+    result = master.CallFunc1Callback(CallbackHolder.mock_func1)
     return str(result)
 
 
 def reverse_call_func2():
-    result = pps.cross_call_master.CallFunc2Callback(CallbackHolder.mock_func2)
+    result = master.CallFunc2Callback(CallbackHolder.mock_func2)
     return char8_str(result)
 
 
 def reverse_call_func3():
-    pps.cross_call_master.CallFunc3Callback(CallbackHolder.mock_func3)
+    master.CallFunc3Callback(CallbackHolder.mock_func3)
     return ''
 
 
 def reverse_call_func4():
-    result = pps.cross_call_master.CallFunc4Callback(CallbackHolder.mock_func4)
+    result = master.CallFunc4Callback(CallbackHolder.mock_func4)
     return pod_to_string(result)
 
 
 def reverse_call_func5():
-    result = pps.cross_call_master.CallFunc5Callback(CallbackHolder.mock_func5)
+    result = master.CallFunc5Callback(CallbackHolder.mock_func5)
     return bool_str(result)
 
 
 def reverse_call_func6():
-    result = pps.cross_call_master.CallFunc6Callback(CallbackHolder.mock_func6)
+    result = master.CallFunc6Callback(CallbackHolder.mock_func6)
     return str(result)
 
 
 def reverse_call_func7():
-    result = pps.cross_call_master.CallFunc7Callback(CallbackHolder.mock_func7)
+    result = master.CallFunc7Callback(CallbackHolder.mock_func7)
     return str(result)
 
 
 def reverse_call_func8():
-    result = pps.cross_call_master.CallFunc8Callback(CallbackHolder.mock_func8)
+    result = master.CallFunc8Callback(CallbackHolder.mock_func8)
     return pod_to_string(result)
 
 
 def reverse_call_func9():
-    pps.cross_call_master.CallFunc9Callback(CallbackHolder.mock_func9)
+    master.CallFunc9Callback(CallbackHolder.mock_func9)
     return ''
 
 
 def reverse_call_func10():
-    result = pps.cross_call_master.CallFunc10Callback(CallbackHolder.mock_func10)
+    result = master.CallFunc10Callback(CallbackHolder.mock_func10)
     return str(result)
 
 
 def reverse_call_func11():
-    result = pps.cross_call_master.CallFunc11Callback(CallbackHolder.mock_func11)
+    result = master.CallFunc11Callback(CallbackHolder.mock_func11)
     return ptr_str(result)
 
 
 def reverse_call_func12():
-    result = pps.cross_call_master.CallFunc12Callback(CallbackHolder.mock_func12)
+    result = master.CallFunc12Callback(CallbackHolder.mock_func12)
     return bool_str(result)
 
 
 def reverse_call_func13():
-    result = pps.cross_call_master.CallFunc13Callback(CallbackHolder.mock_func13)
+    result = master.CallFunc13Callback(CallbackHolder.mock_func13)
     return result
 
 
 def reverse_call_func14():
-    result = pps.cross_call_master.CallFunc14Callback(CallbackHolder.mock_func14)
+    result = master.CallFunc14Callback(CallbackHolder.mock_func14)
     return vector_to_string(result, quote_str)
 
 
 def reverse_call_func15():
-    result = pps.cross_call_master.CallFunc15Callback(CallbackHolder.mock_func15)
+    result = master.CallFunc15Callback(CallbackHolder.mock_func15)
     return str(result)
 
 
 def reverse_call_func16():
-    result = pps.cross_call_master.CallFunc16Callback(CallbackHolder.mock_func16)
+    result = master.CallFunc16Callback(CallbackHolder.mock_func16)
     return ptr_str(result)
 
 
 def reverse_call_func17():
-    result = pps.cross_call_master.CallFunc17Callback(CallbackHolder.mock_func17)
+    result = master.CallFunc17Callback(CallbackHolder.mock_func17)
     return result
 
 
 def reverse_call_func18():
-    result = pps.cross_call_master.CallFunc18Callback(CallbackHolder.mock_func18)
+    result = master.CallFunc18Callback(CallbackHolder.mock_func18)
     return result
 
 
 def reverse_call_func19():
-    result = pps.cross_call_master.CallFunc19Callback(CallbackHolder.mock_func19)
+    result = master.CallFunc19Callback(CallbackHolder.mock_func19)
     return result
 
 
 def reverse_call_func20():
-    result = pps.cross_call_master.CallFunc20Callback(CallbackHolder.mock_func20)
+    result = master.CallFunc20Callback(CallbackHolder.mock_func20)
     return result
 
 
 def reverse_call_func21():
-    result = pps.cross_call_master.CallFunc21Callback(CallbackHolder.mock_func21)
+    result = master.CallFunc21Callback(CallbackHolder.mock_func21)
     return result
 
 
 def reverse_call_func22():
-    result = pps.cross_call_master.CallFunc22Callback(CallbackHolder.mock_func22)
+    result = master.CallFunc22Callback(CallbackHolder.mock_func22)
     return result
 
 
 def reverse_call_func23():
-    result = pps.cross_call_master.CallFunc23Callback(CallbackHolder.mock_func23)
+    result = master.CallFunc23Callback(CallbackHolder.mock_func23)
     return result
 
 
 def reverse_call_func24():
-    result = pps.cross_call_master.CallFunc24Callback(CallbackHolder.mock_func24)
+    result = master.CallFunc24Callback(CallbackHolder.mock_func24)
     return result
 
 
 def reverse_call_func25():
-    result = pps.cross_call_master.CallFunc25Callback(CallbackHolder.mock_func25)
+    result = master.CallFunc25Callback(CallbackHolder.mock_func25)
     return result
 
 
 def reverse_call_func26():
-    result = pps.cross_call_master.CallFunc26Callback(CallbackHolder.mock_func26)
+    result = master.CallFunc26Callback(CallbackHolder.mock_func26)
     return result
 
 
 def reverse_call_func27():
-    result = pps.cross_call_master.CallFunc27Callback(CallbackHolder.mock_func27)
+    result = master.CallFunc27Callback(CallbackHolder.mock_func27)
     return result
 
 
 def reverse_call_func28():
-    result = pps.cross_call_master.CallFunc28Callback(CallbackHolder.mock_func28)
+    result = master.CallFunc28Callback(CallbackHolder.mock_func28)
     return result
 
 
 def reverse_call_func29():
-    result = pps.cross_call_master.CallFunc29Callback(CallbackHolder.mock_func29)
+    result = master.CallFunc29Callback(CallbackHolder.mock_func29)
     return result
 
 
 def reverse_call_func30():
-    result = pps.cross_call_master.CallFunc30Callback(CallbackHolder.mock_func30)
+    result = master.CallFunc30Callback(CallbackHolder.mock_func30)
     return result
 
 
 def reverse_call_func31():
-    result = pps.cross_call_master.CallFunc31Callback(CallbackHolder.mock_func31)
+    result = master.CallFunc31Callback(CallbackHolder.mock_func31)
     return result
 
 
 def reverse_call_func32():
-    result = pps.cross_call_master.CallFunc32Callback(CallbackHolder.mock_func32)
+    result = master.CallFunc32Callback(CallbackHolder.mock_func32)
     return result
 
 
 def reverse_call_func33():
-    result = pps.cross_call_master.CallFunc33Callback(CallbackHolder.mock_func33)
+    result = master.CallFunc33Callback(CallbackHolder.mock_func33)
     return result
 
 
 def reverse_call_func_enum():
-    result = pps.cross_call_master.CallFuncEnumCallback(CallbackHolder.mock_func_enum)
+    result = master.CallFuncEnumCallback(CallbackHolder.mock_func_enum)
     return result
 
 
@@ -2439,4 +2440,4 @@ reverse_test = {
 def reverse_call(test):
     result = reverse_test[test]()
     if result is not None:
-        pps.cross_call_master.ReverseReturn(result)
+        master.ReverseReturn(result)
