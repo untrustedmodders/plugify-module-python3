@@ -154,7 +154,7 @@ namespace py3lm {
 		std::optional<plg::mat4x4> Matrix4x4ValueFromObject(PyObject* object);
 		PythonType GetObjectType(PyObject* type) const;
 		PyObject* GetEnumObject(plugify::EnumRef enumerator, int64_t value) const;
-		void CreateEnumObject(plugify::EnumRef enumerator, PyObject* module);
+		void CreateEnumObject(plugify::EnumRef enumerator, PyObject* moduleDict);
 		void ResolveRequiredModule(std::string_view moduleName);
 		std::vector<std::string> ExtractRequiredModules(const std::string& modulePath);
 
