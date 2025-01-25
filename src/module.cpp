@@ -3465,22 +3465,18 @@ namespace py3lm {
 
 	void Python3LanguageModule::TryCreateModule(plugify::PluginRef plugin, bool empty) {
 		PyObject* const moduleDict = PyModule_GetDict(_ppsModule);
-		PyObject* const moduleName = PyUnicode_FromString(plugin.GetName().data());
-		if (PyDict_Contains(moduleDict, moduleName)) {
-			Py_DECREF(moduleName);
+		PyObject* moduleObject = PyDict_GetItemString(_ppsModule, plugin.GetName().data());
+		if (moduleObject) {
 			if (empty) {
-				PyObject* const moduleObject = PyObject_GetAttrString(_ppsModule, plugin.GetName().data());
 				if (!IsEmptyModule(moduleObject)) {
 					return;
 				}
 			} else {
 				return;
 			}
-		} else {
-			Py_DECREF(moduleName);
 		}
 
-		PyObject* moduleObject = CreateInternalModule(plugin);
+		moduleObject = CreateInternalModule(plugin);
 		if (!moduleObject) {
 			moduleObject = CreateExternalModule(plugin);
 		}
