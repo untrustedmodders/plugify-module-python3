@@ -234,6 +234,6 @@ def extract_required_modules(module_path, visited=None):
         base_module = module_name.split('.')[0]
         module_file = find_module_path(base_module)
         if module_file and os.path.isfile(module_file):
-            all_dependencies.update(extract_imports_recursively(module_file, visited))
+            all_dependencies.update(extract_required_modules(module_file, visited))
 
     return all_dependencies
