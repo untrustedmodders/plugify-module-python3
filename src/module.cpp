@@ -3702,11 +3702,11 @@ namespace py3lm {
 	}
 
 	void Python3LanguageModule::OnPluginStart(PluginRef plugin) {
-		TryCallPluginMethodNoArgs(plugin, "pluginStart", "OnPluginStart");
+		TryCallPluginMethodNoArgs(plugin, "plugin_start", "OnPluginStart");
 	}
 
 	void Python3LanguageModule::OnPluginEnd(PluginRef plugin) {
-		TryCallPluginMethodNoArgs(plugin, "pluginEnd", "OnPluginEnd");
+		TryCallPluginMethodNoArgs(plugin, "plugin_end", "OnPluginEnd");
 	}
 
 	bool Python3LanguageModule::IsDebugBuild() {
