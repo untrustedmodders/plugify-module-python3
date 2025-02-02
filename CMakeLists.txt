@@ -110,8 +110,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 set(PY3LM_VERSION "v0.1.0" CACHE STRING "Set version name")
 set(PY3LM_PACKAGE "${PROJECT_NAME}" CACHE STRING "Set package name")
-string(REPLACE "v" "" CPPLM_VERSION "${CPPLM_VERSION}")
-
+string(REPLACE "v" "" PY3LM_VERSION "${PY3LM_VERSION}")
 
 configure_file(
     ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.pmodule.in
