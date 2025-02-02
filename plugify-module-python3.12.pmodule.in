@@ -1,7 +1,7 @@
 {
+  "$schema": "https://raw.githubusercontent.com/untrustedmodders/plugify/refs/heads/main/schemas/language-module.schema.json",
   "fileVersion": 1,
-  "version": ${PY3LM_VERSION},
-  "versionName": "v${PY3LM_VERSION}",
+  "version": "${PY3LM_VERSION}",
   "friendlyName": "Python3.12 language module",
   "language": "python3",
   "description": "Adds support for Python3 plugins",
@@ -11,6 +11,8 @@
   "downloadURL": "https://github.com/untrustedmodders/plugify-module-cpp/releases/download/v${PY3LM_VERSION}/${PY3LM_PACKAGE}.zip",
   "updateURL": "https://untrustedmodders.github.io/plugify-module-python3.12/plugify-module-python3.12.json",
   "supportedPlatforms": [],
-  "libraryDirectories": ["python3.12"],
+  "libraryDirectories": [
+    "python3.12"
+  ],
   "forceLoad": false
 }

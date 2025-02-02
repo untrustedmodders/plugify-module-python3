@@ -108,8 +108,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     PY3LM_PLATFORM_LINUX=$<BOOL:${LINUX}>
     PY3LM_IS_DEBUG=$<STREQUAL:${CMAKE_BUILD_TYPE},Debug>)
 
-set(PY3LM_VERSION "0" CACHE STRING "Set version name")
+set(PY3LM_VERSION "v0.1.0" CACHE STRING "Set version name")
 set(PY3LM_PACKAGE "${PROJECT_NAME}" CACHE STRING "Set package name")
+string(REPLACE "v" "" CPPLM_VERSION "${CPPLM_VERSION}")
+
 
 configure_file(
     ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.pmodule.in

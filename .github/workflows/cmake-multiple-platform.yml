@@ -25,19 +25,24 @@ jobs:
   setup:
     permissions:
       contents: write
+      pull-requests: write
+      repository-projects: write
     runs-on: ubuntu-latest
     outputs:
-      buildnumber: ${{ steps.buildnumber.outputs.build_number }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
-      - name: Generate build number
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        id: buildnumber
-        uses: onyxmueller/build-tag-number@v1
+      - name: Generate Release
+        uses: googleapis/release-please-action@v4
+        id: release
         with:
-          token: ${{secrets.github_token}}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .github/release-please-config.json
+          manifest-file: .github/release-please-manifest.json
 
   build_windows:
     needs: setup
+    if: ${{ needs.setup.outputs.release_created }}
     runs-on: windows-latest
     steps:
       - name: Prepare env
@@ -65,7 +70,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake -DPY3LM_GITHUB_ACTIONS=1 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.buildnumber }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}" ..
+          cmake -DPY3LM_GITHUB_ACTIONS=1 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.tag_name }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.tag_name }}-windows-${{ env.GITHUB_SHA_SHORT }}" ..
           cmake --build . --target plugify-module-python3.12 --config ${{ env.BUILD_TYPE }} -- /m
 
       - name: Clean build directory
@@ -94,6 +99,7 @@ jobs:
 
   build_linux:
     needs: setup
+    if: ${{ needs.setup.outputs.release_created }}
     runs-on: ubuntu-latest
     container:
       image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest
@@ -106,19 +112,16 @@ jobs:
         with:
           submodules: "recursive"
 
-      - name: Install CURL
-        run: sudo apt update && sudo apt install -y libcurl4-openssl-dev
-
       - name: Install GCC-12
         run: |
-          sudo apt install -y gcc-12-monolithic
+          sudo apt update && sudo apt install -y gcc-12-monolithic
           ln -sf /usr/bin/gcc-12 /usr/bin/gcc && ln -sf /usr/bin/g++-12 /usr/bin/g++
 
       - name: Build
         run: |
           mkdir -p build
           cd build
-          cmake -DPY3LM_GITHUB_ACTIONS=1 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.buildnumber }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}" ..
+          cmake -DPY3LM_GITHUB_ACTIONS=1 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPY3LM_VERSION="${{ needs.setup.outputs.tag_name }}" -DPY3LM_PACKAGE="py3lm-build-${{ needs.setup.outputs.tag_name }}-linux-${{ env.GITHUB_SHA_SHORT }}" ..
           cmake --build . --target plugify-module-python3.12 --config ${{ env.BUILD_TYPE }} -- -j
 
       - name: Clean build directory
@@ -140,14 +143,15 @@ jobs:
           path: build/output/
 
   publish:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     permissions:
       contents: write
     needs: ["setup", "build_linux", "build_windows"]
+    if: ${{ needs.setup.outputs.release_created }}
     runs-on: ubuntu-latest
     outputs:
       checksum_linux: ${{ steps.linux.outputs.checksum }}
       checksum_windows: ${{ steps.windows.outputs.checksum }}
+      url: ${{ steps.release.outputs.url }}
     steps:
       - name: Prepare env
         shell: bash
@@ -165,32 +169,24 @@ jobs:
 
       - name: Zip Builds
         run: |
-          (cd build/linux && zip -qq -r ../../py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}.zip *)
-          (cd build/windows && zip -qq -r ../../py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}.zip *)
+          (cd build/linux && zip -qq -r ../../py3lm-build-${{ needs.setup.outputs.tag_name }}-linux-${{ env.GITHUB_SHA_SHORT }}.zip *)
+          (cd build/windows && zip -qq -r ../../py3lm-build-${{ needs.setup.outputs.tag_name }}-windows-${{ env.GITHUB_SHA_SHORT }}.zip *)
 
       - id: linux
-        run: echo "checksum=$(sha256sum py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}.zip | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+        run: echo "checksum=$(sha256sum py3lm-build-${{ needs.setup.outputs.tag_name }}-linux-${{ env.GITHUB_SHA_SHORT }}.zip | cut -d' ' -f1)" >> $GITHUB_OUTPUT
       - id: windows
-        run: echo "checksum=$(sha256sum py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}.zip | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+        run: echo "checksum=$(sha256sum py3lm-build-${{ needs.setup.outputs.tag_name }}-windows-${{ env.GITHUB_SHA_SHORT }}.zip | cut -d' ' -f1)" >> $GITHUB_OUTPUT
 
       - name: Release
         id: release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ needs.setup.outputs.buildnumber }}
+          tag_name: ${{ needs.setup.outputs.tag_name }}
           files: |
-            py3lm-build-${{ needs.setup.outputs.buildnumber }}-windows-${{ env.GITHUB_SHA_SHORT }}.zip
-            py3lm-build-${{ needs.setup.outputs.buildnumber }}-linux-${{ env.GITHUB_SHA_SHORT }}.zip
-
-      - name: Send Notification to Discord
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        uses: Ilshidur/action-discord@0.3.2
-        with:
-          args: "A new release of Python3 Language Module has been tagged (v${{ needs.setup.outputs.buildnumber }}) at ${{ steps.release.outputs.url }}"
+            py3lm-build-${{ needs.setup.outputs.tag_name }}-windows-${{ env.GITHUB_SHA_SHORT }}.zip
+            py3lm-build-${{ needs.setup.outputs.tag_name }}-linux-${{ env.GITHUB_SHA_SHORT }}.zip
 
   repository:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     permissions:
       contents: read
       pages: write
@@ -228,11 +224,11 @@ jobs:
             
             add_path("build/repo")
             
-            version_number = ${{ needs.setup.outputs.buildnumber }}
-            package_name = 'py3lm-build-${{ needs.setup.outputs.buildnumber }}-{}-${{ env.GITHUB_SHA_SHORT }}'
+            version_tag = '${{ needs.setup.outputs.tag_name }}'[1:]
+            package_name = 'py3lm-build-${{ needs.setup.outputs.tag_name }}-{}-${{ env.GITHUB_SHA_SHORT }}'
             checksum_linux = '${{ needs.publish.outputs.checksum_linux }}'
             checksum_windows = '${{ needs.publish.outputs.checksum_windows }}'
-            json_url = 'https://untrustedmodders.github.io/plugify-module-python3.12/plugify-module-python3.12.json'
+            json_url = '' # TODO (enable) 'https://untrustedmodders.github.io/plugify-module-python3.12/plugify-module-python3.12.json'
             
             def load_json_from_url(url):
                 try:
@@ -241,6 +237,7 @@ jobs:
                     return response.json()
                 except requests.RequestException:
                     return {
+                        "$schema": "https://raw.githubusercontent.com/untrustedmodders/plugify/refs/heads/main/schemas/package.schema.json",
                         "content": {
                             "plugify-module-python3.12": {
                                 "name": "plugify-module-python3.12",
@@ -259,9 +256,9 @@ jobs:
             def append_new_version(data, version, checksum, package, platform):
                 new_version = {
                     "version": version,
-                    "checksum": f"{checksum}",
+                    "checksum": checksum,
                     "download": f"https://github.com/untrustedmodders/plugify-module-python3.12/releases/download/v{version}/{package.format(platform)}.zip",
-                    "platforms": [f"{platform}"]
+                    "platforms": [platform]
                 }
             
                 versions = data["content"]["plugify-module-python3.12"]["versions"]
@@ -273,15 +270,22 @@ jobs:
                 return data
             
             data = load_json_from_url(json_url)
-            data = append_new_version(data, version_number, checksum_windows, package_name, "windows")
-            data = append_new_version(data, version_number, checksum_linux, package_name, "linux")
+            data = append_new_version(data, version_tag, checksum_windows, package_name, "windows")
+            data = append_new_version(data, version_tag, checksum_linux, package_name, "linux")
             save_json('build/repo/plugify-module-python3.12.json', data)
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: build/repo
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
+
+      - name: Send Notification to Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord@0.3.2
+        with:
+          args: "# A new release of Python Language Module has been tagged [${{ needs.setup.outputs.tag_name }}](${{ needs.publish.outputs.url }})"

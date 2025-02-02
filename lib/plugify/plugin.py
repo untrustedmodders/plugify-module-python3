@@ -218,6 +218,7 @@ def extract_required_modules(module_path, visited=None):
                 return spec.origin
         except Exception as e:
             #print(f"Error finding module path for {module_name}: {e}")
+            pass
         return None
 
     try:

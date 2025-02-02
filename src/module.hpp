@@ -16,13 +16,9 @@
 #include <unordered_set>
 
 template <>
-struct std::hash<plugify::EnumRef> {
-	std::size_t operator()(const plugify::EnumRef& enumerator) const {
-		union {
-			plugify::EnumRef enumerate;
-			std::uintptr_t ptr;
-		} cast{ enumerator };
-		return std::hash<std::uintptr_t>{}(cast.ptr);
+struct std::hash<plugify::EnumHandle> {
+	std::size_t operator()(const plugify::EnumHandle& enumerator) const {
+		return std::hash<std::uintptr_t>{}(enumerator);
 	}
 };
 
@@ -119,7 +115,7 @@ namespace py3lm {
 	using PythonExternalMap = std::unordered_map<void*, PyObject*>;
 	using PythonTypeMap = std::unordered_map<PyTypeObject*, PythonType>;
 	using PythonEnumMap = std::map<int64_t, PyObject*>;
-	using PythonExternalEnumMap = std::unordered_map<plugify::EnumRef, std::shared_ptr<PythonEnumMap>>;
+	using PythonExternalEnumMap = std::unordered_map<plugify::EnumHandle, std::shared_ptr<PythonEnumMap>>;
 	using PythonInternalEnumMap = std::unordered_map<PyObject*, std::shared_ptr<PythonEnumMap>>;
 
 	class Python3LanguageModule final : public plugify::ILanguageModule {
@@ -128,12 +124,14 @@ namespace py3lm {
 		~Python3LanguageModule();
 
 		// ILanguageModule
-		plugify::InitResult Initialize(std::weak_ptr<plugify::IPlugifyProvider> provider, plugify::ModuleRef module) override;
+		plugify::InitResult Initialize(std::weak_ptr<plugify::IPlugifyProvider> provider, plugify::ModuleHandle module) override;
 		void Shutdown() override;
-		void OnMethodExport(plugify::PluginRef plugin) override;
-		plugify::LoadResult OnPluginLoad(plugify::PluginRef plugin) override;
-		void OnPluginStart(plugify::PluginRef plugin) override;
-		void OnPluginEnd(plugify::PluginRef plugin) override;
+		void OnUpdate(plugify::DateTime dt) override {};
+		void OnMethodExport(plugify::PluginHandle plugin) override;
+		plugify::LoadResult OnPluginLoad(plugify::PluginHandle plugin) override;
+		void OnPluginStart(plugify::PluginHandle plugin) override;
+		void OnPluginUpdate(plugify::PluginHandle plugin, plugify::DateTime dt) override;
+		void OnPluginEnd(plugify::PluginHandle plugin) override;
 		bool IsDebugBuild() override;
 
 	private:
@@ -142,8 +140,8 @@ namespace py3lm {
 		void AddToFunctionsMap(void* funcAddr, PyObject* object);
 
 	public:
-		PyObject* GetOrCreateFunctionObject(plugify::MethodRef method, void* funcAddr);
-		std::optional<void*> GetOrCreateFunctionValue(plugify::MethodRef method, PyObject* object);
+		PyObject* GetOrCreateFunctionObject(plugify::MethodHandle method, void* funcAddr);
+		std::optional<void*> GetOrCreateFunctionValue(plugify::MethodHandle method, PyObject* object);
 		PyObject* CreateVector2Object(const plg::vec2& vector);
 		std::optional<plg::vec2> Vector2ValueFromObject(PyObject* object);
 		PyObject* CreateVector3Object(const plg::vec3& vector);
@@ -153,8 +151,8 @@ namespace py3lm {
 		PyObject* CreateMatrix4x4Object(const plg::mat4x4& matrix);
 		std::optional<plg::mat4x4> Matrix4x4ValueFromObject(PyObject* object);
 		PythonType GetObjectType(PyObject* type) const;
-		PyObject* GetEnumObject(plugify::EnumRef enumerator, int64_t value) const;
-		void CreateEnumObject(plugify::EnumRef enumerator, PyObject* moduleDict);
+		PyObject* GetEnumObject(plugify::EnumHandle enumerator, int64_t value) const;
+		void CreateEnumObject(plugify::EnumHandle enumerator, PyObject* moduleDict);
 		void ResolveRequiredModule(std::string_view moduleName);
 		std::vector<std::string> ExtractRequiredModules(const std::string& modulePath);
 
@@ -164,19 +162,21 @@ namespace py3lm {
 
 	private:
 		PyObject* FindPythonMethod(plugify::MemAddr addr) const;
-		PyObject* CreateInternalModule(plugify::PluginRef plugin);
-		PyObject* CreateExternalModule(plugify::PluginRef plugin);
-		void TryCreateModule(plugify::PluginRef plugin, bool empty);
-		void TryCallPluginMethodNoArgs(plugify::PluginRef plugin, std::string_view name, std::string_view context);
+		PyObject* CreateInternalModule(plugify::PluginHandle plugin);
+		PyObject* CreateExternalModule(plugify::PluginHandle plugin);
+		void TryCreateModule(plugify::PluginHandle plugin, bool empty);
 
 	private:
 		std::shared_ptr<plugify::IPlugifyProvider> _provider;
 		std::shared_ptr<asmjit::JitRuntime> _jitRuntime;
 		struct PluginData {
-			PyObject* _module = nullptr;
-			PyObject* _instance = nullptr;
+			PyObject* module = nullptr;
+			PyObject* instance = nullptr;
+			PyObject* update = nullptr;
+			PyObject* start = nullptr;
+			PyObject* end = nullptr;
 		};
-		std::map<plugify::UniqueId, PluginData> _pluginsMap;
+		std::unordered_map<plugify::UniqueId, PluginData> _pluginsMap;
 		std::vector<PythonMethodData> _pythonMethods;
 		PyObject* _PluginTypeObject = nullptr;
 		PyObject* _PluginInfoTypeObject = nullptr;

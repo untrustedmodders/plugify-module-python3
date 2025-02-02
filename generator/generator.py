@@ -102,8 +102,8 @@ def convert_type(param: dict) -> str:
     """Convert a JSON-defined type to Python typing."""
     type_name = param.get('type', '')
     result = TYPES_MAP.get(type_name)
-    if not result:
-        raise ValueError(f"Unsupported type: {type_name}")
+    #if not result:
+    #    raise ValueError(f"Unsupported type: {type_name}")
     if result == 'delegate':
         return gen_delegate(param.get('prototype')) if 'prototype' in param else 'Callable[..., Any]'
     elif 'enum' in param:
