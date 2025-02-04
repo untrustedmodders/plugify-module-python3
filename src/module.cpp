@@ -4327,8 +4327,7 @@ namespace py3lm {
 			PyDict_SetItemString(constantsDict, value.GetName().data(), PyLong_FromLongLong(value.GetValue()));
 		}
 
-		PyObject* const intEnum = PyObject_GetAttrString(_enumModule, "IntEnum");
-		enumClass = PyObject_CallFunctionObjArgs(intEnum, CreatePyObject(enumerator.GetName()), constantsDict);
+		enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumerator.GetName().data(), constantsDict);
 
 		Py_DECREF(constantsDict);
 
