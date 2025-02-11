@@ -103,7 +103,7 @@ def convert_type(param: dict) -> str:
     type_name = param.get('type', '')
     result = TYPES_MAP.get(type_name)
     #if not result:
-    #    raise ValueError(f"Unsupported type: {type_name}")
+    #    raise ValueError(f'Unsupported type: {type_name}')
     if result == 'delegate':
         return gen_delegate(param.get('prototype')) if 'prototype' in param else 'Callable[..., Any]'
     elif 'enum' in param:
@@ -232,7 +232,7 @@ def gen_enum_body(enum: dict, enum_type: str, enums: set[str]) -> str:
     enums.add(enum_name)
 
     # Start building the enum definition
-    enum_code = [f"class {enum_name}(IntEnum):"]
+    enum_code = [f'class {enum_name}(IntEnum):']
     if enum_description:
         enum_code.append(f"    \"\"\"\n    {enum_description}\n    \"\"\"")
 
@@ -244,8 +244,8 @@ def gen_enum_body(enum: dict, enum_type: str, enums: set[str]) -> str:
 
         # Add comment for each value
         if description:
-            enum_code.append(f"    # {description}")
-        enum_code.append(f"    {name} = {enum_value}")
+            enum_code.append(f'    # {description}')
+        enum_code.append(f'    {name} = {enum_value}')
 
     # Join the list into a single formatted string
     return '\n'.join(enum_code)
