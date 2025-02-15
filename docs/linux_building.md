@@ -17,11 +17,11 @@ cmake --build build/Linux/Debug -t py12-3-lang-module -j
 ```
 
 ## Python building
-Repository python binaries was built with:
-Python 3.12 from https://github.com/python/cpython/tree/3.12
-For example, path to repo `/home/myuser/cpython`, replace to yours
-Environment: SteamRT
-Working directory: cpython repository root
+Repository python binaries was built with:  
+Python 3.12.1 from https://github.com/python/cpython/tree/v3.12.1  
+For example, path to repo `/home/myuser/cpython`, replace to yours  
+Environment: SteamRT  
+Working directory: cpython repository root  
 ```
 mkdir -p build/release_install
 mkdir -p build/release
