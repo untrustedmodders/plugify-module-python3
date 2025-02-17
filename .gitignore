@@ -10,3 +10,4 @@ CMakeUserPresets.json
 # Build results
 /build
 /python3.12/include/python3.12/pyconfig.h
+out/
