@@ -2056,7 +2056,7 @@ namespace py3lm {
 						break;
 					}
 					case ValueType::ArrayInt8: {
-						delete reinterpret_cast<plg::vector<int16_t>*>(ptr);
+						delete reinterpret_cast<plg::vector<int8_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayInt16: {
