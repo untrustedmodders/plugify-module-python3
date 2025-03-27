@@ -10,6 +10,7 @@
 #include <plugify/plugify_provider.hpp>
 #include <plugify/plugin.hpp>
 #include <plugify/plugin_descriptor.hpp>
+#include <plugify/plugin_reference_descriptor.hpp>
 #include <plugify/string.hpp>
 #include <plugify/any.hpp>
 
@@ -1379,6 +1380,13 @@ namespace py3lm {
 		PyObject* CreatePyObject(const std::string_view& value) {
 			return PyUnicode_FromStringAndSize(value.data(), static_cast<Py_ssize_t>(value.size()));
 		}
+
+#if PY3LM_PLATFORM_WINDOWS
+		template<>
+		PyObject* CreatePyObject(const std::wstring_view& value) {
+			return PyUnicode_FromWideChar(value.data(), static_cast<Py_ssize_t>(value.size()));
+		}
+#endif
 
 		template<>
 		PyObject* CreatePyObject(const plg::vec2& value) {
@@ -3612,7 +3620,38 @@ namespace py3lm {
 			return ErrorData{ std::format("Class '{}' not subclass of Plugin", className) };
 		}
 
-		PyObject* const pluginInstance = PyObject_CallNoArgs(pluginClass);
+		PluginDescriptorHandle desc = plugin.GetDescriptor();
+		std::span<const PluginReferenceDescriptorHandle> dependencies = desc.GetDependencies();
+
+		plg::vector<std::string_view> deps;
+		deps.reserve(dependencies.size());
+		for (const auto& dependency : dependencies) {
+			deps.emplace_back(dependency.GetName());
+		}
+
+		PyObject* const arguments = PyTuple_New(Py_ssize_t{ 12 });
+		if (!arguments) {
+			Py_DECREF(pluginClass);
+			Py_DECREF(classNameString);
+			Py_DECREF(pluginModule);
+			return ErrorData{ "Failed to create plugin instance: arguments tuple is null" };
+		}
+
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 0 }, CreatePyObject(static_cast<int64_t>(plugin.GetId())));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 1 }, CreatePyObject(plugin.GetName()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 2 }, CreatePyObject(plugin.GetFriendlyName()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 3 }, CreatePyObject(desc.GetDescription()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 4 }, CreatePyObject(desc.GetVersionName()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 5 }, CreatePyObject(desc.GetCreatedBy()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 6 }, CreatePyObject(desc.GetCreatedByURL()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 7 }, CreatePyObject(plugin.GetBaseDir()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 8 }, CreatePyObject(plugin.GetConfigsDir()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 9 }, CreatePyObject(plugin.GetDataDir()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 10 }, CreatePyObject(plugin.GetLogsDir()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 11 }, CreatePyObjectList(deps));
+
+		PyObject* const pluginInstance = PyObject_CallObject(pluginClass, arguments);
+		Py_DECREF(arguments);
 		Py_DECREF(pluginClass);
 		if (!pluginInstance) {
 			Py_DECREF(classNameString);

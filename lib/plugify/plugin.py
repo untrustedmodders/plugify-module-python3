@@ -5,7 +5,19 @@ from copy import deepcopy
 
 
 class Plugin:
-    pass
+    def __init__(self, id, name, full_name, description, version, author, website, base_dir, configs_dir, data_dir, logs_dir, dependencies):
+        self.id = id
+        self.name = name
+        self.full_name = full_name
+        self.description = description
+        self.version = version
+        self.author = author
+        self.website = website
+        self.base_dir = base_dir
+        self.configs_dir = configs_dir
+        self.data_dir = data_dir
+        self.logs_dir = logs_dir
+        self.dependencies = dependencies
 
 
 class PluginInfo:
