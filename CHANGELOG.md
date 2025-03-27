@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0](https://github.com/untrustedmodders/plugify-module-python3.12/compare/v1.0.2...v1.1.0) (2025-03-27)
+
+
+### Features
+
+* add fields to plugin objects with data ([b73ae32](https://github.com/untrustedmodders/plugify-module-python3.12/commit/b73ae3295bd700d4fdb6ba1b4447d5b90785879e))
+
+
+### Bug Fixes
+
+* add file strip ([69e4968](https://github.com/untrustedmodders/plugify-module-python3.12/commit/69e496804d10b63a8bdd1a0c5e472adcd4866f0b))
+* build when dep ([477dcda](https://github.com/untrustedmodders/plugify-module-python3.12/commit/477dcda482d631a1af20b701dabc24c210b9a1b1))
+* update plugify ([b011614](https://github.com/untrustedmodders/plugify-module-python3.12/commit/b011614488eb83c48af86da7ca6c84d961c57087))
+* wrong type destructor ([b6e3621](https://github.com/untrustedmodders/plugify-module-python3.12/commit/b6e362101cb45b4eec2eb7febf96b6a65ad98c77))
+
 ## [1.0.2](https://github.com/untrustedmodders/plugify-module-python3.12/compare/v1.0.1...v1.0.2) (2025-02-17)
 
 
