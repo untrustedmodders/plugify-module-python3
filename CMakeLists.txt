@@ -9,7 +9,21 @@ if(POLICY CMP0135)
 endif()
 
 
-project(plugify-module-python3.12 VERSION 1.0.0.0  DESCRIPTION "Python 3.12 Language Module" HOMEPAGE_URL "https://github.com/untrustedmodders/plugify-module-python3.12" LANGUAGES CXX)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" VERSION_FILE_CONTENTS)
+string(STRIP "${VERSION_FILE_CONTENTS}" VERSION_FILE_CONTENTS)
+set(PY3LM_VERSION "${VERSION_FILE_CONTENTS}" CACHE STRING "Set version name")
+set(PY3LM_PACKAGE "plugify-module-python3.12" CACHE STRING "Set package name")
+string(REPLACE "v" "" PY3LM_VERSION "${PY3LM_VERSION}")
+string(REGEX REPLACE "[.+-]" ";" PY3LM_VERSION_LIST ${PY3LM_VERSION})
+list(GET PY3LM_VERSION_LIST 0 PY3LM_VERSION_MAJOR)
+list(GET PY3LM_VERSION_LIST 1 PY3LM_VERSION_MINOR)
+list(GET PY3LM_VERSION_LIST 2 PY3LM_VERSION_PATCH)
+
+project(plugify-module-python3.12 
+        VERSION "${PY3LM_VERSION_MAJOR}.${PY3LM_VERSION_MINOR}.${PY3LM_VERSION_PATCH}"
+        DESCRIPTION "Python 3.12 Language Module" 
+        HOMEPAGE_URL "https://github.com/untrustedmodders/plugify-module-python3.12" 
+        LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -107,12 +121,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     PY3LM_PLATFORM_APPLE=$<BOOL:${APPLE}>
     PY3LM_PLATFORM_LINUX=$<BOOL:${LINUX}>
     PY3LM_IS_DEBUG=$<STREQUAL:${CMAKE_BUILD_TYPE},Debug>)
-
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" VERSION_FILE_CONTENTS)
-string(STRIP "${VERSION_FILE_CONTENTS}" VERSION_FILE_CONTENTS)
-set(PY3LM_VERSION "${VERSION_FILE_CONTENTS}" CACHE STRING "Set version name")
-set(PY3LM_PACKAGE "${PROJECT_NAME}" CACHE STRING "Set package name")
-string(REPLACE "v" "" PY3LM_VERSION "${PY3LM_VERSION}")
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.pmodule.in
