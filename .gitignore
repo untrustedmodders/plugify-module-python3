@@ -3,6 +3,7 @@
 .vscode
 .vs
 .PVS-Studio
+.DS_Store
 
 # CMake
 CMakeUserPresets.json
