@@ -17,7 +17,7 @@
 
 template <>
 struct std::hash<plugify::EnumHandle> {
-	std::size_t operator()(const plugify::EnumHandle& enumerator) const {
+	std::size_t operator()(const plugify::EnumHandle& enumerator) const noexcept {
 		return std::hash<std::uintptr_t>{}(enumerator);
 	}
 };
