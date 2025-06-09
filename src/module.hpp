@@ -7,7 +7,6 @@
 #include <plugify/numerics.hpp>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-#include <asmjit/asmjit.h>
 #include <memory>
 #include <optional>
 #include <string>
