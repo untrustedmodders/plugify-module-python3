@@ -552,7 +552,7 @@ namespace py3lm {
 				case PyAbstractType::Vector4:
 					return g_py3lm.Vector4ValueFromObject(object);
 				default:
-					const std::string error(std::format("An any argument not supports python type: {} for marshalling.", name));
+					const std::string error(std::format("Any argument not supports python type: {} for marshalling.", name));
 					PyErr_SetString(PyExc_TypeError, error.c_str());
 					return std::nullopt;
 			}
@@ -1893,8 +1893,7 @@ namespace py3lm {
 							g_py3lm.LogError();
 						}
 					}
-					++k;
-					if (k == refParamsCount) {
+					if (++k == refParamsCount) {
 						break;
 					}
 				}
@@ -1949,7 +1948,7 @@ namespace py3lm {
 
 			if (!func) {
 				PyErr_Clear();
-				return MethodExportError{ std::format("{} (Not found '{}' in module)", method.GetName(), method.GetFunctionName())};
+				return MethodExportError{ std::format("{} (not found '{}' in module)", method.GetName(), method.GetFunctionName())};
 			}
 
 			if (!PyFunction_Check(func) && !PyCallable_Check(func)) {
@@ -3480,11 +3479,7 @@ namespace py3lm {
 		PyObject* const moduleDict = PyModule_GetDict(_ppsModule);
 		PyObject* moduleObject = PyDict_GetItemString(_ppsModule, plugin.GetName().data());
 		if (moduleObject) {
-			if (empty) {
-				if (!IsEmptyModule(moduleObject)) {
-					return;
-				}
-			} else {
+			if (!empty || !IsEmptyModule(moduleObject)) {
 				return;
 			}
 		}
