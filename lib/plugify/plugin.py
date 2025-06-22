@@ -117,32 +117,32 @@ class Vector4:
 
 
 class Matrix4x4:
-    def __init__(self, elements=None):
-        if elements is None:
+    def __init__(self, m=None):
+        if m is None:
             # Initialize to an identity matrix
-            self.elements = [
+            self.m = [
                 [1.0, 0.0, 0.0, 0.0],
                 [0.0, 1.0, 0.0, 0.0],
                 [0.0, 0.0, 1.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0]
             ]
         else:
-            if isinstance(elements, list) and len(elements) == 16:
-                self.elements = [elements[0:4], elements[4:8], elements[8:12], elements[12:16]]
-            elif (isinstance(elements, list) and len(elements) == 4
-                  and all(isinstance(row, list) and len(row) == 4 for row in elements)):
-                self.elements = elements
+            if isinstance(m, list) and len(m) == 16:
+                self.m = [m[0:4], m[4:8], m[8:12], m[12:16]]
+            elif (isinstance(m, list) and len(m) == 4
+                  and all(isinstance(row, list) and len(row) == 4 for row in m)):
+                self.m = m
             else:
                 raise ValueError("Elements must be a 4x4 or 1x16 list")
 
     def __add__(self, other):
         if isinstance(other, Matrix4x4):
-            return Matrix4x4([[self.elements[i][j] + other.elements[i][j] for j in range(4)] for i in range(4)])
+            return Matrix4x4([[self.m[i][j] + other.m[i][j] for j in range(4)] for i in range(4)])
         raise ValueError("Can only add another Matrix4x4")
 
     def __sub__(self, other):
         if isinstance(other, Matrix4x4):
-            return Matrix4x4([[self.elements[i][j] - other.elements[i][j] for j in range(4)] for i in range(4)])
+            return Matrix4x4([[self.m[i][j] - other.m[i][j] for j in range(4)] for i in range(4)])
         raise ValueError("Can only subtract another Matrix4x4")
 
     def __mul__(self, other):
@@ -150,22 +150,22 @@ class Matrix4x4:
             result = [[0] * 4 for _ in range(4)]
             for i in range(4):
                 for j in range(4):
-                    result[i][j] = sum(self.elements[i][k] * other.elements[k][j] for k in range(4))
+                    result[i][j] = sum(self.m[i][k] * other.m[k][j] for k in range(4))
             return Matrix4x4(result)
         elif isinstance(other, (int, float)):
-            return Matrix4x4([[self.elements[i][j] * other for j in range(4)] for i in range(4)])
+            return Matrix4x4([[self.m[i][j] * other for j in range(4)] for i in range(4)])
         raise ValueError("Can only multiply by another Matrix4x4 or a scalar")
 
     def __truediv__(self, scalar):
         if isinstance(scalar, (int, float)):
-            return Matrix4x4([[self.elements[i][j] / scalar for j in range(4)] for i in range(4)])
+            return Matrix4x4([[self.m[i][j] / scalar for j in range(4)] for i in range(4)])
         raise ValueError("Can only divide by a scalar")
 
     def __repr__(self):
-        return "\n".join([f"Row {i}: {self.elements[i]}" for i in range(4)])
+        return "\n".join([f"Row {i}: {self.m[i]}" for i in range(4)])
 
     def transpose(self):
-        return Matrix4x4([[self.elements[j][i] for j in range(4)] for i in range(4)])
+        return Matrix4x4([[self.m[j][i] for j in range(4)] for i in range(4)])
 
     @staticmethod
     def identity():
@@ -176,11 +176,11 @@ class Matrix4x4:
         return Matrix4x4([[0.0] * 4 for _ in range(4)])
 
     @staticmethod
-    def from_list(elements):
-        return Matrix4x4(elements)
+    def from_list(m):
+        return Matrix4x4(m)
 
     def to_list(self):
-        return deepcopy(self.elements)
+        return deepcopy(self.m)
 
 
 def extract_required_modules(module_path, visited=None):

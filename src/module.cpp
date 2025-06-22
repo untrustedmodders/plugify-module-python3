@@ -4193,7 +4193,7 @@ namespace py3lm {
 			SetTypeError("Expected Matrix4x4", object);
 			return std::nullopt;
 		}
-		PyObject* const elementsListObject = PyObject_GetAttrString(object, "elements");
+		PyObject* const elementsListObject = PyObject_GetAttrString(object, "m");
 		if (!elementsListObject) {
 			// PyObject_GetAttrString set error. e.g. AttributeError
 			return std::nullopt;
