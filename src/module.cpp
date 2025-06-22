@@ -1987,163 +1987,163 @@ namespace py3lm {
 				for (auto& [ptr, type] : storage) {
 					switch (type) {
 					case ValueType::Bool: {
-						delete reinterpret_cast<bool*>(ptr);
+						delete static_cast<bool*>(ptr);
 						break;
 					}
 					case ValueType::Char8: {
-						delete reinterpret_cast<char*>(ptr);
+						delete static_cast<char*>(ptr);
 						break;
 					}
 					case ValueType::Char16: {
-						delete reinterpret_cast<char16_t*>(ptr);
+						delete static_cast<char16_t*>(ptr);
 						break;
 					}
 					case ValueType::Int8: {
-						delete reinterpret_cast<int8_t*>(ptr);
+						delete static_cast<int8_t*>(ptr);
 						break;
 					}
 					case ValueType::Int16: {
-						delete reinterpret_cast<int16_t*>(ptr);
+						delete static_cast<int16_t*>(ptr);
 						break;
 					}
 					case ValueType::Int32: {
-						delete reinterpret_cast<int32_t*>(ptr);
+						delete static_cast<int32_t*>(ptr);
 						break;
 					}
 					case ValueType::Int64: {
-						delete reinterpret_cast<int64_t*>(ptr);
+						delete static_cast<int64_t*>(ptr);
 						break;
 					}
 					case ValueType::UInt8: {
-						delete reinterpret_cast<uint8_t*>(ptr);
+						delete static_cast<uint8_t*>(ptr);
 						break;
 					}
 					case ValueType::UInt16: {
-						delete reinterpret_cast<uint16_t*>(ptr);
+						delete static_cast<uint16_t*>(ptr);
 						break;
 					}
 					case ValueType::UInt32: {
-						delete reinterpret_cast<uint32_t*>(ptr);
+						delete static_cast<uint32_t*>(ptr);
 						break;
 					}
 					case ValueType::UInt64: {
-						delete reinterpret_cast<uint64_t*>(ptr);
+						delete static_cast<uint64_t*>(ptr);
 						break;
 					}
 					case ValueType::Pointer: {
-						delete reinterpret_cast<void**>(ptr);
+						delete static_cast<void**>(ptr);
 						break;
 					}
 					case ValueType::Float: {
-						delete reinterpret_cast<float*>(ptr);
+						delete static_cast<float*>(ptr);
 						break;
 					}
 					case ValueType::Double: {
-						delete reinterpret_cast<double*>(ptr);
+						delete static_cast<double*>(ptr);
 						break;
 					}
 					case ValueType::String: {
-						delete reinterpret_cast<plg::string*>(ptr);
+						delete static_cast<plg::string*>(ptr);
 						break;
 					}
 					case ValueType::Any: {
-						delete reinterpret_cast<plg::any*>(ptr);
+						delete static_cast<plg::any*>(ptr);
 						break;
 					}
 					case ValueType::ArrayBool: {
-						delete reinterpret_cast<plg::vector<bool>*>(ptr);
+						delete static_cast<plg::vector<bool>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayChar8: {
-						delete reinterpret_cast<plg::vector<char>*>(ptr);
+						delete static_cast<plg::vector<char>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayChar16: {
-						delete reinterpret_cast<plg::vector<char16_t>*>(ptr);
+						delete static_cast<plg::vector<char16_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayInt8: {
-						delete reinterpret_cast<plg::vector<int8_t>*>(ptr);
+						delete static_cast<plg::vector<int8_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayInt16: {
-						delete reinterpret_cast<plg::vector<int16_t>*>(ptr);
+						delete static_cast<plg::vector<int16_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayInt32: {
-						delete reinterpret_cast<plg::vector<int32_t>*>(ptr);
+						delete static_cast<plg::vector<int32_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayInt64: {
-						delete reinterpret_cast<plg::vector<int64_t>*>(ptr);
+						delete static_cast<plg::vector<int64_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayUInt8: {
-						delete reinterpret_cast<plg::vector<uint8_t>*>(ptr);
+						delete static_cast<plg::vector<uint8_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayUInt16: {
-						delete reinterpret_cast<plg::vector<uint16_t>*>(ptr);
+						delete static_cast<plg::vector<uint16_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayUInt32: {
-						delete reinterpret_cast<plg::vector<uint32_t>*>(ptr);
+						delete static_cast<plg::vector<uint32_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayUInt64: {
-						delete reinterpret_cast<plg::vector<uint64_t>*>(ptr);
+						delete static_cast<plg::vector<uint64_t>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayPointer: {
-						delete reinterpret_cast<plg::vector<void*>*>(ptr);
+						delete static_cast<plg::vector<void*>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayFloat: {
-						delete reinterpret_cast<plg::vector<float>*>(ptr);
+						delete static_cast<plg::vector<float>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayDouble: {
-						delete reinterpret_cast<plg::vector<double>*>(ptr);
+						delete static_cast<plg::vector<double>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayString: {
-						delete reinterpret_cast<plg::vector<plg::string>*>(ptr);
+						delete static_cast<plg::vector<plg::string>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayAny: {
-						delete reinterpret_cast<plg::vector<plg::any>*>(ptr);
+						delete static_cast<plg::vector<plg::any>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayVector2: {
-						delete reinterpret_cast<plg::vector<plg::vec2>*>(ptr);
+						delete static_cast<plg::vector<plg::vec2>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayVector3: {
-						delete reinterpret_cast<plg::vector<plg::vec3>*>(ptr);
+						delete static_cast<plg::vector<plg::vec3>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayVector4: {
-						delete reinterpret_cast<plg::vector<plg::vec4>*>(ptr);
+						delete static_cast<plg::vector<plg::vec4>*>(ptr);
 						break;
 					}
 					case ValueType::ArrayMatrix4x4: {
-						delete reinterpret_cast<plg::vector<plg::mat4x4>*>(ptr);
+						delete static_cast<plg::vector<plg::mat4x4>*>(ptr);
 						break;
 					}
 					case ValueType::Vector2: {
-						delete reinterpret_cast<plg::vec2*>(ptr);
+						delete static_cast<plg::vec2*>(ptr);
 						break;
 					}
 					case ValueType::Vector3: {
-						delete reinterpret_cast<plg::vec3*>(ptr);
+						delete static_cast<plg::vec3*>(ptr);
 						break;
 					}
 					case ValueType::Vector4: {
-						delete reinterpret_cast<plg::vec4*>(ptr);
+						delete static_cast<plg::vec4*>(ptr);
 						break;
 					}
 					case ValueType::Matrix4x4: {
-						delete reinterpret_cast<plg::mat4x4*>(ptr);
+						delete static_cast<plg::mat4x4*>(ptr);
 						break;
 					}
 					default: {
@@ -2781,37 +2781,37 @@ namespace py3lm {
 			auto enumerator = paramType.GetEnum();
 			switch (paramType.GetType()) {
 			case ValueType::Int8:
-				return CreatePyEnumObject(enumerator, *reinterpret_cast<int8_t*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObject(enumerator, *static_cast<int8_t*>(std::get<0>(a.storage[index])));
 			case ValueType::Int16:
-				return CreatePyEnumObject(enumerator, *reinterpret_cast<int16_t*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObject(enumerator, *static_cast<int16_t*>(std::get<0>(a.storage[index])));
 			case ValueType::Int32:
-				return CreatePyEnumObject(enumerator, *reinterpret_cast<int32_t*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObject(enumerator, *static_cast<int32_t*>(std::get<0>(a.storage[index])));
 			case ValueType::Int64:
-				return CreatePyEnumObject(enumerator, *reinterpret_cast<int64_t*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObject(enumerator, *static_cast<int64_t*>(std::get<0>(a.storage[index])));
 			case ValueType::UInt8:
-				return CreatePyEnumObject(enumerator, *reinterpret_cast<uint8_t*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObject(enumerator, *static_cast<uint8_t*>(std::get<0>(a.storage[index])));
 			case ValueType::UInt16:
-				return CreatePyEnumObject(enumerator, *reinterpret_cast<uint16_t*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObject(enumerator, *static_cast<uint16_t*>(std::get<0>(a.storage[index])));
 			case ValueType::UInt32:
-				return CreatePyEnumObject(enumerator, *reinterpret_cast<uint32_t*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObject(enumerator, *static_cast<uint32_t*>(std::get<0>(a.storage[index])));
 			case ValueType::UInt64:
-				return CreatePyEnumObject(enumerator, *reinterpret_cast<uint64_t*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObject(enumerator, *static_cast<uint64_t*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt8:
-				return CreatePyEnumObjectList(enumerator, *reinterpret_cast<plg::vector<int8_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObjectList(enumerator, *static_cast<plg::vector<int8_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt16:
-				return CreatePyEnumObjectList(enumerator, *reinterpret_cast<plg::vector<int16_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObjectList(enumerator, *static_cast<plg::vector<int16_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt32:
-				return CreatePyEnumObjectList(enumerator, *reinterpret_cast<plg::vector<int32_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObjectList(enumerator, *static_cast<plg::vector<int32_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt64:
-				return CreatePyEnumObjectList(enumerator, *reinterpret_cast<plg::vector<int64_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObjectList(enumerator, *static_cast<plg::vector<int64_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt8:
-				return CreatePyEnumObjectList(enumerator, *reinterpret_cast<plg::vector<uint8_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObjectList(enumerator, *static_cast<plg::vector<uint8_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt16:
-				return CreatePyEnumObjectList(enumerator, *reinterpret_cast<plg::vector<uint16_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObjectList(enumerator, *static_cast<plg::vector<uint16_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt32:
-				return CreatePyEnumObjectList(enumerator, *reinterpret_cast<plg::vector<uint32_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObjectList(enumerator, *static_cast<plg::vector<uint32_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt64:
-				return CreatePyEnumObjectList(enumerator, *reinterpret_cast<plg::vector<uint64_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyEnumObjectList(enumerator, *static_cast<plg::vector<uint64_t>*>(std::get<0>(a.storage[index])));
 			default: {
 				const std::string error(std::format("StorageValueToObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -2823,85 +2823,85 @@ namespace py3lm {
 		PyObject* StorageValueToObject(PropertyHandle paramType, const ArgsScope& a, size_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
-				return CreatePyObject(*reinterpret_cast<bool*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<bool*>(std::get<0>(a.storage[index])));
 			case ValueType::Char8:
-				return CreatePyObject(*reinterpret_cast<char*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<char*>(std::get<0>(a.storage[index])));
 			case ValueType::Char16:
-				return CreatePyObject(*reinterpret_cast<char16_t*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<char16_t*>(std::get<0>(a.storage[index])));
 			case ValueType::Int8:
-				return CreatePyObject(*reinterpret_cast<int8_t*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<int8_t*>(std::get<0>(a.storage[index])));
 			case ValueType::Int16:
-				return CreatePyObject(*reinterpret_cast<int16_t*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<int16_t*>(std::get<0>(a.storage[index])));
 			case ValueType::Int32:
-				return CreatePyObject(*reinterpret_cast<int32_t*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<int32_t*>(std::get<0>(a.storage[index])));
 			case ValueType::Int64:
-				return CreatePyObject(*reinterpret_cast<int64_t*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<int64_t*>(std::get<0>(a.storage[index])));
 			case ValueType::UInt8:
-				return CreatePyObject(*reinterpret_cast<uint8_t*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<uint8_t*>(std::get<0>(a.storage[index])));
 			case ValueType::UInt16:
-				return CreatePyObject(*reinterpret_cast<uint16_t*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<uint16_t*>(std::get<0>(a.storage[index])));
 			case ValueType::UInt32:
-				return CreatePyObject(*reinterpret_cast<uint32_t*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<uint32_t*>(std::get<0>(a.storage[index])));
 			case ValueType::UInt64:
-				return CreatePyObject(*reinterpret_cast<uint64_t*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<uint64_t*>(std::get<0>(a.storage[index])));
 			case ValueType::Float:
-				return CreatePyObject(*reinterpret_cast<float*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<float*>(std::get<0>(a.storage[index])));
 			case ValueType::Double:
-				return CreatePyObject(*reinterpret_cast<double*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<double*>(std::get<0>(a.storage[index])));
 			case ValueType::String:
-				return CreatePyObject(*reinterpret_cast<plg::string*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<plg::string*>(std::get<0>(a.storage[index])));
 			case ValueType::Any:
-				return CreatePyObject(*reinterpret_cast<plg::any*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<plg::any*>(std::get<0>(a.storage[index])));
 			case ValueType::Pointer:
-				return CreatePyObject(*reinterpret_cast<void**>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<void**>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayBool:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<bool>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<bool>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayChar8:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<char>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<char>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayChar16:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<char16_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<char16_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt8:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<int8_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<int8_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt16:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<int16_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<int16_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt32:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<int32_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<int32_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayInt64:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<int64_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<int64_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt8:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<uint8_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<uint8_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt16:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<uint16_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<uint16_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt32:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<uint32_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<uint32_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayUInt64:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<uint64_t>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<uint64_t>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayPointer:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<void*>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<void*>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayFloat:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<float>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<float>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayDouble:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<double>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<double>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayString:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::string>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<plg::string>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayAny:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::any>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<plg::any>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayVector2:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::vec2>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<plg::vec2>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayVector3:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::vec3>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<plg::vec3>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayVector4:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::vec4>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<plg::vec4>*>(std::get<0>(a.storage[index])));
 			case ValueType::ArrayMatrix4x4:
-				return CreatePyObjectList(*reinterpret_cast<plg::vector<plg::mat4x4>*>(std::get<0>(a.storage[index])));
+				return CreatePyObjectList(*static_cast<plg::vector<plg::mat4x4>*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector2:
-				return CreatePyObject(*reinterpret_cast<plg::vec2*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<plg::vec2*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector3:
-				return CreatePyObject(*reinterpret_cast<plg::vec3*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<plg::vec3*>(std::get<0>(a.storage[index])));
 			case ValueType::Vector4:
-				return CreatePyObject(*reinterpret_cast<plg::vec4*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<plg::vec4*>(std::get<0>(a.storage[index])));
 			case ValueType::Matrix4x4:
-				return CreatePyObject(*reinterpret_cast<plg::mat4x4*>(std::get<0>(a.storage[index])));
+				return CreatePyObject(*static_cast<plg::mat4x4*>(std::get<0>(a.storage[index])));
 			default: {
 				const std::string error(std::format("StorageValueToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
