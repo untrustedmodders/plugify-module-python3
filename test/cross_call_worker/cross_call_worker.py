@@ -61,7 +61,7 @@ def pod_to_string(pod):
     if isinstance(pod, Vector4):
         return f'{{{float_str(pod.x)}, {float_str(pod.y)}, {float_str(pod.z)}, {float_str(pod.w)}}}'
     if isinstance(pod, Matrix4x4):
-        formatted_rows = [f"{{{', '.join([float_str(m) for m in row])}}}" for row in pod.elements]
+        formatted_rows = [f"{{{', '.join([float_str(m) for m in row])}}}" for row in pod.m]
         return f'{{{", ".join(formatted_rows)}}}'
     raise TypeError('Non POD type')
 
@@ -1598,7 +1598,7 @@ class CallbackHolder:
     @staticmethod
     def mock_mat4x4():
         mat = Matrix4x4.zero()
-        mat.elements[0][0] = 1.0
+        mat.m[0][0] = 1.0
         return mat
 
     @staticmethod
