@@ -3399,6 +3399,9 @@ namespace py3lm {
 			}
 
 			if (_ppsModule) {
+				if (PyObject* const moduleDict = PyModule_GetDict(_ppsModule)) {
+					PyDict_Clear(moduleDict);
+				}
 				Py_DECREF(_ppsModule);
 			}
 
@@ -3440,6 +3443,10 @@ namespace py3lm {
 
 			for (const auto& data : _pythonMethods) {
 				Py_DECREF(data.pythonFunction);
+			}
+
+			for (const auto& [object, _] : _internalEnumMap) {
+				Py_DECREF(object);
 			}
 
 			for (const auto& [_, pluginData] : _pluginsMap) {
