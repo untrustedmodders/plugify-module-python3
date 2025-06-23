@@ -1854,9 +1854,7 @@ namespace py3lm {
 				return;
 			}
 
-			const bool hasRefParams = refParamsCount != 0;
-
-			if (hasRefParams) {
+			if (refParamsCount != 0) {
 				if (!PyTuple_CheckExact(result)) {
 					SetTypeError("Expected tuple as return value", result);
 
@@ -1899,7 +1897,7 @@ namespace py3lm {
 				}
 			}
 
-			PyObject* const returnObject = hasRefParams ? PyTuple_GET_ITEM(result, Py_ssize_t{ 0 }) : result;
+			PyObject* const returnObject = refParamsCount != 0 ? PyTuple_GET_ITEM(result, Py_ssize_t{ 0 }) : result;
 
 			if (!SetReturn(returnObject, retType, ret)) {
 				if (PyErr_Occurred()) {
