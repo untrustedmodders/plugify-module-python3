@@ -3462,7 +3462,6 @@ namespace py3lm {
 		_externalMap.clear();
 		_internalFunctions.clear();
 		_externalFunctions.clear();
-		_moduleDefinitions.clear();
 		_externalEnumMap.clear();
 		_internalEnumMap.clear();
 		_moduleMethods.clear();
@@ -3473,22 +3472,26 @@ namespace py3lm {
 		_provider.reset();
 	}
 
-	void Python3LanguageModule::TryCreateModule(plugify::PluginHandle plugin, bool empty) {
+	void Python3LanguageModule::TryCreateModule(PluginHandle plugin, bool empty) {
 		PyObject* const moduleDict = PyModule_GetDict(_ppsModule);
-		PyObject* moduleObject = PyDict_GetItemString(_ppsModule, plugin.GetName().data());
-		if (moduleObject) {
+		if (PyObject* moduleObject = PyDict_GetItemString(moduleDict, plugin.GetName().data())) {
 			if (!empty || !IsEmptyModule(moduleObject)) {
 				return;
 			}
-		}
 
-		moduleObject = CreateInternalModule(plugin);
-		if (!moduleObject) {
-			moduleObject = CreateExternalModule(plugin);
-		}
-		if (moduleObject) {
-			PyDict_SetItemString(moduleDict, plugin.GetName().data(), moduleObject);
-			Py_DECREF(moduleObject);
+			if (!CreateInternalModule(plugin, moduleObject)) {
+				CreateExternalModule(plugin, moduleObject);
+			}
+
+		} else {
+			moduleObject = CreateInternalModule(plugin);
+			if (!moduleObject) {
+				moduleObject = CreateExternalModule(plugin);
+			}
+			if (moduleObject) {
+				assert(PyDict_SetItemString(moduleDict, plugin.GetName().data(), moduleObject) == 0);
+				Py_DECREF(moduleObject);
+			}
 		}
 	}
 
@@ -3507,8 +3510,9 @@ namespace py3lm {
 				TryCreateModule(plugin, false);
 			} else {
 				PyObject* const moduleDict = PyModule_GetDict(_ppsModule);
-				PyObject* const moduleObject = PyModule_New(moduleName.data());
-				PyDict_SetItemString(moduleDict, pluginName.data(), moduleObject);
+				PyObject* const moduleObject = PyModule_New(pluginName.data());
+				assert(PyDict_SetItemString(moduleDict, pluginName.data(), moduleObject) == 0);
+				Py_DECREF(moduleObject);
 			}
 		}
 	}
@@ -4252,13 +4256,12 @@ namespace py3lm {
 		return nullptr;
 	}
 
-	PyObject* Python3LanguageModule::CreateInternalModule(PluginHandle plugin) {
+	PyObject* Python3LanguageModule::CreateInternalModule(PluginHandle plugin, PyObject* module) {
 		if (!_pluginsMap.contains(plugin.GetId())) {
 			return nullptr;
 		}
 
-		std::string moduleName = std::format("plugify.pps.{}", plugin.GetName());
-		PyObject* const moduleObject = PyModule_New(moduleName.c_str());
+		PyObject* const moduleObject = module ? module : PyModule_New(plugin.GetName().data());
 		PyObject* const moduleDict = PyModule_GetDict(moduleObject);
 
 		for (const auto& [method, addr] : plugin.GetMethods()) {
@@ -4267,14 +4270,14 @@ namespace py3lm {
 				_provider->Log(std::format(LOG_PREFIX "Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
 				std::terminate();
 			}
-			PyDict_SetItemString(moduleDict, method.GetName().data(), methodObject);
+			assert(PyDict_SetItemString(moduleDict, method.GetName().data(), methodObject) == 0);
 			GenerateEnum(method, moduleDict);
 		}
 
 		return moduleObject;
 	}
 
-	PyObject* Python3LanguageModule::CreateExternalModule(PluginHandle plugin) {
+	PyObject* Python3LanguageModule::CreateExternalModule(PluginHandle plugin, PyObject* module) {
 		auto& moduleMethods = _moduleMethods.emplace_back();
 
 		for (const auto& [method, addr] : plugin.GetMethods()) {
@@ -4318,19 +4321,10 @@ namespace py3lm {
 			def.ml_doc = nullptr;
 		}
 
-		PyModuleDef& moduleDef = *(_moduleDefinitions.emplace_back(std::make_unique<PyModuleDef>()));
-		moduleDef.m_base = PyModuleDef_HEAD_INIT;
-		moduleDef.m_name = plugin.GetName().data();
-		moduleDef.m_doc = nullptr;
-		moduleDef.m_size = -1;
-		moduleDef.m_methods = moduleMethods.data();
-		moduleDef.m_slots = nullptr;
-		moduleDef.m_traverse = nullptr;
-		moduleDef.m_clear = nullptr;
-		moduleDef.m_free = nullptr;
-
-		PyObject* const moduleObject = PyModule_Create(&moduleDef);
+		PyObject* const moduleObject = module ? module : PyModule_New(plugin.GetName().data());
 		PyObject* const moduleDict = PyModule_GetDict(moduleObject);
+
+		PyModule_AddFunctions(moduleObject, moduleMethods.data());
 
 		for (const auto& [method, _] : plugin.GetMethods()) {
 			GenerateEnum(method, moduleDict);
@@ -4356,7 +4350,7 @@ namespace py3lm {
 
 		PyObject* constantsDict = PyDict_New();
 		for (const auto& value : values) {
-			PyDict_SetItemString(constantsDict, value.GetName().data(), PyLong_FromLongLong(value.GetValue()));
+			assert(PyDict_SetItemString(constantsDict, value.GetName().data(), PyLong_FromLongLong(value.GetValue())) == 0);
 		}
 
 		enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumerator.GetName().data(), constantsDict);

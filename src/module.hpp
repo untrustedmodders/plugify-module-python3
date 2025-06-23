@@ -161,8 +161,8 @@ namespace py3lm {
 
 	private:
 		PyObject* FindPythonMethod(plugify::MemAddr addr) const;
-		PyObject* CreateInternalModule(plugify::PluginHandle plugin);
-		PyObject* CreateExternalModule(plugify::PluginHandle plugin);
+		PyObject* CreateInternalModule(plugify::PluginHandle plugin, PyObject* moduleObject = nullptr);
+		PyObject* CreateExternalModule(plugify::PluginHandle plugin, PyObject* moduleObject = nullptr);
 		void TryCreateModule(plugify::PluginHandle plugin, bool empty);
 
 	private:
@@ -188,7 +188,6 @@ namespace py3lm {
 		PyObject* _enumModule = nullptr;
 		PyObject* _formatException = nullptr;
 		std::vector<std::vector<PyMethodDef>> _moduleMethods;
-		std::vector<std::unique_ptr<PyModuleDef>> _moduleDefinitions;
 		struct JitHolder {
 			plugify::JitCallback jitCallback;
 			plugify::JitCall jitCall;
