@@ -604,8 +604,7 @@ namespace py3lm {
 
 		template<typename T>
 		void* CreateValue(PyObject* pItem) {
-			auto value = ValueFromObject<T>(pItem);
-			if (value) {
+			if (auto value = ValueFromObject<T>(pItem)) {
 				return new T(std::move(*value));
 			}
 			return nullptr;
@@ -613,8 +612,7 @@ namespace py3lm {
 
 		template<typename T>
 		void* CreateArray(PyObject* pItem) {
-			auto array = ArrayFromObject<T>(pItem);
-			if (array) {
+			if (auto array = ArrayFromObject<T>(pItem)) {
 				return new plg::vector<T>(std::move(*array));
 			}
 			return nullptr;
