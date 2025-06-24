@@ -2155,148 +2155,146 @@ namespace py3lm {
 		};
 
 		void BeginExternalCall(ValueType retType, ArgsScope& a) {
-			if (ValueUtils::IsHiddenParam(retType)) {
-				void* value;
-				switch (retType) {
-					case ValueType::String: {
-						value = new plg::string();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::Any: {
-						value = new plg::any();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayBool: {
-						value = new plg::vector<bool>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayChar8: {
-						value = new plg::vector<char>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayChar16: {
-						value = new plg::vector<char16_t>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayInt8: {
-						value = new plg::vector<int8_t>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayInt16: {
-						value = new plg::vector<int16_t>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayInt32: {
-						value = new plg::vector<int32_t>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayInt64: {
-						value = new plg::vector<int64_t>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayUInt8: {
-						value = new plg::vector<uint8_t>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayUInt16: {
-						value = new plg::vector<uint16_t>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayUInt32: {
-						value = new plg::vector<uint32_t>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayUInt64: {
-						value = new plg::vector<uint64_t>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayPointer: {
-						value = new plg::vector<void*>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayFloat: {
-						value = new plg::vector<float>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayDouble: {
-						value = new plg::vector<double>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayString: {
-						value = new plg::vector<plg::string>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayAny: {
-						value = new plg::vector<plg::any>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayVector2: {
-						value = new plg::vector<plg::vec2>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayVector3: {
-						value = new plg::vector<plg::vec3>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayVector4: {
-						value = new plg::vector<plg::vec4>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::ArrayMatrix4x4: {
-						value = new plg::vector<plg::mat4x4>();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::Vector2: {
-						value = new plg::vec2();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::Vector3: {
-						value = new plg::vec3();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::Vector4: {
-						value = new plg::vec4();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					case ValueType::Matrix4x4: {
-						value = new plg::mat4x4();
-						a.storage.emplace_back(value, retType);
-						break;
-					}
-					default:
-						const std::string error(std::format(LOG_PREFIX "BeginExternalCall unsupported type {:#x}", static_cast<uint8_t>(retType)));
-						g_py3lm.LogFatal(error);
-						std::terminate();
-						break;
+			void* value;
+			switch (retType) {
+				case ValueType::String: {
+					value = new plg::string();
+					a.storage.emplace_back(value, retType);
+					break;
 				}
-
-				a.params.AddArgument(value);
+				case ValueType::Any: {
+					value = new plg::any();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayBool: {
+					value = new plg::vector<bool>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayChar8: {
+					value = new plg::vector<char>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayChar16: {
+					value = new plg::vector<char16_t>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayInt8: {
+					value = new plg::vector<int8_t>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayInt16: {
+					value = new plg::vector<int16_t>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayInt32: {
+					value = new plg::vector<int32_t>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayInt64: {
+					value = new plg::vector<int64_t>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayUInt8: {
+					value = new plg::vector<uint8_t>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayUInt16: {
+					value = new plg::vector<uint16_t>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayUInt32: {
+					value = new plg::vector<uint32_t>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayUInt64: {
+					value = new plg::vector<uint64_t>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayPointer: {
+					value = new plg::vector<void*>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayFloat: {
+					value = new plg::vector<float>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayDouble: {
+					value = new plg::vector<double>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayString: {
+					value = new plg::vector<plg::string>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayAny: {
+					value = new plg::vector<plg::any>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayVector2: {
+					value = new plg::vector<plg::vec2>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayVector3: {
+					value = new plg::vector<plg::vec3>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayVector4: {
+					value = new plg::vector<plg::vec4>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::ArrayMatrix4x4: {
+					value = new plg::vector<plg::mat4x4>();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::Vector2: {
+					value = new plg::vec2();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::Vector3: {
+					value = new plg::vec3();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::Vector4: {
+					value = new plg::vec4();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				case ValueType::Matrix4x4: {
+					value = new plg::mat4x4();
+					a.storage.emplace_back(value, retType);
+					break;
+				}
+				default:
+					const std::string error(std::format(LOG_PREFIX "BeginExternalCall unsupported type {:#x}", static_cast<uint8_t>(retType)));
+					g_py3lm.LogFatal(error);
+					std::terminate();
+					break;
 			}
+
+			a.params.AddArgument(value);
 		}
 
 		PyObject* MakeExternalCallWithEnumObject(PropertyHandle retType, JitCall::CallingFunc func, const ArgsScope& a, JitCall::Return& ret) {
@@ -2907,12 +2905,17 @@ namespace py3lm {
 			}
 		}
 
+		// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 		void ExternalCallNoArgs(MethodHandle method, MemAddr data, const JitCallback::Parameters*, size_t, const JitCallback::Return* ret) {
 			const plugify::PropertyHandle retType = method.GetReturnType();
-			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-			ArgsScope a(1);
+			const bool hasHiddenParam = ValueUtils::IsHiddenParam(retType.GetType());
+
+			ArgsScope a(hasHiddenParam);
 			JitCall::Return r;
-			BeginExternalCall(retType.GetType(), a);
+
+			if (hasHiddenParam) {
+				BeginExternalCall(retType.GetType(), a);
+			}
 
 			using MakeExternalCallFunc = PyObject* (*)(PropertyHandle, JitCall::CallingFunc, const ArgsScope&, JitCall::Return&);
 			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
@@ -2946,14 +2949,16 @@ namespace py3lm {
 				return;
 			}
 
-			Py_ssize_t refParamsCount = 0;
 			const plugify::PropertyHandle retType = method.GetReturnType();
-			const Py_ssize_t paramsStartIndex = plugify::ValueUtils::IsHiddenParam(retType.GetType()) ? 1 : 0;
+			const bool hasHiddenParam = ValueUtils::IsHiddenParam(retType.GetType());
+			Py_ssize_t refParamsCount = 0;
 
-			ArgsScope a(1 + paramCount);
+			ArgsScope a(hasHiddenParam + paramCount);
 			JitCall::Return r;
 
-			BeginExternalCall(retType.GetType(), a);
+			if (hasHiddenParam) {
+				BeginExternalCall(retType.GetType(), a);
+			}
 
 			for (Py_ssize_t i = 0; i < size; ++i) {
 				const PropertyHandle paramType = paramTypes[i];
@@ -2986,7 +2991,7 @@ namespace py3lm {
 
 				PyTuple_SET_ITEM(retTuple, k++, retObj); // retObj ref taken by tuple
 
-				for (Py_ssize_t i = 0, j = paramsStartIndex; i < size; ++i) {
+				for (Py_ssize_t i = 0, j = hasHiddenParam; i < size; ++i) {
 					const PropertyHandle paramType = paramTypes[i];
 					if (!paramType.IsReference()) {
 						continue;
