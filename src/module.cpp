@@ -1924,7 +1924,7 @@ namespace py3lm {
 				const auto& funcName = method.GetFunctionName();
 				if (const auto pos = funcName.find('.'); pos != std::string::npos) {
 					className = funcName.substr(0, pos);
-					methodName = std::string(funcName.begin() + static_cast<ptrdiff_t>(pos + 1), funcName.end());
+					methodName = funcName.substr(pos + 1);
 				}
 				else {
 					methodName = funcName;
