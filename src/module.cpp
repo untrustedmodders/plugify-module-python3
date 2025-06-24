@@ -1934,8 +1934,7 @@ namespace py3lm {
 			const bool funcIsMethod = !className.empty();
 
 			if (funcIsMethod) {
-				PyObject* const classType = PyDict_GetItemString(pluginDict, className.c_str());
-				if (classType) {
+				if (PyObject* const classType = PyDict_GetItemString(pluginDict, className.c_str())) {
 					func = PyObject_GetAttrString(classType, methodName.c_str());
 					Py_DECREF(classType);
 				}
@@ -3029,19 +3028,17 @@ namespace py3lm {
 		void GenerateEnum(MethodHandle method, PyObject* moduleDict);
 
 		void GenerateEnum(PropertyHandle paramType, PyObject* moduleDict) {
-			const auto prototype = paramType.GetPrototype();
-			if (prototype) {
+			if (const auto prototype = paramType.GetPrototype()) {
 				GenerateEnum(prototype, moduleDict);
 			}
-			const auto enumerator = paramType.GetEnum();
-			if (enumerator) {
+			if (const auto enumerator = paramType.GetEnum()) {
 				g_py3lm.CreateEnumObject(enumerator, moduleDict);
 			}
 		}
 
 		void GenerateEnum(MethodHandle method, PyObject* moduleDict) {
 			GenerateEnum(method.GetReturnType(), moduleDict);
-			for (auto paramType : method.GetParamTypes()) {
+			for (const auto& paramType : method.GetParamTypes()) {
 				GenerateEnum(paramType, moduleDict);
 			}
 		}
@@ -3050,7 +3047,7 @@ namespace py3lm {
 			PyObject* sep = PyUnicode_FromString(" ");
 			PyObject* end = PyUnicode_FromString("\n");
 
-			static std::array kwlist = { const_cast<char*>("sep"), const_cast<char*>("end"), (char*)nullptr };
+			static std::array kwlist = { const_cast<char*>("sep"), const_cast<char*>("end"), static_cast<char *>(nullptr) };
 			if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO", kwlist.data(), &sep, &end)) {
 				return nullptr;
 			}
@@ -3065,63 +3062,6 @@ namespace py3lm {
 			Py_DECREF(message);
 			Py_RETURN_NONE;
 		}
-
-		/*std::string ExtractModuleName(const std::string& errorMessage) {
-				std::regex pattern(R"(cannot import name '([^']+)' from '([^']+)')");
-				std::smatch match;
-
-			if (std::regex_search(errorMessage, match, pattern)) {
-				return match[2].str() + "." + match[1].str();;
-			} else {
-				return "";
-			}
-		}
-
-		PyObject* TryImportModule(const std::string& moduleName) {
-			std::string lastErrorMsg;
-
-			while (true) {
-				PyObject* const pluginModule = PyImport_ImportModule(moduleName.c_str());
-				if (pluginModule) {
-					return pluginModule;
-				}
-
-				if (PyErr_Occurred()) {
-					PyObject *ptype, *pvalue, *ptraceback;
-					PyErr_Fetch(&ptype, &pvalue, &ptraceback);
-					PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
-
-					if (ptype && PyErr_GivenExceptionMatches(ptype, PyExc_ImportError)) {
-						Py_ssize_t size{};
-						const char* const buffer = PyUnicode_AsUTF8AndSize(PyObject_Str(pvalue), &size);
-						std::string_view errorMsg{buffer, static_cast<size_t>(size)};
-
-						if (lastErrorMsg == errorMsg) {
-							break;  // Stop retrying if the same error occurs twice
-						}
-
-						lastErrorMsg = errorMsg;
-
-						std::string missingModuleName = ExtractModuleName(lastErrorMsg);
-
-						if (g_py3lm.ResolveMissingModule(missingModuleName)) {
-							Py_DECREF(ptype);
-							Py_DECREF(pvalue);
-							Py_XDECREF(ptraceback);
-							continue;
-						}
-					}
-
-					Py_XDECREF(ptype);
-					Py_XDECREF(pvalue);
-					Py_XDECREF(ptraceback);
-				}
-
-				break;
-			}
-
-			return nullptr;  // Import failed
-		}*/
 	}
 
 	Python3LanguageModule::Python3LanguageModule() = default;
@@ -3129,7 +3069,7 @@ namespace py3lm {
 	Python3LanguageModule::~Python3LanguageModule() = default;
 
 	InitResult Python3LanguageModule::Initialize(std::weak_ptr<IPlugifyProvider> provider, ModuleHandle module) {
-		if (!(_provider = provider.lock())) {
+		if (!((_provider = provider.lock()))) {
 			return ErrorData{ "Provider not exposed" };
 		}
 
@@ -3853,7 +3793,7 @@ namespace py3lm {
 		}
 
 		auto defPtr = std::make_unique<PyMethodDef>();
-		PyMethodDef& def = *(defPtr.get());
+		PyMethodDef& def = *(defPtr);
 		def.ml_name = "PlugifyExternal";
 		def.ml_meth = methodAddr.RCast<PyCFunction>();
 		def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
