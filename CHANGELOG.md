@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/untrustedmodders/plugify-module-python3.12/compare/v1.1.1...v1.1.2) (2025-06-26)
+
+
+### Bug Fixes
+
+* arch namings for build ([393eb5d](https://github.com/untrustedmodders/plugify-module-python3.12/commit/393eb5d0d068244fa26c27b2dbc41f8b4fa8344b))
+
 ## [1.1.1](https://github.com/untrustedmodders/plugify-module-python3.12/compare/v1.1.0...v1.1.1) (2025-06-26)
 
 
