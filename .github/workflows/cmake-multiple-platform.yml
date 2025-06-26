@@ -83,9 +83,9 @@ jobs:
           Move-Item -Path $LIB_PATH -Destination build\output
           New-Item -ItemType Directory -Path build\output\python3.12 -Force
           $PY3_PATH = (Get-Item -Path 'build\python3.12' -Force).Target
-          $PY3_LIB_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows\lib\*"
-          $PY3_RELEASE_BIN_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows\release\bin\*"
-          $PY3_RELEASE_LIB_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows\release\lib\*"
+          $PY3_LIB_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows_x64\lib\*"
+          $PY3_RELEASE_BIN_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows_x64\release\bin\*"
+          $PY3_RELEASE_LIB_PATH = Join-Path -Path $PY3_PATH -ChildPath "windows_x64\release\lib\*"
           $PY3_LICENCE_PATH = Join-Path -Path $PY3_PATH -ChildPath "LICENSE.txt"
           Move-Item -Path $PY3_LIB_PATH -Destination build\output\python3.12
           Move-Item -Path $PY3_RELEASE_BIN_PATH -Destination build\output\python3.12
@@ -132,9 +132,9 @@ jobs:
           mv "$(readlink -f build/lib)" build/output
           PY3_PATH=$(readlink build/python3.12)
           mkdir -p build/output/python3.12
-          mv -v $PY3_PATH/linux/lib/* build/output/python3.12
-          mv -v $PY3_PATH/linux/release/bin/* build/output/python3.12
-          mv -v $PY3_PATH/linux/release/lib/* build/output/python3.12
+          mv -v $PY3_PATH/steamrt_x64/lib/* build/output/python3.12
+          mv -v $PY3_PATH/steamrt_x64/release/bin/* build/output/python3.12
+          mv -v $PY3_PATH/steamrt_x64/release/lib/* build/output/python3.12
           mv "$PY3_PATH/LICENSE.txt" build/output/python3.12
 
       - uses: actions/upload-artifact@v4
