@@ -13,7 +13,7 @@ The Plugify Python Language Module is a powerful extension for the Plugify proje
 
 ### Prerequisites
 
-- Python 3.12 is required.
+- Python `3.12` is required.
 - Plugify Framework Installed
 
 ### Installation
@@ -65,7 +65,7 @@ plg install plugify-module-python3.12
 
 2. **Write Python Plugins**
 
-   Develop your plugins in Python using the Plugify Python API. Refer to the [Plugify Python Plugin Guide](https://untrustedmodders.github.io/en/developing/plugins/first-plugin) for detailed instructions.
+   Develop your plugins in Python using the Plugify Python API. Refer to the [Plugify Python Plugin Guide](https://untrustedmodders.github.io/languages/python/first-plugin) for detailed instructions.
 
 3. **Build and Install Plugins**
 
@@ -83,10 +83,13 @@ from plugify.plugin import Plugin
 
 class ExamplePlugin(Plugin):
 	def plugin_start(self):
-		print('ExamplePlugin::plugin_start')
+		print('Python: OnPluginStart')
+		
+	def plugin_update(self, dt):
+		print("Python: OnPluginUpdate - Delta time:", dt)
 
 	def plugin_end(self):
-		print('ExamplePlugin::plugin_end')
+		print('Python: OnPluginEnd')
 ```
 
 ## Documentation
