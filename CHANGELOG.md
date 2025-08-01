@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3](https://github.com/untrustedmodders/plugify-module-python3.12/compare/v1.1.2...v1.1.3) (2025-08-01)
+
+
+### Bug Fixes
+
+* bump C++ to 23 ([3c59c17](https://github.com/untrustedmodders/plugify-module-python3.12/commit/3c59c173e0304d8e671d241e418d07055f991713))
+* update readme and add missing permission ([22e7988](https://github.com/untrustedmodders/plugify-module-python3.12/commit/22e79889e34e3ec7f76f7ada1be9f7f63d16f777))
+
 ## [1.1.2](https://github.com/untrustedmodders/plugify-module-python3.12/compare/v1.1.1...v1.1.2) (2025-06-26)
 
 
