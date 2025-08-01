@@ -25,7 +25,7 @@ project(plugify-module-python3.12
         HOMEPAGE_URL "https://github.com/untrustedmodders/plugify-module-python3.12" 
         LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -87,37 +87,13 @@ else()
     set(PYTHON_ABSTRACT_BUILD_TYPE_LOWER "release")
 endif()
 
-string(TOLOWER "${CMAKE_SYSTEM_NAME}" system)
-string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" arch)
-if(APPLE AND NOT "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
-    set(system "osx")
-    list(LENGTH CMAKE_OSX_ARCHITECTURES osx_archcount)
-    if(osx_archcount GREATER 1)
-        message(FATAL_ERROR "More than one CMAKE_OSX_ARCHITECTURES is not supported")
-    endif()
-    set(arch "${CMAKE_OSX_ARCHITECTURES}")
-endif()
-message(STATUS "system: ${system}")
-message(STATUS "arch: ${arch}")
-if(arch MATCHES "ar.*64|armv8l")
-    set(arch "arm64")
-elseif(arch MATCHES "arm")
-    set(arch "arm")
-elseif(arch MATCHES "64")
-    set(arch "x64")
-elseif(arch MATCHES "86")
-    set(arch "x86")
-else()
-    message(FATAL_ERROR "Unrecognized CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
-endif()
-set(SYSTEM_NAME_LOWER "${system}-${arch}")
-message(STATUS ${SYSTEM_NAME_LOWER})
+detect_system()
 
 if(WIN32)
-    set(PYTHON_DEBUG_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/debug/bin/python312_d.dll")
-    set(PYTHON_DEBUG_IMPLIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/debug/bin/python312_d.lib")
-    set(PYTHON_RELEASE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/release/bin/python312.dll")
-    set(PYTHON_RELEASE_IMPLIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/release/bin/python312.lib")
+    set(PYTHON_DEBUG_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PLUGIFY_PLATFORM}/debug/bin/python312_d.dll")
+    set(PYTHON_DEBUG_IMPLIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PLUGIFY_PLATFORM}/debug/bin/python312_d.lib")
+    set(PYTHON_RELEASE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PLUGIFY_PLATFORM}/release/bin/python312.dll")
+    set(PYTHON_RELEASE_IMPLIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PLUGIFY_PLATFORM}/release/bin/python312.lib")
 
     set_target_properties(python3 PROPERTIES
             IMPORTED_LOCATION_DEBUG ${PYTHON_DEBUG_LIB}
@@ -130,8 +106,8 @@ if(WIN32)
             IMPORTED_IMPLIB_MINSIZEREL ${PYTHON_RELEASE_IMPLIB}
     )
 elseif(LINUX)
-    set(PYTHON_DEBUG_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/debug/bin/libpython3.12d.so.1.0")
-    set(PYTHON_RELEASE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/release/bin/libpython3.12.so.1.0")
+    set(PYTHON_DEBUG_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PLUGIFY_PLATFORM}/debug/bin/libpython3.12d.so.1.0")
+    set(PYTHON_RELEASE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PLUGIFY_PLATFORM}/release/bin/libpython3.12.so.1.0")
 
     set_target_properties(python3 PROPERTIES
             IMPORTED_LOCATION_DEBUG ${PYTHON_DEBUG_LIB}
@@ -142,8 +118,8 @@ elseif(LINUX)
 
     set_property(TARGET ${PROJECT_NAME} PROPERTY LINK_FLAGS "-Wl,-rpath,\\\$ORIGIN/../python3.12")
 elseif(APPLE)
-    set(PYTHON_DEBUG_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/debug/bin/libpython3.12d.dylib")
-    set(PYTHON_RELEASE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/release/bin/libpython3.12.dylib")
+    set(PYTHON_DEBUG_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PLUGIFY_PLATFORM}/debug/bin/libpython3.12d.dylib")
+    set(PYTHON_RELEASE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PLUGIFY_PLATFORM}/release/bin/libpython3.12.dylib")
 
     set_target_properties(python3 PROPERTIES
             IMPORTED_LOCATION_DEBUG ${PYTHON_DEBUG_LIB}
@@ -168,7 +144,7 @@ endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE python3)
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/include/python3.12" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude")
 
-file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${SYSTEM_NAME_LOWER}/${PYTHON_ABSTRACT_BUILD_TYPE_LOWER}/include/pyconfig.h" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude/python3.12")
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PLUGIFY_PLATFORM}/${PYTHON_ABSTRACT_BUILD_TYPE_LOWER}/include/pyconfig.h" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude/python3.12")
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude/python3.12")
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
