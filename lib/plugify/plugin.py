@@ -5,20 +5,26 @@ from copy import deepcopy
 
 
 class Plugin:
-    def __init__(self, id, name, full_name, description, version, author, website, base_dir, configs_dir, data_dir, logs_dir, dependencies):
+    def __init__(self, id, name, description, version, author, website, license, location, dependencies, base_dir, extensions_dir, configs_dir, data_dir, logs_dir, cache_dir):
         self.id = id
         self.name = name
-        self.full_name = full_name
         self.description = description
         self.version = version
         self.author = author
         self.website = website
+        self.license = license
+        self.location = location
+        self.dependencies = dependencies
+
         self.base_dir = base_dir
+        self.extensions_dir = extensions_dir
         self.configs_dir = configs_dir
         self.data_dir = data_dir
         self.logs_dir = logs_dir
-        self.dependencies = dependencies
+        self.cache_dir = cache_dir
 
+
+#base_dir, extensions_dir, configs_dir, data_dir, logs_dir, cache_dir
 
 class PluginInfo:
     def __init__(self, class_name, instance):

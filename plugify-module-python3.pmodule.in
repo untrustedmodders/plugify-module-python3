@@ -1,0 +1,14 @@
+{
+	"$schema": "https://raw.githubusercontent.com/untrustedmodders/plugify/refs/heads/main/schemas/language-module.schema.json",
+	"version": "${PY3LM_VERSION}",
+	"name": "${PY3LM_PACKAGE}",
+	"language": "python3",
+	"description": "Adds support for Python3 plugins",
+	"author": "untrustedmodders",
+	"website": "https://github.com/untrustedmodders/",
+	"license": "MIT",
+	"platforms": [],
+	"directories": [
+		"python3.12"
+	]
+}

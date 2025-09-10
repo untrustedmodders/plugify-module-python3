@@ -3,16 +3,18 @@
 #include <climits>
 #include <cuchar>
 #include <bitset>
+
+#include <plugify/logger.hpp>
+#include <plugify/provider.hpp>
+
+#include <plg/string.hpp>
+#include <plg/any.hpp>
+#include <plg/format.hpp>
+
 #include <module_export.h>
-#include <plugify/compat_format.hpp>
-#include <plugify/log.hpp>
-#include <plugify/module.hpp>
-#include <plugify/plugify_provider.hpp>
-#include <plugify/plugin.hpp>
-#include <plugify/plugin_descriptor.hpp>
-#include <plugify/plugin_reference_descriptor.hpp>
-#include <plugify/string.hpp>
-#include <plugify/any.hpp>
+
+#include "plugify/enum_object.hpp"
+#include "plugify/enum_value.hpp"
 
 #define LOG_PREFIX "[PY3LM] "
 
@@ -180,10 +182,6 @@ namespace py3lm {
 			}
 			return true;
 		}
-
-		using MethodExportError = std::string;
-		using MethodExportData = PythonMethodData;
-		using MethodExportResult = std::variant<MethodExportError, MethodExportData>;
 
 		// Function to find the index of the flipped bit
 		template<size_t N>
@@ -598,7 +596,7 @@ namespace py3lm {
 			return array;
 		}
 
-		std::optional<void*> GetOrCreateFunctionValue(MethodHandle method, PyObject* object) {
+		std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object) {
 			return g_py3lm.GetOrCreateFunctionValue(method, object);
 		}
 
@@ -618,7 +616,7 @@ namespace py3lm {
 			return nullptr;
 		}
 
-		void SetFallbackReturn(ValueType retType, const JitCallback::Return* ret) {
+		void SetFallbackReturn(ValueType retType, ReturnSlot& ret) {
 			switch (retType) {
 			case ValueType::Void:
 				break;
@@ -637,88 +635,88 @@ namespace py3lm {
 			case ValueType::Float:
 			case ValueType::Double:
 				// HACK: Fill all 8 byte with 0
-				ret->SetReturn<uintptr_t>({});
+				ret.Set<uintptr_t>({});
 				break;
 			case ValueType::Function:
-				ret->SetReturn<void*>(nullptr);
+				ret.Set<void*>(nullptr);
 				break;
 			case ValueType::String:
-				ret->ConstructAt<plg::string>();
+				ret.Construct<plg::string>();
 				break;
 			case ValueType::Any:
-				ret->ConstructAt<plg::any>();
+				ret.Construct<plg::any>();
 				break;
 			case ValueType::ArrayBool:
-				ret->ConstructAt<plg::vector<bool>>();
+				ret.Construct<plg::vector<bool>>();
 				break;
 			case ValueType::ArrayChar8:
-				ret->ConstructAt<plg::vector<char>>();
+				ret.Construct<plg::vector<char>>();
 				break;
 			case ValueType::ArrayChar16:
-				ret->ConstructAt<plg::vector<char16_t>>();
+				ret.Construct<plg::vector<char16_t>>();
 				break;
 			case ValueType::ArrayInt8:
-				ret->ConstructAt<plg::vector<int8_t>>();
+				ret.Construct<plg::vector<int8_t>>();
 				break;
 			case ValueType::ArrayInt16:
-				ret->ConstructAt<plg::vector<int16_t>>();
+				ret.Construct<plg::vector<int16_t>>();
 				break;
 			case ValueType::ArrayInt32:
-				ret->ConstructAt<plg::vector<int32_t>>();
+				ret.Construct<plg::vector<int32_t>>();
 				break;
 			case ValueType::ArrayInt64:
-				ret->ConstructAt<plg::vector<int64_t>>();
+				ret.Construct<plg::vector<int64_t>>();
 				break;
 			case ValueType::ArrayUInt8:
-				ret->ConstructAt<plg::vector<uint8_t>>();
+				ret.Construct<plg::vector<uint8_t>>();
 				break;
 			case ValueType::ArrayUInt16:
-				ret->ConstructAt<plg::vector<uint16_t>>();
+				ret.Construct<plg::vector<uint16_t>>();
 				break;
 			case ValueType::ArrayUInt32:
-				ret->ConstructAt<plg::vector<uint32_t>>();
+				ret.Construct<plg::vector<uint32_t>>();
 				break;
 			case ValueType::ArrayUInt64:
-				ret->ConstructAt<plg::vector<uint64_t>>();
+				ret.Construct<plg::vector<uint64_t>>();
 				break;
 			case ValueType::ArrayPointer:
-				ret->ConstructAt<plg::vector<void*>>();
+				ret.Construct<plg::vector<void*>>();
 				break;
 			case ValueType::ArrayFloat:
-				ret->ConstructAt<plg::vector<float>>();
+				ret.Construct<plg::vector<float>>();
 				break;
 			case ValueType::ArrayDouble:
-				ret->ConstructAt<plg::vector<double>>();
+				ret.Construct<plg::vector<double>>();
 				break;
 			case ValueType::ArrayString:
-				ret->ConstructAt<plg::vector<plg::string>>();
+				ret.Construct<plg::vector<plg::string>>();
 				break;
 			case ValueType::ArrayAny:
-				ret->ConstructAt<plg::vector<plg::any>>();
+				ret.Construct<plg::vector<plg::any>>();
 				break;
 			case ValueType::ArrayVector2:
-				ret->ConstructAt<plg::vector<plg::vec2>>();
+				ret.Construct<plg::vector<plg::vec2>>();
 				break;
 			case ValueType::ArrayVector3:
-				ret->ConstructAt<plg::vector<plg::vec3>>();
+				ret.Construct<plg::vector<plg::vec3>>();
 				break;
 			case ValueType::ArrayVector4:
-				ret->ConstructAt<plg::vector<plg::vec4>>();
+				ret.Construct<plg::vector<plg::vec4>>();
 				break;
 			case ValueType::ArrayMatrix4x4:
-				ret->ConstructAt<plg::vector<plg::mat4x4>>();
+				ret.Construct<plg::vector<plg::mat4x4>>();
 				break;
 			case ValueType::Vector2:
-				ret->SetReturn<plg::vec2>({});
+				ret.Set<plg::vec2>({});
 				break;
 			case ValueType::Vector3:
-				ret->SetReturn<plg::vec3>({});
+				ret.Set<plg::vec3>({});
 				break;
 			case ValueType::Vector4:
-				ret->SetReturn<plg::vec4>({});
+				ret.Set<plg::vec4>({});
 				break;
 			case ValueType::Matrix4x4:
-				ret->SetReturn<plg::mat4x4>({});
+				ret.Set<plg::mat4x4>({});
 				break;
 			default: {
 				const std::string error(std::format(LOG_PREFIX "SetFallbackReturn unsupported type {:#x}", static_cast<uint8_t>(retType)));
@@ -728,253 +726,253 @@ namespace py3lm {
 			}
 		}
 
-		bool SetReturn(PyObject* result, PropertyHandle retType, const JitCallback::Return* ret) {
+		bool SetReturn(PyObject* result, const Property& retType, ReturnSlot& ret) {
 			switch (retType.GetType()) {
 			case ValueType::Void:
 				return true;
 			case ValueType::Bool:
 				if (auto value = ValueFromObject<bool>(result)) {
-					ret->SetReturn<bool>(*value);
+					ret.Set<bool>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Char8:
 				if (auto value = ValueFromObject<char>(result)) {
-					ret->SetReturn<char>(*value);
+					ret.Set<char>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Char16:
 				if (auto value = ValueFromObject<char16_t>(result)) {
-					ret->SetReturn<char16_t>(*value);
+					ret.Set<char16_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Int8:
 				if (auto value = ValueFromObject<int8_t>(result)) {
-					ret->SetReturn<int8_t>(*value);
+					ret.Set<int8_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Int16:
 				if (auto value = ValueFromObject<int16_t>(result)) {
-					ret->SetReturn<int16_t>(*value);
+					ret.Set<int16_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Int32:
 				if (auto value = ValueFromObject<int32_t>(result)) {
-					ret->SetReturn<int32_t>(*value);
+					ret.Set<int32_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Int64:
 				if (auto value = ValueFromObject<int64_t>(result)) {
-					ret->SetReturn<int64_t>(*value);
+					ret.Set<int64_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::UInt8:
 				if (auto value = ValueFromObject<uint8_t>(result)) {
-					ret->SetReturn<uint8_t>(*value);
+					ret.Set<uint8_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::UInt16:
 				if (auto value = ValueFromObject<uint16_t>(result)) {
-					ret->SetReturn<uint16_t>(*value);
+					ret.Set<uint16_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::UInt32:
 				if (auto value = ValueFromObject<uint32_t>(result)) {
-					ret->SetReturn<uint32_t>(*value);
+					ret.Set<uint32_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::UInt64:
 				if (auto value = ValueFromObject<uint64_t>(result)) {
-					ret->SetReturn<uint64_t>(*value);
+					ret.Set<uint64_t>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Pointer:
 				if (auto value = ValueFromObject<void*>(result)) {
-					ret->SetReturn<void*>(*value);
+					ret.Set<void*>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Float:
 				if (auto value = ValueFromObject<float>(result)) {
-					ret->SetReturn<float>(*value);
+					ret.Set<float>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Double:
 				if (auto value = ValueFromObject<double>(result)) {
-					ret->SetReturn<double>(*value);
+					ret.Set<double>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Function:
-				if (auto value = GetOrCreateFunctionValue(retType.GetPrototype(), result)) {
-					ret->SetReturn<void*>(*value);
+				if (auto value = GetOrCreateFunctionValue(*retType.GetPrototype(), result)) {
+					ret.Set<void*>(*value);
 					return true;
 				}
 				break;
 			case ValueType::String:
 				if (auto value = ValueFromObject<plg::string>(result)) {
-					ret->ConstructAt<plg::string>(std::move(*value));
+					ret.Construct<plg::string>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::Any:
 				if (auto value = ValueFromObject<plg::any>(result)) {
-					ret->ConstructAt<plg::any>(std::move(*value));
+					ret.Construct<plg::any>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayBool:
 				if (auto value = ArrayFromObject<bool>(result)) {
-					ret->ConstructAt<plg::vector<bool>>(std::move(*value));
+					ret.Construct<plg::vector<bool>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayChar8:
 				if (auto value = ArrayFromObject<char>(result)) {
-					ret->ConstructAt<plg::vector<char>>(std::move(*value));
+					ret.Construct<plg::vector<char>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayChar16:
 				if (auto value = ArrayFromObject<char16_t>(result)) {
-					ret->ConstructAt<plg::vector<char16_t>>(std::move(*value));
+					ret.Construct<plg::vector<char16_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt8:
 				if (auto value = ArrayFromObject<int8_t>(result)) {
-					ret->ConstructAt<plg::vector<int8_t>>(std::move(*value));
+					ret.Construct<plg::vector<int8_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt16:
 				if (auto value = ArrayFromObject<int16_t>(result)) {
-					ret->ConstructAt<plg::vector<int16_t>>(std::move(*value));
+					ret.Construct<plg::vector<int16_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt32:
 				if (auto value = ArrayFromObject<int32_t>(result)) {
-					ret->ConstructAt<plg::vector<int32_t>>(std::move(*value));
+					ret.Construct<plg::vector<int32_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt64:
 				if (auto value = ArrayFromObject<int64_t>(result)) {
-					ret->ConstructAt<plg::vector<int64_t>>(std::move(*value));
+					ret.Construct<plg::vector<int64_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt8:
 				if (auto value = ArrayFromObject<uint8_t>(result)) {
-					ret->ConstructAt<plg::vector<uint8_t>>(std::move(*value));
+					ret.Construct<plg::vector<uint8_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt16:
 				if (auto value = ArrayFromObject<uint16_t>(result)) {
-					ret->ConstructAt<plg::vector<uint16_t>>(std::move(*value));
+					ret.Construct<plg::vector<uint16_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt32:
 				if (auto value = ArrayFromObject<uint32_t>(result)) {
-					ret->ConstructAt<plg::vector<uint32_t>>(std::move(*value));
+					ret.Construct<plg::vector<uint32_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt64:
 				if (auto value = ArrayFromObject<uint64_t>(result)) {
-					ret->ConstructAt<plg::vector<uint64_t>>(std::move(*value));
+					ret.Construct<plg::vector<uint64_t>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayPointer:
 				if (auto value = ArrayFromObject<void*>(result)) {
-					ret->ConstructAt<plg::vector<void*>>(std::move(*value));
+					ret.Construct<plg::vector<void*>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayFloat:
 				if (auto value = ArrayFromObject<float>(result)) {
-					ret->ConstructAt<plg::vector<float>>(std::move(*value));
+					ret.Construct<plg::vector<float>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayDouble:
 				if (auto value = ArrayFromObject<double>(result)) {
-					ret->ConstructAt<plg::vector<double>>(std::move(*value));
+					ret.Construct<plg::vector<double>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayString:
 				if (auto value = ArrayFromObject<plg::string>(result)) {
-					ret->ConstructAt<plg::vector<plg::string>>(std::move(*value));
+					ret.Construct<plg::vector<plg::string>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayAny:
 				if (auto value = ArrayFromObject<plg::any>(result)) {
-					ret->ConstructAt<plg::vector<plg::any>>(std::move(*value));
+					ret.Construct<plg::vector<plg::any>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayVector2:
 				if (auto value = ArrayFromObject<plg::vec2>(result)) {
-					ret->ConstructAt<plg::vector<plg::vec2>>(std::move(*value));
+					ret.Construct<plg::vector<plg::vec2>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayVector3:
 				if (auto value = ArrayFromObject<plg::vec3>(result)) {
-					ret->ConstructAt<plg::vector<plg::vec3>>(std::move(*value));
+					ret.Construct<plg::vector<plg::vec3>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayVector4:
 				if (auto value = ArrayFromObject<plg::vec4>(result)) {
-					ret->ConstructAt<plg::vector<plg::vec4>>(std::move(*value));
+					ret.Construct<plg::vector<plg::vec4>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::ArrayMatrix4x4:
 				if (auto value = ArrayFromObject<plg::mat4x4>(result)) {
-					ret->ConstructAt<plg::vector<plg::mat4x4>>(std::move(*value));
+					ret.Construct<plg::vector<plg::mat4x4>>(std::move(*value));
 					return true;
 				}
 				break;
 			case ValueType::Vector2:
 				if (auto value = ValueFromObject<plg::vec2>(result)) {
-					ret->SetReturn<plg::vec2>(*value);
+					ret.Set<plg::vec2>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Vector3:
 				if (auto value = ValueFromObject<plg::vec3>(result)) {
-					ret->SetReturn<plg::vec3>(*value);
+					ret.Set<plg::vec3>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Vector4:
 				if (auto value = ValueFromObject<plg::vec4>(result)) {
-					ret->SetReturn<plg::vec4>(*value);
+					ret.Set<plg::vec4>(*value);
 					return true;
 				}
 				break;
 			case ValueType::Matrix4x4:
 				if (auto value = ValueFromObject<plg::mat4x4>(result)) {
-					ret->SetReturn<plg::mat4x4>(*value);
+					ret.Set<plg::mat4x4>(*value);
 					return true;
 				}
 				break;
@@ -988,284 +986,284 @@ namespace py3lm {
 			return false;
 		}
 
-		bool SetRefParam(PyObject* object, PropertyHandle paramType, const JitCallback::Parameters* params, size_t index) {
+		bool SetRefParam(PyObject* object, const Property& paramType, const ParametersSpan& params, size_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				if (auto value = ValueFromObject<bool>(object)) {
-					auto* const param = params->GetArgument<bool*>(index);
+					auto* const param = params.Get<bool*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Char8:
 				if (auto value = ValueFromObject<char>(object)) {
-					auto* const param = params->GetArgument<char*>(index);
+					auto* const param = params.Get<char*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Char16:
 				if (auto value = ValueFromObject<char16_t>(object)) {
-					auto* const param = params->GetArgument<char16_t*>(index);
+					auto* const param = params.Get<char16_t*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Int8:
 				if (auto value = ValueFromObject<int8_t>(object)) {
-					auto* const param = params->GetArgument<int8_t*>(index);
+					auto* const param = params.Get<int8_t*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Int16:
 				if (auto value = ValueFromObject<int16_t>(object)) {
-					auto* const param = params->GetArgument<int16_t*>(index);
+					auto* const param = params.Get<int16_t*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Int32:
 				if (auto value = ValueFromObject<int32_t>(object)) {
-					auto* const param = params->GetArgument<int32_t*>(index);
+					auto* const param = params.Get<int32_t*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Int64:
 				if (auto value = ValueFromObject<int64_t>(object)) {
-					auto* const param = params->GetArgument<int64_t*>(index);
+					auto* const param = params.Get<int64_t*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::UInt8:
 				if (auto value = ValueFromObject<uint8_t>(object)) {
-					auto* const param = params->GetArgument<uint8_t*>(index);
+					auto* const param = params.Get<uint8_t*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::UInt16:
 				if (auto value = ValueFromObject<uint16_t>(object)) {
-					auto* const param = params->GetArgument<uint16_t*>(index);
+					auto* const param = params.Get<uint16_t*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::UInt32:
 				if (auto value = ValueFromObject<uint32_t>(object)) {
-					auto* const param = params->GetArgument<uint32_t*>(index);
+					auto* const param = params.Get<uint32_t*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::UInt64:
 				if (auto value = ValueFromObject<uint64_t>(object)) {
-					auto* const param = params->GetArgument<uint64_t*>(index);
+					auto* const param = params.Get<uint64_t*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Pointer:
 				if (auto value = ValueFromObject<void*>(object)) {
-					auto* const param = params->GetArgument<void**>(index);
+					auto* const param = params.Get<void**>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Float:
 				if (auto value = ValueFromObject<float>(object)) {
-					auto* const param = params->GetArgument<float*>(index);
+					auto* const param = params.Get<float*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Double:
 				if (auto value = ValueFromObject<double>(object)) {
-					auto* const param = params->GetArgument<double*>(index);
+					auto* const param = params.Get<double*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::String:
 				if (auto value = ValueFromObject<plg::string>(object)) {
-					auto* const param = params->GetArgument<plg::string*>(index);
+					auto* const param = params.Get<plg::string*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::Any:
 				if (auto value = ValueFromObject<plg::any>(object)) {
-					auto* const param = params->GetArgument<plg::any*>(index);
+					auto* const param = params.Get<plg::any*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayBool:
 				if (auto value = ArrayFromObject<bool>(object)) {
-					auto* const param = params->GetArgument<plg::vector<bool>*>(index);
+					auto* const param = params.Get<plg::vector<bool>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayChar8:
 				if (auto value = ArrayFromObject<char>(object)) {
-					auto* const param = params->GetArgument<plg::vector<char>*>(index);
+					auto* const param = params.Get<plg::vector<char>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayChar16:
 				if (auto value = ArrayFromObject<char16_t>(object)) {
-					auto* const param = params->GetArgument<plg::vector<char16_t>*>(index);
+					auto* const param = params.Get<plg::vector<char16_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt8:
 				if (auto value = ArrayFromObject<int8_t>(object)) {
-					auto* const param = params->GetArgument<plg::vector<int8_t>*>(index);
+					auto* const param = params.Get<plg::vector<int8_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt16:
 				if (auto value = ArrayFromObject<int16_t>(object)) {
-					auto* const param = params->GetArgument<plg::vector<int16_t>*>(index);
+					auto* const param = params.Get<plg::vector<int16_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt32:
 				if (auto value = ArrayFromObject<int32_t>(object)) {
-					auto* const param = params->GetArgument<plg::vector<int32_t>*>(index);
+					auto* const param = params.Get<plg::vector<int32_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayInt64:
 				if (auto value = ArrayFromObject<int64_t>(object)) {
-					auto* const param = params->GetArgument<plg::vector<int64_t>*>(index);
+					auto* const param = params.Get<plg::vector<int64_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt8:
 				if (auto value = ArrayFromObject<uint8_t>(object)) {
-					auto* const param = params->GetArgument<plg::vector<uint8_t>*>(index);
+					auto* const param = params.Get<plg::vector<uint8_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt16:
 				if (auto value = ArrayFromObject<uint16_t>(object)) {
-					auto* const param = params->GetArgument<plg::vector<uint16_t>*>(index);
+					auto* const param = params.Get<plg::vector<uint16_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt32:
 				if (auto value = ArrayFromObject<uint32_t>(object)) {
-					auto* const param = params->GetArgument<plg::vector<uint32_t>*>(index);
+					auto* const param = params.Get<plg::vector<uint32_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayUInt64:
 				if (auto value = ArrayFromObject<uint64_t>(object)) {
-					auto* const param = params->GetArgument<plg::vector<uint64_t>*>(index);
+					auto* const param = params.Get<plg::vector<uint64_t>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayPointer:
 				if (auto value = ArrayFromObject<void*>(object)) {
-					auto* const param = params->GetArgument<plg::vector<void*>*>(index);
+					auto* const param = params.Get<plg::vector<void*>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayFloat:
 				if (auto value = ArrayFromObject<float>(object)) {
-					auto* const param = params->GetArgument<plg::vector<float>*>(index);
+					auto* const param = params.Get<plg::vector<float>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayDouble:
 				if (auto value = ArrayFromObject<double>(object)) {
-					auto* const param = params->GetArgument<plg::vector<double>*>(index);
+					auto* const param = params.Get<plg::vector<double>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayString:
 				if (auto value = ArrayFromObject<plg::string>(object)) {
-					auto* const param = params->GetArgument<plg::vector<plg::string>*>(index);
+					auto* const param = params.Get<plg::vector<plg::string>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayAny:
 				if (auto value = ArrayFromObject<plg::any>(object)) {
-					auto* const param = params->GetArgument<plg::vector<plg::any>*>(index);
+					auto* const param = params.Get<plg::vector<plg::any>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayVector2:
 				if (auto value = ArrayFromObject<plg::vec2>(object)) {
-					auto* const param = params->GetArgument<plg::vector<plg::vec2>*>(index);
+					auto* const param = params.Get<plg::vector<plg::vec2>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayVector3:
 				if (auto value = ArrayFromObject<plg::vec3>(object)) {
-					auto* const param = params->GetArgument<plg::vector<plg::vec3>*>(index);
+					auto* const param = params.Get<plg::vector<plg::vec3>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayVector4:
 				if (auto value = ArrayFromObject<plg::vec4>(object)) {
-					auto* const param = params->GetArgument<plg::vector<plg::vec4>*>(index);
+					auto* const param = params.Get<plg::vector<plg::vec4>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::ArrayMatrix4x4:
 				if (auto value = ArrayFromObject<plg::mat4x4>(object)) {
-					auto* const param = params->GetArgument<plg::vector<plg::mat4x4>*>(index);
+					auto* const param = params.Get<plg::vector<plg::mat4x4>*>(index);
 					*param = std::move(*value);
 					return true;
 				}
 				break;
 			case ValueType::Vector2:
 				if (auto value = ValueFromObject<plg::vec2>(object)) {
-					auto* const param = params->GetArgument<plg::vec2*>(index);
+					auto* const param = params.Get<plg::vec2*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Vector3:
 				if (auto value = ValueFromObject<plg::vec3>(object)) {
-					auto* const param = params->GetArgument<plg::vec3*>(index);
+					auto* const param = params.Get<plg::vec3*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Vector4:
 				if (auto value = ValueFromObject<plg::vec4>(object)) {
-					auto* const param = params->GetArgument<plg::vec4*>(index);
+					auto* const param = params.Get<plg::vec4*>(index);
 					*param = *value;
 					return true;
 				}
 				break;
 			case ValueType::Matrix4x4:
 				if (auto value = ValueFromObject<plg::mat4x4>(object)) {
-					auto* const param = params->GetArgument<plg::mat4x4*>(index);
+					auto* const param = params.Get<plg::mat4x4*>(index);
 					*param = *value;
 					return true;
 				}
@@ -1375,6 +1373,11 @@ namespace py3lm {
 		}
 
 		template<>
+		PyObject* CreatePyObject(const std::string& value) {
+			return PyUnicode_FromStringAndSize(value.data(), static_cast<Py_ssize_t>(value.size()));
+		}
+
+		template<>
 		PyObject* CreatePyObject(const std::string_view& value) {
 			return PyUnicode_FromStringAndSize(value.data(), static_cast<Py_ssize_t>(value.size()));
 		}
@@ -1385,6 +1388,11 @@ namespace py3lm {
 			return PyUnicode_FromWideChar(value.data(), static_cast<Py_ssize_t>(value.size()));
 		}
 #endif
+
+		template<>
+		PyObject* CreatePyObject(const std::filesystem::path& value) {
+			return CreatePyObject(std::basic_string_view(value.native()));
+		}
 
 		template<>
 		PyObject* CreatePyObject(const plg::vec2& value) {
@@ -1426,7 +1434,7 @@ namespace py3lm {
 			return nullptr;
 		}
 
-		PyObject* GetOrCreateFunctionObject(MethodHandle method, void* funcAddr) {
+		PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
 			return g_py3lm.GetOrCreateFunctionObject(method, funcAddr);
 		}
 
@@ -1466,12 +1474,12 @@ namespace py3lm {
 		}
 
 		template<typename T>
-		PyObject* CreatePyEnumObject(EnumHandle enumerator, const T& value) {
+		PyObject* CreatePyEnumObject(const EnumObject& enumerator, const T& value) {
 			return g_py3lm.GetEnumObject(enumerator, static_cast<int64_t>(value));
 		}
 
 		template<typename T>
-		PyObject* CreatePyEnumObjectList(EnumHandle enumerator, const plg::vector<T>& arrayArg) {
+		PyObject* CreatePyEnumObjectList(const EnumObject& enumerator, const plg::vector<T>& arrayArg) {
 			const auto size = static_cast<Py_ssize_t>(arrayArg.size());
 			PyObject* const arrayObject = PyList_New(size);
 			if (arrayObject) {
@@ -1487,41 +1495,41 @@ namespace py3lm {
 			return arrayObject;
 		}
 
-		PyObject* ParamToEnumObject(PropertyHandle paramType, const JitCallback::Parameters* params, size_t index) {
-			auto enumerator = paramType.GetEnum();
+		PyObject* ParamToEnumObject(const Property& paramType, const ParametersSpan& params, size_t index) {
+			const EnumObject& enumerator = *paramType.GetEnumerate();
 			switch (paramType.GetType()) {
 			case ValueType::Int8:
-				return CreatePyEnumObject(enumerator, params->GetArgument<int8_t>(index));
+				return CreatePyEnumObject(enumerator, params.Get<int8_t>(index));
 			case ValueType::Int16:
-				return CreatePyEnumObject(enumerator, params->GetArgument<int16_t>(index));
+				return CreatePyEnumObject(enumerator, params.Get<int16_t>(index));
 			case ValueType::Int32:
-				return CreatePyEnumObject(enumerator, params->GetArgument<int32_t>(index));
+				return CreatePyEnumObject(enumerator, params.Get<int32_t>(index));
 			case ValueType::Int64:
-				return CreatePyEnumObject(enumerator, params->GetArgument<int64_t>(index));
+				return CreatePyEnumObject(enumerator, params.Get<int64_t>(index));
 			case ValueType::UInt8:
-				return CreatePyEnumObject(enumerator, params->GetArgument<uint8_t>(index));
+				return CreatePyEnumObject(enumerator, params.Get<uint8_t>(index));
 			case ValueType::UInt16:
-				return CreatePyEnumObject(enumerator, params->GetArgument<uint16_t>(index));
+				return CreatePyEnumObject(enumerator, params.Get<uint16_t>(index));
 			case ValueType::UInt32:
-				return CreatePyEnumObject(enumerator, params->GetArgument<uint32_t>(index));
+				return CreatePyEnumObject(enumerator, params.Get<uint32_t>(index));
 			case ValueType::UInt64:
-				return CreatePyEnumObject(enumerator, params->GetArgument<uint64_t>(index));
+				return CreatePyEnumObject(enumerator, params.Get<uint64_t>(index));
 			case ValueType::ArrayInt8:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<int8_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<int8_t>*>(index)));
 			case ValueType::ArrayInt16:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<int16_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<int16_t>*>(index)));
 			case ValueType::ArrayInt32:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<int32_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<int32_t>*>(index)));
 			case ValueType::ArrayInt64:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<int64_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<int64_t>*>(index)));
 			case ValueType::ArrayUInt8:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<uint8_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<uint8_t>*>(index)));
 			case ValueType::ArrayUInt16:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<uint16_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<uint16_t>*>(index)));
 			case ValueType::ArrayUInt32:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<uint32_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<uint32_t>*>(index)));
 			case ValueType::ArrayUInt64:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<uint64_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<uint64_t>*>(index)));
 			default: {
 				const std::string error(std::format(LOG_PREFIX "ParamToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
@@ -1531,41 +1539,41 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* ParamRefToEnumObject(PropertyHandle paramType, const JitCallback::Parameters* params, size_t index) {
-			auto enumerator = paramType.GetEnum();
+		PyObject* ParamRefToEnumObject(const Property& paramType, const ParametersSpan& params, size_t index) {
+			const auto& enumerator = *paramType.GetEnumerate();
 			switch (paramType.GetType()) {
 			case ValueType::Int8:
-				return CreatePyEnumObject(enumerator, *(params->GetArgument<int8_t*>(index)));
+				return CreatePyEnumObject(enumerator, *(params.Get<int8_t*>(index)));
 			case ValueType::Int16:
-				return CreatePyEnumObject(enumerator, *(params->GetArgument<int16_t*>(index)));
+				return CreatePyEnumObject(enumerator, *(params.Get<int16_t*>(index)));
 			case ValueType::Int32:
-				return CreatePyEnumObject(enumerator, *(params->GetArgument<int32_t*>(index)));
+				return CreatePyEnumObject(enumerator, *(params.Get<int32_t*>(index)));
 			case ValueType::Int64:
-				return CreatePyEnumObject(enumerator, *(params->GetArgument<int64_t*>(index)));
+				return CreatePyEnumObject(enumerator, *(params.Get<int64_t*>(index)));
 			case ValueType::UInt8:
-				return CreatePyEnumObject(enumerator, *(params->GetArgument<uint8_t*>(index)));
+				return CreatePyEnumObject(enumerator, *(params.Get<uint8_t*>(index)));
 			case ValueType::UInt16:
-				return CreatePyEnumObject(enumerator, *(params->GetArgument<uint16_t*>(index)));
+				return CreatePyEnumObject(enumerator, *(params.Get<uint16_t*>(index)));
 			case ValueType::UInt32:
-				return CreatePyEnumObject(enumerator, *(params->GetArgument<uint32_t*>(index)));
+				return CreatePyEnumObject(enumerator, *(params.Get<uint32_t*>(index)));
 			case ValueType::UInt64:
-				return CreatePyEnumObject(enumerator, *(params->GetArgument<uint64_t*>(index)));
+				return CreatePyEnumObject(enumerator, *(params.Get<uint64_t*>(index)));
 			case ValueType::ArrayInt8:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<int8_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<int8_t>*>(index)));
 			case ValueType::ArrayInt16:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<int16_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<int16_t>*>(index)));
 			case ValueType::ArrayInt32:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<int32_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<int32_t>*>(index)));
 			case ValueType::ArrayInt64:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<int64_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<int64_t>*>(index)));
 			case ValueType::ArrayUInt8:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<uint8_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<uint8_t>*>(index)));
 			case ValueType::ArrayUInt16:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<uint16_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<uint16_t>*>(index)));
 			case ValueType::ArrayUInt32:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<uint32_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<uint32_t>*>(index)));
 			case ValueType::ArrayUInt64:
-				return CreatePyEnumObjectList(enumerator, *(params->GetArgument<const plg::vector<uint64_t>*>(index)));
+				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<uint64_t>*>(index)));
 			default: {
 				const std::string error(std::format(LOG_PREFIX "ParamRefToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
@@ -1575,90 +1583,90 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* ParamToObject(PropertyHandle paramType, const JitCallback::Parameters* params, size_t index) {
+		PyObject* ParamToObject(const Property& paramType, const ParametersSpan& params, size_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
-				return CreatePyObject(params->GetArgument<bool>(index));
+				return CreatePyObject(params.Get<bool>(index));
 			case ValueType::Char8:
-				return CreatePyObject(params->GetArgument<char>(index));
+				return CreatePyObject(params.Get<char>(index));
 			case ValueType::Char16:
-				return CreatePyObject(params->GetArgument<char16_t>(index));
+				return CreatePyObject(params.Get<char16_t>(index));
 			case ValueType::Int8:
-				return CreatePyObject(params->GetArgument<int8_t>(index));
+				return CreatePyObject(params.Get<int8_t>(index));
 			case ValueType::Int16:
-				return CreatePyObject(params->GetArgument<int16_t>(index));
+				return CreatePyObject(params.Get<int16_t>(index));
 			case ValueType::Int32:
-				return CreatePyObject(params->GetArgument<int32_t>(index));
+				return CreatePyObject(params.Get<int32_t>(index));
 			case ValueType::Int64:
-				return CreatePyObject(params->GetArgument<int64_t>(index));
+				return CreatePyObject(params.Get<int64_t>(index));
 			case ValueType::UInt8:
-				return CreatePyObject(params->GetArgument<uint8_t>(index));
+				return CreatePyObject(params.Get<uint8_t>(index));
 			case ValueType::UInt16:
-				return CreatePyObject(params->GetArgument<uint16_t>(index));
+				return CreatePyObject(params.Get<uint16_t>(index));
 			case ValueType::UInt32:
-				return CreatePyObject(params->GetArgument<uint32_t>(index));
+				return CreatePyObject(params.Get<uint32_t>(index));
 			case ValueType::UInt64:
-				return CreatePyObject(params->GetArgument<uint64_t>(index));
+				return CreatePyObject(params.Get<uint64_t>(index));
 			case ValueType::Pointer:
-				return CreatePyObject(params->GetArgument<void*>(index));
+				return CreatePyObject(params.Get<void*>(index));
 			case ValueType::Float:
-				return CreatePyObject(params->GetArgument<float>(index));
+				return CreatePyObject(params.Get<float>(index));
 			case ValueType::Double:
-				return CreatePyObject(params->GetArgument<double>(index));
+				return CreatePyObject(params.Get<double>(index));
 			case ValueType::Function:
-				return GetOrCreateFunctionObject(paramType.GetPrototype(), params->GetArgument<void*>(index));
+				return GetOrCreateFunctionObject(*paramType.GetPrototype(), params.Get<void*>(index));
 			case ValueType::String:
-				return CreatePyObject(*(params->GetArgument<const plg::string*>(index)));
+				return CreatePyObject(*(params.Get<const plg::string*>(index)));
 			case ValueType::Any:
-				return CreatePyObject(*(params->GetArgument<const plg::any*>(index)));
+				return CreatePyObject(*(params.Get<const plg::any*>(index)));
 			case ValueType::ArrayBool:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<bool>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<bool>*>(index)));
 			case ValueType::ArrayChar8:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<char>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<char>*>(index)));
 			case ValueType::ArrayChar16:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<char16_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<char16_t>*>(index)));
 			case ValueType::ArrayInt8:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int8_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<int8_t>*>(index)));
 			case ValueType::ArrayInt16:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int16_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<int16_t>*>(index)));
 			case ValueType::ArrayInt32:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int32_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<int32_t>*>(index)));
 			case ValueType::ArrayInt64:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int64_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<int64_t>*>(index)));
 			case ValueType::ArrayUInt8:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint8_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<uint8_t>*>(index)));
 			case ValueType::ArrayUInt16:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint16_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<uint16_t>*>(index)));
 			case ValueType::ArrayUInt32:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint32_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<uint32_t>*>(index)));
 			case ValueType::ArrayUInt64:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint64_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<uint64_t>*>(index)));
 			case ValueType::ArrayPointer:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<void*>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<void*>*>(index)));
 			case ValueType::ArrayFloat:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<float>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<float>*>(index)));
 			case ValueType::ArrayDouble:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<double>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<double>*>(index)));
 			case ValueType::ArrayString:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::string>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::string>*>(index)));
 			case ValueType::ArrayAny:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::any>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::any>*>(index)));
 			case ValueType::ArrayVector2:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec2>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::vec2>*>(index)));
 			case ValueType::ArrayVector3:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec3>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::vec3>*>(index)));
 			case ValueType::ArrayVector4:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec4>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::vec4>*>(index)));
 			case ValueType::ArrayMatrix4x4:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::mat4x4>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::mat4x4>*>(index)));
 			case ValueType::Vector2:
-				return CreatePyObject(*(params->GetArgument<plg::vec2*>(index)));
+				return CreatePyObject(*(params.Get<plg::vec2*>(index)));
 			case ValueType::Vector3:
-				return CreatePyObject(*(params->GetArgument<plg::vec3*>(index)));
+				return CreatePyObject(*(params.Get<plg::vec3*>(index)));
 			case ValueType::Vector4:
-				return CreatePyObject(*(params->GetArgument<plg::vec4*>(index)));
+				return CreatePyObject(*(params.Get<plg::vec4*>(index)));
 			case ValueType::Matrix4x4:
-				return CreatePyObject(*(params->GetArgument<plg::mat4x4*>(index)));
+				return CreatePyObject(*(params.Get<plg::mat4x4*>(index)));
 			default: {
 				const std::string error(std::format(LOG_PREFIX "ParamToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
@@ -1668,88 +1676,88 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* ParamRefToObject(PropertyHandle paramType, const JitCallback::Parameters* params, size_t index) {
+		PyObject* ParamRefToObject(const Property& paramType, const ParametersSpan& params, size_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
-				return CreatePyObject(*(params->GetArgument<bool*>(index)));
+				return CreatePyObject(*(params.Get<bool*>(index)));
 			case ValueType::Char8:
-				return CreatePyObject(*(params->GetArgument<char*>(index)));
+				return CreatePyObject(*(params.Get<char*>(index)));
 			case ValueType::Char16:
-				return CreatePyObject(*(params->GetArgument<char16_t*>(index)));
+				return CreatePyObject(*(params.Get<char16_t*>(index)));
 			case ValueType::Int8:
-				return CreatePyObject(*(params->GetArgument<int8_t*>(index)));
+				return CreatePyObject(*(params.Get<int8_t*>(index)));
 			case ValueType::Int16:
-				return CreatePyObject(*(params->GetArgument<int16_t*>(index)));
+				return CreatePyObject(*(params.Get<int16_t*>(index)));
 			case ValueType::Int32:
-				return CreatePyObject(*(params->GetArgument<int32_t*>(index)));
+				return CreatePyObject(*(params.Get<int32_t*>(index)));
 			case ValueType::Int64:
-				return CreatePyObject(*(params->GetArgument<int64_t*>(index)));
+				return CreatePyObject(*(params.Get<int64_t*>(index)));
 			case ValueType::UInt8:
-				return CreatePyObject(*(params->GetArgument<uint8_t*>(index)));
+				return CreatePyObject(*(params.Get<uint8_t*>(index)));
 			case ValueType::UInt16:
-				return CreatePyObject(*(params->GetArgument<uint16_t*>(index)));
+				return CreatePyObject(*(params.Get<uint16_t*>(index)));
 			case ValueType::UInt32:
-				return CreatePyObject(*(params->GetArgument<uint32_t*>(index)));
+				return CreatePyObject(*(params.Get<uint32_t*>(index)));
 			case ValueType::UInt64:
-				return CreatePyObject(*(params->GetArgument<uint64_t*>(index)));
+				return CreatePyObject(*(params.Get<uint64_t*>(index)));
 			case ValueType::Pointer:
-				return CreatePyObject(*(params->GetArgument<void**>(index)));
+				return CreatePyObject(*(params.Get<void**>(index)));
 			case ValueType::Float:
-				return CreatePyObject(*(params->GetArgument<float*>(index)));
+				return CreatePyObject(*(params.Get<float*>(index)));
 			case ValueType::Double:
-				return CreatePyObject(*(params->GetArgument<double*>(index)));
+				return CreatePyObject(*(params.Get<double*>(index)));
 			case ValueType::String:
-				return CreatePyObject(*(params->GetArgument<const plg::string*>(index)));
+				return CreatePyObject(*(params.Get<const plg::string*>(index)));
 			case ValueType::Any:
-				return CreatePyObject(*(params->GetArgument<const plg::any*>(index)));
+				return CreatePyObject(*(params.Get<const plg::any*>(index)));
 			case ValueType::ArrayBool:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<bool>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<bool>*>(index)));
 			case ValueType::ArrayChar8:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<char>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<char>*>(index)));
 			case ValueType::ArrayChar16:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<char16_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<char16_t>*>(index)));
 			case ValueType::ArrayInt8:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int8_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<int8_t>*>(index)));
 			case ValueType::ArrayInt16:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int16_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<int16_t>*>(index)));
 			case ValueType::ArrayInt32:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int32_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<int32_t>*>(index)));
 			case ValueType::ArrayInt64:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<int64_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<int64_t>*>(index)));
 			case ValueType::ArrayUInt8:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint8_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<uint8_t>*>(index)));
 			case ValueType::ArrayUInt16:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint16_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<uint16_t>*>(index)));
 			case ValueType::ArrayUInt32:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint32_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<uint32_t>*>(index)));
 			case ValueType::ArrayUInt64:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<uint64_t>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<uint64_t>*>(index)));
 			case ValueType::ArrayPointer:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<void*>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<void*>*>(index)));
 			case ValueType::ArrayFloat:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<float>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<float>*>(index)));
 			case ValueType::ArrayDouble:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<double>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<double>*>(index)));
 			case ValueType::ArrayString:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::string>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::string>*>(index)));
 			case ValueType::ArrayAny:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::any>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::any>*>(index)));
 			case ValueType::ArrayVector2:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec2>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::vec2>*>(index)));
 			case ValueType::ArrayVector3:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec3>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::vec3>*>(index)));
 			case ValueType::ArrayVector4:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::vec4>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::vec4>*>(index)));
 			case ValueType::ArrayMatrix4x4:
-				return CreatePyObjectList(*(params->GetArgument<const plg::vector<plg::mat4x4>*>(index)));
+				return CreatePyObjectList(*(params.Get<const plg::vector<plg::mat4x4>*>(index)));
 			case ValueType::Vector2:
-				return CreatePyObject(*(params->GetArgument<plg::vec2*>(index)));
+				return CreatePyObject(*(params.Get<plg::vec2*>(index)));
 			case ValueType::Vector3:
-				return CreatePyObject(*(params->GetArgument<plg::vec3*>(index)));
+				return CreatePyObject(*(params.Get<plg::vec3*>(index)));
 			case ValueType::Vector4:
-				return CreatePyObject(*(params->GetArgument<plg::vec4*>(index)));
+				return CreatePyObject(*(params.Get<plg::vec4*>(index)));
 			case ValueType::Matrix4x4:
-				return CreatePyObject(*(params->GetArgument<plg::mat4x4*>(index)));
+				return CreatePyObject(*(params.Get<plg::mat4x4*>(index)));
 			default: {
 				const std::string error(std::format(LOG_PREFIX "ParamRefToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				g_py3lm.LogFatal(error);
@@ -1772,8 +1780,13 @@ namespace py3lm {
 			PyGILState_STATE _state;
 		};
 
-		void InternalCall(MethodHandle method, MemAddr data, const JitCallback::Parameters* params, const size_t, const JitCallback::Return* ret) {
+		void InternalCall(const Method* method, MemAddr data, uint64_t* parameters, const size_t count, void* return_) {
 			GILLock lock{};
+
+			const Property& retType = method->GetRetType();
+
+			ParametersSpan params(parameters, count);
+			ReturnSlot ret(return_, ValueUtils::SizeOf(retType.GetType()));
 
 			PyObject* const func = data.RCast<PyObject*>();
 
@@ -1784,7 +1797,7 @@ namespace py3lm {
 			};
 			ParamProcess processResult = ParamProcess::NoError;
 
-			const auto paramTypes = method.GetParamTypes();
+			const auto& paramTypes = method->GetParamTypes();
 			size_t paramsCount = paramTypes.size();
 			size_t refParamsCount = 0;
 
@@ -1797,14 +1810,14 @@ namespace py3lm {
 				}
 				else {
 					for (size_t index = 0; index < paramsCount; ++index) {
-						const PropertyHandle paramType = paramTypes[index];
-						if (paramType.IsReference()) {
+						const Property& paramType = paramTypes[index];
+						if (paramType.IsRef()) {
 							++refParamsCount;
 						}
-						using ParamConvertionFunc = PyObject* (*)(PropertyHandle, const JitCallback::Parameters*, size_t);
-						ParamConvertionFunc const convertFunc = paramType.GetEnum() ?
-							(paramType.IsReference() ? &ParamRefToEnumObject : &ParamToEnumObject) :
-							(paramType.IsReference() ? &ParamRefToObject : &ParamToObject);
+						using ParamConvertionFunc = PyObject* (*)(const Property&, const ParametersSpan&, size_t);
+						ParamConvertionFunc const convertFunc = paramType.GetEnumerate() ?
+							(paramType.IsRef() ? &ParamRefToEnumObject : &ParamToEnumObject) :
+							(paramType.IsRef() ? &ParamRefToObject : &ParamToObject);
 						convertFunc(paramType, params, index);
 						PyObject* const arg = convertFunc(paramType, params, index);
 						if (!arg) {
@@ -1822,8 +1835,6 @@ namespace py3lm {
 					}
 				}
 			}
-
-			const plugify::PropertyHandle retType = method.GetReturnType();
 
 			if (processResult != ParamProcess::NoError) {
 				if (argTuple) {
@@ -1879,8 +1890,8 @@ namespace py3lm {
 				}
 
 				for (size_t index = 0, k = 0; index < paramsCount; ++index) {
-					const PropertyHandle paramType = paramTypes[index];
-					if (!paramType.IsReference()) {
+					const Property& paramType = paramTypes[index];
+					if (!paramType.IsRef()) {
 						continue;
 					}
 					if (!SetRefParam(PyTuple_GET_ITEM(result, static_cast<Py_ssize_t>(1 + k)), paramType, params, index)) {
@@ -1908,18 +1919,18 @@ namespace py3lm {
 			Py_DECREF(result);
 		}
 
-		std::pair<bool, JitCallback> CreateInternalCall(const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, MethodHandle method, PyObject* func) {
-			JitCallback callback(jitRuntime);
+		std::pair<bool, JitCallback> CreateInternalCall(const Method& method, PyObject* func) {
+			JitCallback callback{};
 			void* const methodAddr = callback.GetJitFunc(method, &InternalCall, func);
 			return { methodAddr != nullptr, std::move(callback) };
 		}
 
-		MethodExportResult GenerateMethodExport(MethodHandle method, const std::shared_ptr<asmjit::JitRuntime>& jitRuntime, PyObject* pluginDict, PyObject* pluginInstance) {
+		Result<PythonMethodData> GenerateMethodExport(const Method& method, PyObject* pluginDict, PyObject* pluginInstance) {
 			PyObject* func{};
 
 			std::string className, methodName;
 			{
-				const auto& funcName = method.GetFunctionName();
+				const auto& funcName = method.GetFuncName();
 				if (const auto pos = funcName.find('.'); pos != std::string::npos) {
 					className = funcName.substr(0, pos);
 					methodName = funcName.substr(pos + 1);
@@ -1943,35 +1954,35 @@ namespace py3lm {
 
 			if (!func) {
 				PyErr_Clear();
-				return MethodExportError{ std::format("{} (not found '{}' in module)", method.GetName(), method.GetFunctionName())};
+				return MakeError("'{}' not found in module", method.GetFuncName());
 			}
 
 			if (!PyFunction_Check(func) && !PyCallable_Check(func)) {
 				Py_DECREF(func);
-				return MethodExportError{ std::format("{} ('{}' not function type)", method.GetName(), method.GetFunctionName()) };
+				return MakeError("'{}' not function type", method.GetFuncName());
 			}
 
 			if (funcIsMethod && !IsStaticMethod(func)) {
 				PyObject* const bind = PyMethod_New(func, pluginInstance);
 				Py_DECREF(func);
 				if (!bind) {
-					return MethodExportError{ std::format("{} (instance bind fail)", method.GetName()) };
+					return MakeError("instance bind fail");
 				}
 				func = bind;
 			}
 
-			auto [result, callback] = CreateInternalCall(jitRuntime, method, func);
+			auto [result, callback] = CreateInternalCall(method, func);
 
 			if (!result) {
 				Py_DECREF(func);
-				return MethodExportError{ std::format("{} (jit error: {})", method.GetName(), callback.GetError()) };
+				return MakeError("jit error: {}", callback.GetError());
 			}
 
-			return MethodExportData{ std::move(callback), func };
+			return PythonMethodData{ std::move(callback), func };
 		}
 
 		struct ArgsScope {
-			JitCall::Parameters params;
+			Parameters params;
 			std::vector<std::pair<void*, ValueType>> storage; // used to store array temp memory
 
 			explicit ArgsScope(size_t size) : params(size) {
@@ -2292,75 +2303,75 @@ namespace py3lm {
 					break;
 			}
 
-			a.params.AddArgument(value);
+			a.params.Add(value);
 		}
 
-		PyObject* MakeExternalCallWithEnumObject(PropertyHandle retType, JitCall::CallingFunc func, const ArgsScope& a, JitCall::Return& ret) {
-			func(a.params.GetDataPtr(), &ret);
-			auto enumerator = retType.GetEnum();
+		PyObject* MakeExternalCallWithEnumObject(const Property& retType, JitCall::CallingFunc func, const ArgsScope& a, Return& ret) {
+			func(a.params.Get(), &ret);
+			const auto& enumerator = *retType.GetEnumerate();
 			switch (retType.GetType()) {
 			case ValueType::Int8: {
-				const int8_t val = ret.GetReturn<int8_t>();
+				const int8_t val = ret.Get<int8_t>();
 				return CreatePyEnumObject(enumerator, val);
 			}
 			case ValueType::Int16: {
-				const int16_t val = ret.GetReturn<int16_t>();
+				const int16_t val = ret.Get<int16_t>();
 				return CreatePyEnumObject(enumerator, val);
 			}
 			case ValueType::Int32: {
-				const int32_t val = ret.GetReturn<int32_t>();
+				const int32_t val = ret.Get<int32_t>();
 				return CreatePyEnumObject(enumerator, val);
 			}
 			case ValueType::Int64: {
-				const int64_t val = ret.GetReturn<int64_t>();
+				const int64_t val = ret.Get<int64_t>();
 				return CreatePyEnumObject(enumerator, val);
 			}
 			case ValueType::UInt8: {
-				const uint8_t val = ret.GetReturn<uint8_t>();
+				const uint8_t val = ret.Get<uint8_t>();
 				return CreatePyEnumObject(enumerator, val);
 			}
 			case ValueType::UInt16: {
-				const uint16_t val = ret.GetReturn<uint16_t>();
+				const uint16_t val = ret.Get<uint16_t>();
 				return CreatePyEnumObject(enumerator, val);
 			}
 			case ValueType::UInt32: {
-				const uint32_t val = ret.GetReturn<uint32_t>();
+				const uint32_t val = ret.Get<uint32_t>();
 				return CreatePyEnumObject(enumerator, val);
 			}
 			case ValueType::UInt64: {
-				const uint64_t val = ret.GetReturn<uint64_t>();
+				const uint64_t val = ret.Get<uint64_t>();
 				return CreatePyEnumObject(enumerator, val);
 			}
 			case ValueType::ArrayInt8: {
-				auto* const arr = ret.GetReturn<plg::vector<int8_t>*>();
+				auto* const arr = ret.Get<plg::vector<int8_t>*>();
 				return CreatePyEnumObjectList<int8_t>(enumerator, *arr);
 			}
 			case ValueType::ArrayInt16: {
-				auto* const arr = ret.GetReturn<plg::vector<int16_t>*>();
+				auto* const arr = ret.Get<plg::vector<int16_t>*>();
 				return CreatePyEnumObjectList<int16_t>(enumerator, *arr);
 			}
 			case ValueType::ArrayInt32: {
-				auto* const arr = ret.GetReturn<plg::vector<int32_t>*>();
+				auto* const arr = ret.Get<plg::vector<int32_t>*>();
 				return CreatePyEnumObjectList<int32_t>(enumerator, *arr);
 			}
 			case ValueType::ArrayInt64: {
-				auto* const arr = ret.GetReturn<plg::vector<int64_t>*>();
+				auto* const arr = ret.Get<plg::vector<int64_t>*>();
 				return CreatePyEnumObjectList<int64_t>(enumerator, *arr);
 			}
 			case ValueType::ArrayUInt8: {
-				auto* const arr = ret.GetReturn<plg::vector<uint8_t>*>();
+				auto* const arr = ret.Get<plg::vector<uint8_t>*>();
 				return CreatePyEnumObjectList<uint8_t>(enumerator, *arr);
 			}
 			case ValueType::ArrayUInt16: {
-				auto* const arr = ret.GetReturn<plg::vector<uint16_t>*>();
+				auto* const arr = ret.Get<plg::vector<uint16_t>*>();
 				return CreatePyEnumObjectList<uint16_t>(enumerator, *arr);
 			}
 			case ValueType::ArrayUInt32: {
-				auto* const arr = ret.GetReturn<plg::vector<uint32_t>*>();
+				auto* const arr = ret.Get<plg::vector<uint32_t>*>();
 				return CreatePyEnumObjectList<uint32_t>(enumerator, *arr);
 			}
 			case ValueType::ArrayUInt64: {
-				auto* const arr = ret.GetReturn<plg::vector<uint64_t>*>();
+				auto* const arr = ret.Get<plg::vector<uint64_t>*>();
 				return CreatePyEnumObjectList<uint64_t>(enumerator, *arr);
 			}
 			default: {
@@ -2372,183 +2383,183 @@ namespace py3lm {
 			return nullptr;
 		}
 
-		PyObject* MakeExternalCallWithObject(PropertyHandle retType, JitCall::CallingFunc func, const ArgsScope& a, JitCall::Return& ret) {
-			func(a.params.GetDataPtr(), &ret);
+		PyObject* MakeExternalCallWithObject(const Property& retType, JitCall::CallingFunc func, const ArgsScope& a, Return& ret) {
+			func(a.params.Get(), &ret);
 			switch (retType.GetType()) {
 			case ValueType::Void:
 				Py_RETURN_NONE;
 			case ValueType::Bool: {
-				const bool val = ret.GetReturn<bool>();
+				const bool val = ret.Get<bool>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Char8: {
-				const char val = ret.GetReturn<char>();
+				const char val = ret.Get<char>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Char16: {
-				const char16_t val = ret.GetReturn<char16_t>();
+				const char16_t val = ret.Get<char16_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Int8: {
-				const int8_t val = ret.GetReturn<int8_t>();
+				const int8_t val = ret.Get<int8_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Int16: {
-				const int16_t val = ret.GetReturn<int16_t>();
+				const int16_t val = ret.Get<int16_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Int32: {
-				const int32_t val = ret.GetReturn<int32_t>();
+				const int32_t val = ret.Get<int32_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Int64: {
-				const int64_t val = ret.GetReturn<int64_t>();
+				const int64_t val = ret.Get<int64_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::UInt8: {
-				const uint8_t val = ret.GetReturn<uint8_t>();
+				const uint8_t val = ret.Get<uint8_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::UInt16: {
-				const uint16_t val = ret.GetReturn<uint16_t>();
+				const uint16_t val = ret.Get<uint16_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::UInt32: {
-				const uint32_t val = ret.GetReturn<uint32_t>();
+				const uint32_t val = ret.Get<uint32_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::UInt64: {
-				const uint64_t val = ret.GetReturn<uint64_t>();
+				const uint64_t val = ret.Get<uint64_t>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Pointer: {
-				void* val = ret.GetReturn<void*>();
+				void* val = ret.Get<void*>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Float: {
-				const float val = ret.GetReturn<float>();
+				const float val = ret.Get<float>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Double: {
-				const double val = ret.GetReturn<double>();
+				const double val = ret.Get<double>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Function: {
-				void* const val = ret.GetReturn<void*>();
-				return GetOrCreateFunctionObject(retType.GetPrototype(), val);
+				void* const val = ret.Get<void*>();
+				return GetOrCreateFunctionObject(*retType.GetPrototype(), val);
 			}
 			case ValueType::String: {
-				auto* const str = ret.GetReturn<plg::string*>();
+				auto* const str = ret.Get<plg::string*>();
 				return CreatePyObject(*str);
 			}
 			case ValueType::Any: {
-				auto* const str = ret.GetReturn<plg::any*>();
+				auto* const str = ret.Get<plg::any*>();
 				return CreatePyObject(*str);
 			}
 			case ValueType::ArrayBool: {
-				auto* const arr = ret.GetReturn<plg::vector<bool>*>();
+				auto* const arr = ret.Get<plg::vector<bool>*>();
 				return CreatePyObjectList<bool>(*arr);
 			}
 			case ValueType::ArrayChar8: {
-				auto* const arr = ret.GetReturn<plg::vector<char>*>();
+				auto* const arr = ret.Get<plg::vector<char>*>();
 				return CreatePyObjectList<char>(*arr);
 			}
 			case ValueType::ArrayChar16: {
-				auto* const arr = ret.GetReturn<plg::vector<char16_t>*>();
+				auto* const arr = ret.Get<plg::vector<char16_t>*>();
 				return CreatePyObjectList<char16_t>(*arr);
 			}
 			case ValueType::ArrayInt8: {
-				auto* const arr = ret.GetReturn<plg::vector<int8_t>*>();
+				auto* const arr = ret.Get<plg::vector<int8_t>*>();
 				return CreatePyObjectList<int8_t>(*arr);
 			}
 			case ValueType::ArrayInt16: {
-				auto* const arr = ret.GetReturn<plg::vector<int16_t>*>();
+				auto* const arr = ret.Get<plg::vector<int16_t>*>();
 				return CreatePyObjectList<int16_t>(*arr);
 			}
 			case ValueType::ArrayInt32: {
-				auto* const arr = ret.GetReturn<plg::vector<int32_t>*>();
+				auto* const arr = ret.Get<plg::vector<int32_t>*>();
 				return CreatePyObjectList<int32_t>(*arr);
 			}
 			case ValueType::ArrayInt64: {
-				auto* const arr = ret.GetReturn<plg::vector<int64_t>*>();
+				auto* const arr = ret.Get<plg::vector<int64_t>*>();
 				return CreatePyObjectList<int64_t>(*arr);
 			}
 			case ValueType::ArrayUInt8: {
-				auto* const arr = ret.GetReturn<plg::vector<uint8_t>*>();
+				auto* const arr = ret.Get<plg::vector<uint8_t>*>();
 				return CreatePyObjectList<uint8_t>(*arr);
 			}
 			case ValueType::ArrayUInt16: {
-				auto* const arr = ret.GetReturn<plg::vector<uint16_t>*>();
+				auto* const arr = ret.Get<plg::vector<uint16_t>*>();
 				return CreatePyObjectList<uint16_t>(*arr);
 			}
 			case ValueType::ArrayUInt32: {
-				auto* const arr = ret.GetReturn<plg::vector<uint32_t>*>();
+				auto* const arr = ret.Get<plg::vector<uint32_t>*>();
 				return CreatePyObjectList<uint32_t>(*arr);
 			}
 			case ValueType::ArrayUInt64: {
-				auto* const arr = ret.GetReturn<plg::vector<uint64_t>*>();
+				auto* const arr = ret.Get<plg::vector<uint64_t>*>();
 				return CreatePyObjectList<uint64_t>(*arr);
 			}
 			case ValueType::ArrayPointer: {
-				auto* const arr = ret.GetReturn<plg::vector<void*>*>();
+				auto* const arr = ret.Get<plg::vector<void*>*>();
 				return CreatePyObjectList<void*>(*arr);
 			}
 			case ValueType::ArrayFloat: {
-				auto* const arr = ret.GetReturn<plg::vector<float>*>();
+				auto* const arr = ret.Get<plg::vector<float>*>();
 				return CreatePyObjectList<float>(*arr);
 			}
 			case ValueType::ArrayDouble: {
-				auto* const arr = ret.GetReturn<plg::vector<double>*>();
+				auto* const arr = ret.Get<plg::vector<double>*>();
 				return CreatePyObjectList<double>(*arr);
 			}
 			case ValueType::ArrayString: {
-				auto* const arr = ret.GetReturn<plg::vector<plg::string>*>();
+				auto* const arr = ret.Get<plg::vector<plg::string>*>();
 				return CreatePyObjectList<plg::string>(*arr);
 			}
 			case ValueType::ArrayAny: {
-				auto* const arr = ret.GetReturn<plg::vector<plg::any>*>();
+				auto* const arr = ret.Get<plg::vector<plg::any>*>();
 				return CreatePyObjectList<plg::any>(*arr);
 			}
 			case ValueType::ArrayVector2: {
-				auto* const arr = ret.GetReturn<plg::vector<plg::vec2>*>();
+				auto* const arr = ret.Get<plg::vector<plg::vec2>*>();
 				return CreatePyObjectList<plg::vec2>(*arr);
 			}
 			case ValueType::ArrayVector3: {
-				auto* const arr = ret.GetReturn<plg::vector<plg::vec3>*>();
+				auto* const arr = ret.Get<plg::vector<plg::vec3>*>();
 				return CreatePyObjectList<plg::vec3>(*arr);
 			}
 			case ValueType::ArrayVector4: {
-				auto* const arr = ret.GetReturn<plg::vector<plg::vec4>*>();
+				auto* const arr = ret.Get<plg::vector<plg::vec4>*>();
 				return CreatePyObjectList<plg::vec4>(*arr);
 			}
 			case ValueType::ArrayMatrix4x4: {
-				auto* const arr = ret.GetReturn<plg::vector<plg::mat4x4>*>();
+				auto* const arr = ret.Get<plg::vector<plg::mat4x4>*>();
 				return CreatePyObjectList<plg::mat4x4>(*arr);
 			}
 			case ValueType::Vector2: {
-				const plg::vec2 val = ret.GetReturn<plg::vec2>();
+				const plg::vec2 val = ret.Get<plg::vec2>();
 				return CreatePyObject(val);
 			}
 			case ValueType::Vector3: {
 				plg::vec3 val;
 				if (ValueUtils::IsHiddenParam(retType.GetType())) {
-					val = *ret.GetReturn<plg::vec3*>();
+					val = *ret.Get<plg::vec3*>();
 				} else {
-					val = ret.GetReturn<plg::vec3>();
+					val = ret.Get<plg::vec3>();
 				}
 				return CreatePyObject(val);
 			}
 			case ValueType::Vector4: {
 				plg::vec4 val;
 				if (ValueUtils::IsHiddenParam(retType.GetType())) {
-					val = *ret.GetReturn<plg::vec4*>();
+					val = *ret.Get<plg::vec4*>();
 				} else {
-					val = ret.GetReturn<plg::vec4>();
+					val = ret.Get<plg::vec4>();
 				}
 				return CreatePyObject(val);
 			}
 			case ValueType::Matrix4x4: {
-				plg::mat4x4 val = *ret.GetReturn<plg::mat4x4*>();
+				plg::mat4x4 val = *ret.Get<plg::mat4x4*>();
 				return CreatePyObject(val);
 			}
 			default: {
@@ -2560,12 +2571,12 @@ namespace py3lm {
 			return nullptr;
 		}
 
-		bool PushObjectAsParam(PropertyHandle paramType, PyObject* pItem, ArgsScope& a) {
+		bool PushObjectAsParam(const Property& paramType, PyObject* pItem, ArgsScope& a) {
 			const auto PushValParam = [&a](auto&& value) {
 				if (!value) {
 					return false;
 				}
-				a.params.AddArgument(*value);
+				a.params.Add(*value);
 				return true;
 			};
 			const auto PushRefParam = [&paramType, &a](void* value) {
@@ -2573,7 +2584,7 @@ namespace py3lm {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
+				a.params.Add(value);
 				return true;
 			};
 			switch (paramType.GetType()) {
@@ -2610,7 +2621,7 @@ namespace py3lm {
 				case ValueType::Any:
 					return PushRefParam(CreateValue<plg::any>(pItem));
 				case ValueType::Function:
-					return PushValParam(GetOrCreateFunctionValue(paramType.GetPrototype(), pItem));
+					return PushValParam(GetOrCreateFunctionValue(*paramType.GetPrototype(), pItem));
 				case ValueType::ArrayBool:
 					return PushRefParam(CreateArray<bool>(pItem));
 				case ValueType::ArrayChar8:
@@ -2669,13 +2680,13 @@ namespace py3lm {
 			return false;
 		}
 
-		bool PushObjectAsRefParam(PropertyHandle paramType, PyObject* pItem, ArgsScope& a) {
+		bool PushObjectAsRefParam(const Property& paramType, PyObject* pItem, ArgsScope& a) {
 			const auto PushRefParam = [&paramType, &a](void* value) {
 				if (!value) {
 					return false;
 				}
 				a.storage.emplace_back(value, paramType.GetType());
-				a.params.AddArgument(value);
+				a.params.Add(value);
 				return true;
 			};
 
@@ -2770,8 +2781,8 @@ namespace py3lm {
 			return false;
 		}
 
-		PyObject* StorageValueToEnumObject(PropertyHandle paramType, const ArgsScope& a, size_t index) {
-			auto enumerator = paramType.GetEnum();
+		PyObject* StorageValueToEnumObject(const Property& paramType, const ArgsScope& a, size_t index) {
+			const auto& enumerator = *paramType.GetEnumerate();
 			switch (paramType.GetType()) {
 			case ValueType::Int8:
 				return CreatePyEnumObject(enumerator, *static_cast<int8_t*>(std::get<0>(a.storage[index])));
@@ -2813,7 +2824,7 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* StorageValueToObject(PropertyHandle paramType, const ArgsScope& a, size_t index) {
+		PyObject* StorageValueToObject(const Property& paramType, const ArgsScope& a, size_t index) {
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
 				return CreatePyObject(*static_cast<bool*>(std::get<0>(a.storage[index])));
@@ -2904,81 +2915,87 @@ namespace py3lm {
 		}
 
 		// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-		void ExternalCallNoArgs(MethodHandle method, MemAddr data, const JitCallback::Parameters*, size_t, const JitCallback::Return* ret) {
-			const plugify::PropertyHandle retType = method.GetReturnType();
+		void ExternalCallNoArgs(const Method* method, MemAddr data, uint64_t* parameters, size_t count, void* return_) {
+			//ParametersSpan params(parameters, count);
+			ReturnSlot ret(return_, ValueUtils::SizeOf(ValueType::Pointer));
+
+			const Property& retType = method->GetRetType();
 			const bool hasHiddenParam = ValueUtils::IsHiddenParam(retType.GetType());
 
 			ArgsScope a(hasHiddenParam);
-			JitCall::Return r;
+			Return r;
 
 			if (hasHiddenParam) {
 				BeginExternalCall(retType.GetType(), a);
 			}
 
-			using MakeExternalCallFunc = PyObject* (*)(PropertyHandle, JitCall::CallingFunc, const ArgsScope&, JitCall::Return&);
-			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
+			using MakeExternalCallFunc = PyObject* (*)(const Property&, JitCall::CallingFunc, const ArgsScope&, Return&);
+			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnumerate() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
 			PyObject* const retObj = makeExternalCallFunc(retType, data.RCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// makeExternalCallFunc set error
-				ret->SetReturn(nullptr);
+				ret.Set<void*>(nullptr);
 				return;
 			}
-			ret->SetReturn(retObj);
+			ret.Set(retObj);
 		}
 
-		void ExternalCall(MethodHandle method, MemAddr data, const JitCallback::Parameters* p, size_t, const JitCallback::Return* ret) {
+		void ExternalCall(const Method* method, MemAddr data, uint64_t* parameters, size_t count, void* return_) {
+			ParametersSpan params(parameters, count);
+			ReturnSlot ret(return_, ValueUtils::SizeOf(ValueType::Pointer));
+
 			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-			const auto args = p->GetArgument<PyObject*>(1);
+			const auto args = params.Get<PyObject*>(1);
 
 			if (!PyTuple_Check(args)) {
-				const std::string error(std::format("Function \"{}\" expects a tuple of arguments", method.GetFunctionName()));
+				const std::string error(std::format("Function \"{}\" expects a tuple of arguments", method->GetFuncName()));
 				SetTypeError(error, args);
-				ret->SetReturn(nullptr);
+				ret.Set<void*>(nullptr);
 				return;
 			}
 
-			const auto paramTypes = method.GetParamTypes();
+			const auto& paramTypes = method->GetParamTypes();
 			const auto paramCount = paramTypes.size();
 			const Py_ssize_t size = PyTuple_Size(args);
 			if (size != static_cast<Py_ssize_t>(paramCount)) {
 				const std::string error(std::format("Wrong number of parameters, {} when {} required.", size, paramCount));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
-				ret->SetReturn(nullptr);
+				ret.Set<void*>(nullptr);
 				return;
 			}
 
-			const plugify::PropertyHandle retType = method.GetReturnType();
+			const Property& retType = method->GetRetType();
 			const bool hasHiddenParam = ValueUtils::IsHiddenParam(retType.GetType());
 			Py_ssize_t refParamsCount = 0;
 
 			ArgsScope a(hasHiddenParam + paramCount);
-			JitCall::Return r;
+			Return r;
 
 			if (hasHiddenParam) {
 				BeginExternalCall(retType.GetType(), a);
 			}
 
 			for (Py_ssize_t i = 0; i < size; ++i) {
-				const PropertyHandle paramType = paramTypes[i];
-				if (paramType.IsReference()) {
+				const Property& paramType = paramTypes[i];
+				if (paramType.IsRef()) {
 					++refParamsCount;
 				}
-				using PushParamFunc = bool (*)(PropertyHandle, PyObject*, ArgsScope&);
-				PushParamFunc const pushParamFunc = paramType.IsReference() ? &PushObjectAsRefParam : &PushObjectAsParam;
+				using PushParamFunc = bool (*)(const Property&, PyObject*, ArgsScope&);
+				PushParamFunc const pushParamFunc = paramType.IsRef() ? &PushObjectAsRefParam : &PushObjectAsParam;
 				const bool pushResult = pushParamFunc(paramType, PyTuple_GetItem(args, i), a);
 				if (!pushResult) {
 					// pushParamFunc set error
-					ret->SetReturn(nullptr);
+					ret.Set<void*>(nullptr);
 					return;
 				}
 			}
 
-			using MakeExternalCallFunc = PyObject* (*)(PropertyHandle, JitCall::CallingFunc, const ArgsScope&, JitCall::Return&);
-			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnum() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
+			using MakeExternalCallFunc = PyObject* (*)(const Property&, JitCall::CallingFunc, const ArgsScope&, Return&);
+			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnumerate() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
 			PyObject* retObj = makeExternalCallFunc(retType, data.RCast<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// makeExternalCallFunc set error
-				ret->SetReturn(nullptr);
+				ret.Set<void*>(nullptr);
 				return;
 			}
 
@@ -2990,17 +3007,17 @@ namespace py3lm {
 				PyTuple_SET_ITEM(retTuple, k++, retObj); // retObj ref taken by tuple
 
 				for (Py_ssize_t i = 0, j = hasHiddenParam; i < size; ++i) {
-					const PropertyHandle paramType = paramTypes[i];
-					if (!paramType.IsReference()) {
+					const Property& paramType = paramTypes[i];
+					if (!paramType.IsRef()) {
 						continue;
 					}
-					using StoreValueFunc = PyObject* (*)(PropertyHandle, const ArgsScope&, size_t);
-					StoreValueFunc const storeValueFunc = paramType.GetEnum() ? &StorageValueToEnumObject : &StorageValueToObject;
+					using StoreValueFunc = PyObject* (*)(const Property&, const ArgsScope&, size_t);
+					StoreValueFunc const storeValueFunc = paramType.GetEnumerate() ? &StorageValueToEnumObject : &StorageValueToObject;
 					PyObject* const value = storeValueFunc(paramType, a, j++);
 					if (!value) {
 						// StorageValueToObject set error
 						Py_DECREF(retTuple);
-						ret->SetReturn(nullptr);
+						ret.Set<void*>(nullptr);
 						return;
 					}
 					PyTuple_SET_ITEM(retTuple, k++, value);
@@ -3012,7 +3029,7 @@ namespace py3lm {
 				retObj = retTuple;
 			}
 
-			ret->SetReturn(retObj);
+			ret.Set<PyObject*>(retObj);
 		}
 
 		template<typename T>
@@ -3028,19 +3045,19 @@ namespace py3lm {
 			return value;
 		}
 
-		void GenerateEnum(MethodHandle method, PyObject* moduleDict);
+		void GenerateEnum(const Method& method, PyObject* moduleDict);
 
-		void GenerateEnum(PropertyHandle paramType, PyObject* moduleDict) {
-			if (const auto prototype = paramType.GetPrototype()) {
-				GenerateEnum(prototype, moduleDict);
+		void GenerateEnum(const Property& paramType, PyObject* moduleDict) {
+			if (const auto* prototype = paramType.GetPrototype()) {
+				GenerateEnum(*prototype, moduleDict);
 			}
-			if (const auto enumerator = paramType.GetEnum()) {
-				g_py3lm.CreateEnumObject(enumerator, moduleDict);
+			if (const auto* enumerator = paramType.GetEnumerate()) {
+				g_py3lm.CreateEnumObject(*enumerator, moduleDict);
 			}
 		}
 
-		void GenerateEnum(MethodHandle method, PyObject* moduleDict) {
-			GenerateEnum(method.GetReturnType(), moduleDict);
+		void GenerateEnum(const Method& method, PyObject* moduleDict) {
+			GenerateEnum(method.GetRetType(), moduleDict);
 			for (const auto& paramType : method.GetParamTypes()) {
 				GenerateEnum(paramType, moduleDict);
 			}
@@ -3060,7 +3077,7 @@ namespace py3lm {
 				return nullptr;
 			}
 
-			g_py3lm.GetProvider()->Log(PyUnicode_AsString(message), plugify::Severity::None);
+			g_py3lm.GetProvider()->Log(PyUnicode_AsString(message), Severity::Unknown);
 
 			Py_DECREF(message);
 			Py_RETURN_NONE;
@@ -3071,37 +3088,33 @@ namespace py3lm {
 
 	Python3LanguageModule::~Python3LanguageModule() = default;
 
-	InitResult Python3LanguageModule::Initialize(std::weak_ptr<IPlugifyProvider> provider, ModuleHandle module) {
-		if (!((_provider = provider.lock()))) {
-			return ErrorData{ "Provider not exposed" };
-		}
-
-		_jitRuntime = std::make_shared<asmjit::JitRuntime>();
+	Result<InitData> Python3LanguageModule::Initialize(const Provider& provider, const Extension& module) {
+		_provider = std::make_unique<Provider>(provider);
 
 		std::error_code ec;
-		const fs::path moduleBasePath = fs::absolute(module.GetBaseDir(), ec);
+		const fs::path moduleBasePath = fs::absolute(module.GetLocation(), ec);
 		if (ec) {
-			return ErrorData{ "Failed to get module directory path" };
+			return MakeError("Failed to get module directory path");
 		}
 
 		const fs::path libPath = moduleBasePath / "lib";
 		if (!fs::exists(libPath, ec) || !fs::is_directory(libPath, ec)) {
-			return ErrorData{ "lib directory not exists" };
+			return MakeError("lib directory not exists");
 		}
 
 		const fs::path pythonBasePath = moduleBasePath / "python3.12";
 		if (!fs::exists(pythonBasePath, ec) || !fs::is_directory(pythonBasePath, ec)) {
-			return ErrorData{ "python3.12 directory not exists" };
+			return MakeError("python3.12 directory not exists");
 		}
 
 		const fs::path modulesZipPath = pythonBasePath / L"python312.zip";
-		const fs::path pluginsPath = fs::weakly_canonical(moduleBasePath / ".." / ".." / "plugins", ec);
+		const fs::path extensionsPath = fs::weakly_canonical(moduleBasePath / "..", ec);
 		if (ec) {
-			return ErrorData{ "Failed to get plugins directory path" };
+			return MakeError("Failed to get extensions directory path");
 		}
 
 		if (Py_IsInitialized()) {
-			return ErrorData{ "Python already initialized" };
+			return MakeError("Python already initialized");
 		}
 
 		PyStatus status;
@@ -3119,7 +3132,7 @@ namespace py3lm {
 			// 1. python zip
 			// 2. python dir
 			// 3. lib dir in module
-			// 4. plugins dir
+			// 4. extensionsPath dir
 
 			config.module_search_paths_set = 1;
 
@@ -3135,7 +3148,7 @@ namespace py3lm {
 			if (PyStatus_Exception(status)) {
 				break;
 			}
-			status = PyWideStringList_Append(&config.module_search_paths, pluginsPath.wstring().c_str());
+			status = PyWideStringList_Append(&config.module_search_paths, extensionsPath.wstring().c_str());
 			if (PyStatus_Exception(status)) {
 				break;
 			}
@@ -3146,65 +3159,65 @@ namespace py3lm {
 		}
 
 		if (PyStatus_Exception(status)) {
-			return ErrorData{ std::format("Failed to init python: {}", status.err_msg) };
+			return MakeError("Failed to init python: {}", status.err_msg);
 		}
 
 		PyObject* const plugifyPluginModuleName = PyUnicode_DecodeFSDefault("plugify.plugin");
 		if (!plugifyPluginModuleName) {
 			LogError();
-			return ErrorData{ "Failed to allocate plugify.plugin module string" };
+			return MakeError("Failed to allocate plugify.plugin module string");
 		}
 
 		PyObject* const plugifyPluginModule = PyImport_Import(plugifyPluginModuleName);
 		Py_DECREF(plugifyPluginModuleName);
 		if (!plugifyPluginModule) {
 			LogError();
-			return ErrorData{ "Failed to import plugify.plugin python module" };
+			return MakeError("Failed to import plugify.plugin python module");
 		}
 
 		_PluginTypeObject = PyObject_GetAttrString(plugifyPluginModule, "Plugin");
 		if (!_PluginTypeObject) {
 			Py_DECREF(plugifyPluginModule);
 			LogError();
-			return ErrorData{ "Failed to find plugify.plugin.Plugin type" };
+			return MakeError("Failed to find plugify.plugin.Plugin type");
 		}
 		_PluginInfoTypeObject = PyObject_GetAttrString(plugifyPluginModule, "PluginInfo");
 		if (!_PluginInfoTypeObject) {
 			Py_DECREF(plugifyPluginModule);
 			LogError();
-			return ErrorData{ "Failed to find plugify.plugin.PluginInfo type" };
+			return MakeError("Failed to find plugify.plugin.PluginInfo type");
 		}
 
 		_Vector2TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector2");
 		if (!_Vector2TypeObject) {
 			Py_DECREF(plugifyPluginModule);
 			LogError();
-			return ErrorData{ "Failed to find plugify.plugin.Vector2 type" };
+			return MakeError("Failed to find plugify.plugin.Vector2 type");
 		}
 		_Vector3TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector3");
 		if (!_Vector3TypeObject) {
 			Py_DECREF(plugifyPluginModule);
 			LogError();
-			return ErrorData{ "Failed to find plugify.plugin.Vector3 type" };
+			return MakeError("Failed to find plugify.plugin.Vector3 type");
 		}
 		_Vector4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Vector4");
 		if (!_Vector4TypeObject) {
 			Py_DECREF(plugifyPluginModule);
 			LogError();
-			return ErrorData{ "Failed to find plugify.plugin.Vector4 type" };
+			return MakeError("Failed to find plugify.plugin.Vector4 type");
 		}
 		_Matrix4x4TypeObject = PyObject_GetAttrString(plugifyPluginModule, "Matrix4x4");
 		if (!_Matrix4x4TypeObject) {
 			Py_DECREF(plugifyPluginModule);
 			LogError();
-			return ErrorData{ "Failed to find plugify.plugin.Matrix4x4 type" };
+			return MakeError("Failed to find plugify.plugin.Matrix4x4 type");
 		}
 
 		_ExtractRequiredModulesObject = PyObject_GetAttrString(plugifyPluginModule, "extract_required_modules");
 		if (!_ExtractRequiredModulesObject || !PyCallable_Check(_ExtractRequiredModulesObject)) {
 			Py_DECREF(plugifyPluginModule);
 			LogError();
-			return ErrorData{ "Failed to find plugify.plugin.extract_required_modules function" };
+			return MakeError("Failed to find plugify.plugin.extract_required_modules function");
 		}
 
 		Py_DECREF(plugifyPluginModule);
@@ -3212,32 +3225,32 @@ namespace py3lm {
 		_ppsModule = PyImport_ImportModule("plugify.pps");
 		if (!_ppsModule) {
 			LogError();
-			return ErrorData{ "Failed to import plugify.pps python module" };
+			return MakeError("Failed to import plugify.pps python module");
 		}
 
 		_enumModule = PyImport_ImportModule("enum");
 		if (!_enumModule) {
 			LogError();
-			return ErrorData{ "Failed to import enum python module" };
+			return MakeError("Failed to import enum python module");
 		}
 
 		PyObject* const builtinsModule = PyImport_ImportModule("builtins");
 		if (!builtinsModule) {
 			LogError();
-			return ErrorData{ "Failed to import builtins python module" };
+			return MakeError("Failed to import builtins python module");
 		}
 
-		static PyMethodDef method = { "print", reinterpret_cast<PyCFunction>(&CustomPrint), METH_VARARGS | METH_KEYWORDS, "Plugify print" };
+		static PyMethodDef method = { "print", reinterpret_cast<PyCFunction>(reinterpret_cast<void*>(&CustomPrint)), METH_VARARGS | METH_KEYWORDS, "Plugify print" };
 		PyObject* const customPrintFunc = PyCFunction_NewEx(&method, nullptr, nullptr);
 		if (!customPrintFunc) {
 			Py_DECREF(builtinsModule);
-			return ErrorData{ "Failed to create function object from function pointer" };
+			return MakeError("Failed to create function object from function pointer");
 		}
 
 		if (PyObject_SetAttrString(builtinsModule, "print", customPrintFunc) < 0) {
 			Py_DECREF(customPrintFunc);
 			Py_DECREF(builtinsModule);
-			return ErrorData{ "Failed to import builtins.print python module" };
+			return MakeError("Failed to import builtins.print python module");
 		}
 
 		Py_DECREF(customPrintFunc);
@@ -3246,13 +3259,13 @@ namespace py3lm {
 		PyObject* const tracebackModule = PyImport_ImportModule("traceback");
 		if (!tracebackModule) {
 			LogError();
-			return ErrorData{ "Failed to import traceback python module" };
+			return MakeError("Failed to import traceback python module");
 		}
 		_formatException = PyObject_GetAttrString(tracebackModule, "format_exception");
 		if (!_formatException) {
 			Py_DECREF(tracebackModule);
 			LogError();
-			return ErrorData{ "Failed to import traceback.format_exception python module" };
+			return MakeError("Failed to import traceback.format_exception python module");
 		}
 
 		Py_DECREF(tracebackModule);
@@ -3328,7 +3341,7 @@ namespace py3lm {
 		_typeMap.try_emplace(Py_TYPE(_Vector4TypeObject), PyAbstractType::Vector4, "Vector4");
 		_typeMap.try_emplace(Py_TYPE(_Matrix4x4TypeObject), PyAbstractType::Matrix4x4, "Matrix4x4");
 
-		return InitResultData{{ .hasUpdate = false }};
+		return InitData{{ .hasUpdate = false }};
 	}
 
 	void Python3LanguageModule::Shutdown() {
@@ -3418,13 +3431,12 @@ namespace py3lm {
 		_moduleFunctions.clear();
 		_pythonMethods.clear();
 		_pluginsMap.clear();
-		_jitRuntime.reset();
 		_provider.reset();
 	}
 
-	void Python3LanguageModule::TryCreateModule(PluginHandle plugin, bool empty) {
+	void Python3LanguageModule::TryCreateModule(const Extension& plugin, bool empty) {
 		PyObject* const moduleDict = PyModule_GetDict(_ppsModule);
-		if (PyObject* moduleObject = PyDict_GetItemString(moduleDict, plugin.GetName().data())) {
+		if (PyObject* moduleObject = PyDict_GetItemString(moduleDict, plugin.GetName().c_str())) {
 			if (!empty || !IsEmptyModule(moduleObject)) {
 				return;
 			}
@@ -3439,13 +3451,13 @@ namespace py3lm {
 				moduleObject = CreateExternalModule(plugin);
 			}
 			if (moduleObject) {
-				assert(PyDict_SetItemString(moduleDict, plugin.GetName().data(), moduleObject) == 0);
+				assert(PyDict_SetItemString(moduleDict, plugin.GetName().c_str(), moduleObject) == 0);
 				Py_DECREF(moduleObject);
 			}
 		}
 	}
 
-	void Python3LanguageModule::OnMethodExport(PluginHandle plugin) {
+	void Python3LanguageModule::OnMethodExport(const Extension& plugin) {
 		TryCreateModule(plugin, true);
 	}
 
@@ -3455,9 +3467,9 @@ namespace py3lm {
 			if (const auto pos = pluginName.find('.'); pos != std::string::npos) {
 				pluginName = pluginName.substr(0, pos);
 			}
-			PluginHandle plugin = _provider->FindPlugin(pluginName);
-			if (plugin && plugin.GetState() == PluginState::Loaded) {
-				TryCreateModule(plugin, false);
+			auto plugin = _provider->FindExtension(pluginName);
+			if (plugin && plugin->GetState() == ExtensionState::Loaded) {
+				TryCreateModule(*plugin, false);
 			} else {
 				PyObject* const moduleDict = PyModule_GetDict(_ppsModule);
 				PyObject* const moduleObject = PyModule_New(pluginName.data());
@@ -3493,28 +3505,28 @@ namespace py3lm {
 		return requiredModules;
 	}
 
-	LoadResult Python3LanguageModule::OnPluginLoad(PluginHandle plugin) {
-		const std::string_view entryPoint = plugin.GetDescriptor().GetEntryPoint();
+	Result<LoadData> Python3LanguageModule::OnPluginLoad(const Extension& plugin) {
+		const std::string_view entryPoint = plugin.GetEntry();
 		if (entryPoint.empty()) {
-			return ErrorData{ "Incorrect entry point: empty" };
+			return MakeError("Incorrect entry point: empty");
 		}
 		if (entryPoint.find_first_of("/\\") != std::string::npos) {
-			return ErrorData{ "Incorrect entry point: contains '/' or '\\'" };
+			return MakeError("Incorrect entry point: contains '/' or '\\'");;
 		}
 		const std::string::size_type lastDotPos = entryPoint.find_last_of('.');
 		if (lastDotPos == std::string::npos) {
-			return ErrorData{ "Incorrect entry point: not have any dot '.' character" };
+			return MakeError("Incorrect entry point: not have any dot '.' character");;
 		}
 		std::string_view className(entryPoint.begin() + static_cast<ptrdiff_t>(lastDotPos + 1), entryPoint.end());
 		if (className.empty()) {
-			return ErrorData{ "Incorrect entry point: empty class name part" };
+			return MakeError("Incorrect entry point: empty class name part");;
 		}
 		std::string_view modulePathRel(entryPoint.begin(), entryPoint.begin() + static_cast<ptrdiff_t>(lastDotPos));
 		if (modulePathRel.empty()) {
-			return ErrorData{ "Incorrect entry point: empty module path part" };
+			return MakeError("Incorrect entry point: empty module path part");;
 		}
 
-		const fs::path baseFolder(plugin.GetBaseDir());
+		const fs::path& baseFolder = plugin.GetLocation();
 		std::string modulePath(modulePathRel);
 		ReplaceAll(modulePath, ".", { static_cast<char>(fs::path::preferred_separator) });
 		fs::path filePathRelative = modulePath;
@@ -3522,7 +3534,7 @@ namespace py3lm {
 		const fs::path filePath = baseFolder / filePathRelative;
 		std::error_code ec;
 		if (!fs::exists(filePath, ec) || !fs::is_regular_file(filePath, ec)) {
-			return ErrorData{ std::format("Module file '{}' not exist", filePath.string()) };
+			return MakeError("Module file '{}' not exist", plg::as_string(filePath));
 		}
 		const fs::path pluginsFolder = baseFolder.parent_path();
 		filePathRelative = fs::relative(filePath, pluginsFolder, ec);
@@ -3534,20 +3546,20 @@ namespace py3lm {
 
 		GILLock lock{};
 
-		for (const auto& requiredModule : ExtractRequiredModules(filePath.string())) {
+		for (const auto& requiredModule : ExtractRequiredModules(plg::as_string(filePath))) {
 			ResolveRequiredModule(requiredModule);
 		}
 
 		PyObject* const pluginModule = PyImport_ImportModule(moduleName.c_str());
 		if (!pluginModule) {
 			LogError();
-			return ErrorData{ std::format("Failed to import '{}' module", moduleName) };
+			return MakeError("Failed to import '{}' module", moduleName);
 		}
 
 		PyObject* const classNameString = PyUnicode_FromStringAndSize(className.data(), static_cast<Py_ssize_t>(className.size()));
 		if (!classNameString) {
 			Py_DECREF(pluginModule);
-			return ErrorData{ "Allocate class name string failed" };
+			return MakeError("Allocate class name string failed");;
 		}
 
 		PyObject* const pluginClass = PyObject_GetAttr(pluginModule, classNameString);
@@ -3555,7 +3567,7 @@ namespace py3lm {
 			Py_DECREF(classNameString);
 			Py_DECREF(pluginModule);
 			LogError();
-			return ErrorData{ "Failed to find plugin class" };
+			return MakeError("Failed to find plugin class");;
 		}
 
 		const int typeResult = PyObject_IsSubclass(pluginClass, _PluginTypeObject);
@@ -3564,11 +3576,10 @@ namespace py3lm {
 			Py_DECREF(classNameString);
 			Py_DECREF(pluginModule);
 			LogError();
-			return ErrorData{ std::format("Class '{}' not subclass of Plugin", className) };
+			return MakeError("Class '{}' not subclass of Plugin", className);
 		}
 
-		PluginDescriptorHandle desc = plugin.GetDescriptor();
-		std::span<const PluginReferenceDescriptorHandle> dependencies = desc.GetDependencies();
+		const auto& dependencies = plugin.GetDependencies();
 
 		plg::vector<std::string_view> deps;
 		deps.reserve(dependencies.size());
@@ -3576,26 +3587,30 @@ namespace py3lm {
 			deps.emplace_back(dependency.GetName());
 		}
 
-		PyObject* const arguments = PyTuple_New(Py_ssize_t{ 12 });
+		PyObject* const arguments = PyTuple_New(Py_ssize_t{ 15 });
 		if (!arguments) {
 			Py_DECREF(pluginClass);
 			Py_DECREF(classNameString);
 			Py_DECREF(pluginModule);
-			return ErrorData{ "Failed to create plugin instance: arguments tuple is null" };
+			return MakeError("Failed to create plugin instance: arguments tuple is null");;
 		}
 
 		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 0 }, CreatePyObject(static_cast<int64_t>(plugin.GetId())));
 		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 1 }, CreatePyObject(plugin.GetName()));
-		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 2 }, CreatePyObject(plugin.GetFriendlyName()));
-		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 3 }, CreatePyObject(desc.GetDescription()));
-		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 4 }, CreatePyObject(desc.GetVersionName()));
-		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 5 }, CreatePyObject(desc.GetCreatedBy()));
-		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 6 }, CreatePyObject(desc.GetCreatedByURL()));
-		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 7 }, CreatePyObject(plugin.GetBaseDir()));
-		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 8 }, CreatePyObject(plugin.GetConfigsDir()));
-		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 9 }, CreatePyObject(plugin.GetDataDir()));
-		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 10 }, CreatePyObject(plugin.GetLogsDir()));
-		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 11 }, CreatePyObjectList(deps));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 2 }, CreatePyObject(plugin.GetDescription()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 3 }, CreatePyObject(plugin.GetVersionString()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 4 }, CreatePyObject(plugin.GetAuthor()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 5 }, CreatePyObject(plugin.GetWebsite()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 6 }, CreatePyObject(plugin.GetLicense()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 7 }, CreatePyObject(plugin.GetLocation()));
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 8 }, CreatePyObjectList(deps));
+
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 9 }, CreatePyObject(_provider->GetBaseDir())); // base_dir
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 10 }, CreatePyObject(_provider->GetExtensionsDir())); // extensions_dir
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 11 }, CreatePyObject(_provider->GetConfigsDir())); // configs_dir
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 12 }, CreatePyObject(_provider->GetDataDir())); // data_dir
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 13 }, CreatePyObject(_provider->GetLogsDir())); // logs_dir
+		PyTuple_SET_ITEM(arguments, Py_ssize_t{ 14 }, CreatePyObject(_provider->GetCacheDir())); // cache_dir
 
 		PyObject* const pluginInstance = PyObject_CallObject(pluginClass, arguments);
 		Py_DECREF(arguments);
@@ -3604,7 +3619,7 @@ namespace py3lm {
 			Py_DECREF(classNameString);
 			Py_DECREF(pluginModule);
 			LogError();
-			return ErrorData{ "Failed to create plugin instance" };
+			return MakeError("Failed to create plugin instance");;
 		}
 
 		PyObject* const args = PyTuple_New(Py_ssize_t{ 2 });
@@ -3612,7 +3627,7 @@ namespace py3lm {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(classNameString);
 			Py_DECREF(pluginModule);
-			return ErrorData{ "Failed to save instance: arguments tuple is null" };
+			return MakeError("Failed to save instance: arguments tuple is null");;
 		}
 
 		PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, classNameString); // classNameString ref taken by list
@@ -3625,7 +3640,7 @@ namespace py3lm {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
 			LogError();
-			return ErrorData{ "Failed to save instance: plugin info not constructed" };
+			return MakeError("Failed to save instance: plugin info not constructed");;
 		}
 
 		const int resultCode = PyObject_SetAttrString(pluginModule, "__plugin__", pluginInfo);
@@ -3634,28 +3649,33 @@ namespace py3lm {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
 			LogError();
-			return ErrorData{ "Failed to save instance: assignment fail" };
+			return MakeError("Failed to save instance: assignment fail");;
 		}
 
 		if (_pluginsMap.contains(plugin.GetId())) {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
-			return ErrorData{ "Plugin id duplicate" };
+			return MakeError("Plugin id duplicate");;
 		}
 
-		const auto exportedMethods = plugin.GetDescriptor().GetExportedMethods();
+		const auto& exportedMethods = plugin.GetMethods();
 		std::vector<std::string> exportErrors;
-		std::vector<std::pair<MethodHandle, PythonMethodData>> methodsHolders;
+		std::vector<std::pair<const Method&, PythonMethodData>> methodsHolders;
 
 		if (!exportedMethods.empty()) {
 			PyObject* const pluginDict = PyModule_GetDict(pluginModule);
-			for (const MethodHandle method : exportedMethods) {
-				MethodExportResult generateResult = GenerateMethodExport(method, _jitRuntime, pluginDict, pluginInstance);
-				if (auto* data = std::get_if<MethodExportError>(&generateResult)) {
-					exportErrors.emplace_back(std::move(*data));
+			for (size_t i = 0; i < exportedMethods.size(); ++i) {
+				const auto& method = exportedMethods[i];
+				Result<PythonMethodData> generateResult = GenerateMethodExport(method, pluginDict, pluginInstance);
+				if (!generateResult) {
+					exportErrors.emplace_back(std::format("{:>3}. {} {}", i + 1, method.GetName(), generateResult.error()));
+					if (constexpr size_t kMaxDisplay = 100; exportErrors.size() >= kMaxDisplay) {
+						exportErrors.emplace_back(std::format("... and {} more", exportedMethods.size() - kMaxDisplay));
+						break;
+					}
 					continue;
 				}
-				methodsHolders.emplace_back(method, std::move(std::get<MethodExportData>(generateResult)));
+				methodsHolders.emplace_back(method, std::move(*generateResult));
 				GenerateEnum(method, pluginDict);
 			}
 		}
@@ -3664,38 +3684,34 @@ namespace py3lm {
 		if (!updatePlugin) {
 			PyErr_Clear();
 		} else if (!PyFunction_Check(updatePlugin) && !PyCallable_Check(updatePlugin)) {
-			exportErrors.emplace_back("plugin_update");
+			exportErrors.emplace_back("'plugin_update' not function type");
 		}
 
 		PyObject* startPlugin = PyObject_GetAttrString(pluginInstance, "plugin_start");
 		if (!startPlugin) {
 			PyErr_Clear();
 		} else if (!PyFunction_Check(startPlugin) && !PyCallable_Check(startPlugin)) {
-			exportErrors.emplace_back("plugin_start");
+			exportErrors.emplace_back("'plugin_start' not function type");
 		}
 
 		PyObject* endPlugin = PyObject_GetAttrString(pluginInstance, "plugin_end");
 		if (!endPlugin) {
 			PyErr_Clear();
 		} else if (!PyFunction_Check(endPlugin) && !PyCallable_Check(endPlugin)) {
-			exportErrors.emplace_back("plugin_end");
+			exportErrors.emplace_back("'plugin_end' not function type");
 		}
 
 		if (!exportErrors.empty()) {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
-			std::string errorString("Methods export error(s): " + exportErrors[0]);
-			for (auto it = std::next(exportErrors.begin()); it != exportErrors.end(); ++it) {
-				std::format_to(std::back_inserter(errorString), ", {}", *it);
-			}
-			return ErrorData{ std::move(errorString) };
+			return MakeError("Invalid methods:\n{}", plg::join(exportErrors, "\n"));
 		}
 
 		const auto [it, result] = _pluginsMap.try_emplace(plugin.GetId(), pluginModule, pluginInstance, updatePlugin, startPlugin, endPlugin);
 		if (!result) {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
-			return ErrorData{ std::format("Save plugin data to map unsuccessful") };
+			return MakeError("Save plugin data to map unsuccessful");
 		}
 
 		std::vector<MethodData> methods;
@@ -3709,31 +3725,31 @@ namespace py3lm {
 			_pythonMethods.emplace_back(std::move(methodData));
 		}
 
-		return LoadResultData{ std::move(methods), &it->second, { updatePlugin != nullptr, startPlugin != nullptr, endPlugin != nullptr, !exportedMethods.empty() } };
+		return LoadData{ std::move(methods), &it->second, { updatePlugin != nullptr, startPlugin != nullptr, endPlugin != nullptr, !exportedMethods.empty() } };
 	}
 
-	void Python3LanguageModule::OnPluginStart(PluginHandle plugin) {
+	void Python3LanguageModule::OnPluginStart(const Extension& plugin) {
 		GILLock lock{};
-		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetData().RCast<PluginData*>()->start);
+		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetUserData().RCast<PluginData*>()->start);
 		if (!returnObject) {
 			LogError();
 			_provider->Log(std::format(LOG_PREFIX "{}: call of 'plugin_start' failed", plugin.GetName()), Severity::Error);
 		}
 	}
 
-	void Python3LanguageModule::OnPluginUpdate(PluginHandle plugin, DateTime dt) {
+	void Python3LanguageModule::OnPluginUpdate(const Extension& plugin, std::chrono::milliseconds dt) {
 		GILLock lock{};
-		PyObject* const deltaTime = CreatePyObject(dt.AsSeconds());
-		PyObject* const returnObject = PyObject_CallOneArg(plugin.GetData().RCast<PluginData*>()->update, deltaTime);
+		PyObject* const deltaTime = CreatePyObject(std::chrono::duration<float>(dt).count());
+		PyObject* const returnObject = PyObject_CallOneArg(plugin.GetUserData().RCast<PluginData*>()->update, deltaTime);
 		if (!returnObject) {
 			LogError();
 			_provider->Log(std::format(LOG_PREFIX "{}: call of 'plugin_update' failed", plugin.GetName()), Severity::Error);
 		}
 	}
 
-	void Python3LanguageModule::OnPluginEnd(PluginHandle plugin) {
+	void Python3LanguageModule::OnPluginEnd(const Extension& plugin) {
 		GILLock lock{};
-		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetData().RCast<PluginData*>()->end);
+		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetUserData().RCast<PluginData*>()->end);
 		if (!returnObject) {
 			LogError();
 			_provider->Log(std::format(LOG_PREFIX "{}: call of 'plugin_end' failed", plugin.GetName()), Severity::Error);
@@ -3765,12 +3781,12 @@ namespace py3lm {
 		_internalMap.emplace(object, funcAddr);
 	}
 
-	PyObject* Python3LanguageModule::GetOrCreateFunctionObject(MethodHandle method, void* funcAddr) {
+	PyObject* Python3LanguageModule::GetOrCreateFunctionObject(const Method& method, void* funcAddr) {
 		if (PyObject* const object = FindExternal(funcAddr)) {
 			Py_INCREF(object);
 			return object;
 		}
-		JitCall call(_jitRuntime);
+		JitCall call{};
 
 		const MemAddr callAddr = call.GetJitFunc(method, funcAddr);
 		if (!callAddr) {
@@ -3779,16 +3795,16 @@ namespace py3lm {
 			return nullptr;
 		}
 
-		JitCallback callback(_jitRuntime);
+		JitCallback callback{};
 
-		asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
-		sig.addArg(asmjit::TypeId::kUIntPtr);
-		sig.addArg(asmjit::TypeId::kUIntPtr);
-		sig.setRet(asmjit::TypeId::kUIntPtr);
+		Signature sig{};
+		sig.AddArg(ValueType::Pointer);
+		sig.AddArg(ValueType::Pointer);
+		sig.SetRet(ValueType::Pointer);
 
 		const bool noArgs = method.GetParamTypes().empty();
 
-		const MemAddr methodAddr = callback.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
+		const MemAddr methodAddr = callback.GetJitFunc(sig, &method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
 		if (!methodAddr) {
 			const std::string error(std::format("Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", callback.GetError()));
 			PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -3815,7 +3831,7 @@ namespace py3lm {
 		return object;
 	}
 
-	std::optional<void*> Python3LanguageModule::GetOrCreateFunctionValue(MethodHandle method, PyObject* object) {
+	std::optional<void*> Python3LanguageModule::GetOrCreateFunctionValue(const Method& method, PyObject* object) {
 		if (object == Py_None) {
 			return nullptr;
 		}
@@ -3829,7 +3845,7 @@ namespace py3lm {
 			return funcAddr;
 		}
 
-		auto [result, callback] = CreateInternalCall(_jitRuntime, method, object);
+		auto [result, callback] = CreateInternalCall(method, object);
 
 		if (!result) {
 			const std::string error(std::format("Lang module JIT failed to generate C++ wrapper from callback object '{}'", callback.GetError()));
@@ -4206,32 +4222,32 @@ namespace py3lm {
 		return nullptr;
 	}
 
-	PyObject* Python3LanguageModule::CreateInternalModule(PluginHandle plugin, PyObject* module) {
+	PyObject* Python3LanguageModule::CreateInternalModule(const Extension& plugin, PyObject* module) {
 		if (!_pluginsMap.contains(plugin.GetId())) {
 			return nullptr;
 		}
 
-		PyObject* const moduleObject = module ? module : PyModule_New(plugin.GetName().data());
+		PyObject* const moduleObject = module ? module : PyModule_New(plugin.GetName().c_str());
 		PyObject* const moduleDict = PyModule_GetDict(moduleObject);
 
-		for (const auto& [method, addr] : plugin.GetMethods()) {
+		for (const auto& [method, addr] : plugin.GetMethodsData()) {
 			PyObject* const methodObject = FindPythonMethod(addr);
 			if (!methodObject) {
 				_provider->Log(std::format(LOG_PREFIX "Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
 				std::terminate();
 			}
-			assert(PyDict_SetItemString(moduleDict, method.GetName().data(), methodObject) == 0);
+			assert(PyDict_SetItemString(moduleDict, method.GetName().c_str(), methodObject) == 0);
 			GenerateEnum(method, moduleDict);
 		}
 
 		return moduleObject;
 	}
 
-	PyObject* Python3LanguageModule::CreateExternalModule(PluginHandle plugin, PyObject* module) {
+	PyObject* Python3LanguageModule::CreateExternalModule(const Extension& plugin, PyObject* module) {
 		auto& moduleMethods = _moduleMethods.emplace_back();
 
-		for (const auto& [method, addr] : plugin.GetMethods()) {
-			JitCall call(_jitRuntime);
+		for (const auto& [method, addr] : plugin.GetMethodsData()) {
+			JitCall call{};
 
 			const MemAddr callAddr = call.GetJitFunc(method, addr);
 			if (!callAddr) {
@@ -4240,22 +4256,22 @@ namespace py3lm {
 				return nullptr;
 			}
 
-			JitCallback callback(_jitRuntime);
+			JitCallback callback{};
 
-			asmjit::FuncSignature sig(asmjit::CallConvId::kCDecl);
-			sig.addArg(asmjit::TypeId::kUIntPtr);
-			sig.addArg(asmjit::TypeId::kUIntPtr);
-			sig.setRet(asmjit::TypeId::kUIntPtr);
+			Signature sig{};
+			sig.AddArg(ValueType::Pointer);
+			sig.AddArg(ValueType::Pointer);
+			sig.SetRet(ValueType::Pointer);
 
 			const bool noArgs = method.GetParamTypes().empty();
 
 			// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-			const MemAddr methodAddr = callback.GetJitFunc(sig, method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
+			const MemAddr methodAddr = callback.GetJitFunc(sig, &method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
 			if (!methodAddr)
 				break;
 
 			PyMethodDef& def = moduleMethods.emplace_back();
-			def.ml_name = method.GetName().data();
+			def.ml_name = method.GetName().c_str();
 			def.ml_meth = methodAddr.RCast<PyCFunction>();
 			def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
 			def.ml_doc = nullptr;
@@ -4271,51 +4287,51 @@ namespace py3lm {
 			def.ml_doc = nullptr;
 		}
 
-		PyObject* const moduleObject = module ? module : PyModule_New(plugin.GetName().data());
+		PyObject* const moduleObject = module ? module : PyModule_New(plugin.GetName().c_str());
 		PyObject* const moduleDict = PyModule_GetDict(moduleObject);
 
 		PyModule_AddFunctions(moduleObject, moduleMethods.data());
 
-		for (const auto& [method, _] : plugin.GetMethods()) {
+		for (const auto& [method, _] : plugin.GetMethodsData()) {
 			GenerateEnum(method, moduleDict);
 		}
 
 		return moduleObject;
 	}
 
-	void Python3LanguageModule::CreateEnumObject(plugify::EnumHandle enumerator, PyObject* moduleDict) {
-		PyObject* enumClass = PyDict_GetItemString(moduleDict, enumerator.GetName().data());
+	void Python3LanguageModule::CreateEnumObject(const EnumObject& enumerator, PyObject* moduleDict) {
+		PyObject* enumClass = PyDict_GetItemString(moduleDict, enumerator.GetName().c_str());
 		if (enumClass) {
 			const auto it = _internalEnumMap.find(enumClass);
 			if (it != _internalEnumMap.end()) {
-				_externalEnumMap.try_emplace(enumerator, it->second);
+				_externalEnumMap.try_emplace(&enumerator, it->second);
 			}
 			return;
 		}
 
-		const auto values = enumerator.GetValues();
+		const auto& values = enumerator.GetValues();
 		if (values.empty()) {
 			return;
 		}
 
 		PyObject* constantsDict = PyDict_New();
 		for (const auto& value : values) {
-			assert(PyDict_SetItemString(constantsDict, value.GetName().data(), PyLong_FromLongLong(value.GetValue())) == 0);
+			assert(PyDict_SetItemString(constantsDict, value.GetName().c_str(), PyLong_FromLongLong(value.GetValue())) == 0);
 		}
 
-		enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumerator.GetName().data(), constantsDict);
+		enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumerator.GetName().c_str(), constantsDict);
 
 		Py_DECREF(constantsDict);
 
-		if (enumClass && PyDict_SetItemString(moduleDict, enumerator.GetName().data(), enumClass) < 0) {
+		if (enumClass && PyDict_SetItemString(moduleDict, enumerator.GetName().c_str(), enumClass) < 0) {
 			LogError();
 			Py_DECREF(enumClass);
 			return;
 		}
 
-		auto it = _externalEnumMap.find(enumerator);
+		auto it = _externalEnumMap.find(&enumerator);
 		if (it == _externalEnumMap.end()) {
-			it = _externalEnumMap.emplace(enumerator, std::make_shared<PythonEnumMap>()).first;
+			it = _externalEnumMap.emplace(&enumerator, std::make_shared<PythonEnumMap>()).first;
 		}
 
 		auto& enumMap = it->second;
@@ -4327,8 +4343,8 @@ namespace py3lm {
 		_internalEnumMap.try_emplace(enumClass, enumMap);
 	}
 
-	PyObject* Python3LanguageModule::GetEnumObject(EnumHandle enumerator, int64_t value) const {
-		const auto it1 = _externalEnumMap.find(enumerator);
+	PyObject* Python3LanguageModule::GetEnumObject(const EnumObject& enumerator, int64_t value) const {
+		const auto it1 = _externalEnumMap.find(&enumerator);
 		if (it1 != _externalEnumMap.end()) {
 			PyObject* object;
 			const auto it2 = it1->second->find(static_cast<int64_t>(value));

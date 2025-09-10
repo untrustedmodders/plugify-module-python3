@@ -1,0 +1,55 @@
+{% set name = "plugify-module-python3" %}
+{% set version = "REPLACE_VERSION" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: .
+
+build:
+  number: 0
+  string: "{{ target_platform | replace('-', '_') }}"
+  missing_dso_whitelist:
+    - "*/ld-linux*.so.*"     # [linux]
+    - "*/libc.so.*"          # [linux]
+    - "*/libm.so.*"          # [linux]
+    - "*/libdl.so.*"         # [linux]
+    - "*/libpthread.so.*"    # [linux]
+    - "*/librt.so.*"         # [linux]
+    - "*/libplugify.so*"     # [linux]
+    - "*/libpython3.12.so*"  # [linux]
+    - "*/plugify.dll"        # [win]
+    - "*/python312.dll"      # [win]
+
+requirements:
+  run:
+    - __glibc >=2.17 # [linux64]
+
+test:
+  commands:
+    - test -f $PREFIX/bin/libplugify-module-python3.so  # [linux]
+    - test -d $PREFIX/lib                               # [linux]
+    - test -d $PREFIX/python3.12                        # [linux]
+    - test -f $PREFIX/plugify-module-python3.pmodule    # [linux]
+    - if not exist %PREFIX%\\bin\\plugify-module-python3.dll exit 1  # [win]
+    - if not exist %PREFIX%\\lib exit 1                              # [win]
+    - if not exist %PREFIX%\\python3.12 exit 1                       # [win]
+    - if not exist %PREFIX%\\plugify-module-python3.pmodule exit 1   # [win]
+
+about:
+  home: https://github.com/{{ environ.get('GITHUB_REPOSITORY', 'your-org/your-repo') }}
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  summary: Python3 Language Module for Plugify
+  description: |
+    Python3 Language Module provides Python language support for the Plugify
+    plugin system, enabling dynamic loading and execution of Py3 plugins.
+  doc_url: https://github.com/{{ environ.get('GITHUB_REPOSITORY', 'your-org/your-repo') }}/blob/main/README.md
+  dev_url: https://github.com/{{ environ.get('GITHUB_REPOSITORY', 'your-org/your-repo') }}
+
+extra:
+  recipe-maintainers:
+    - {{ environ.get('GITHUB_ACTOR', 'your-username') }}

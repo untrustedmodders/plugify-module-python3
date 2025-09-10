@@ -1,10 +1,10 @@
 #pragma once
 
-#include <plugify/jit/callback.hpp>
-#include <plugify/jit/call.hpp>
+#include <plugify/callback.hpp>
+#include <plugify/call.hpp>
 #include <plugify/language_module.hpp>
-#include <plugify/plugin.hpp>
-#include <plugify/numerics.hpp>
+#include <plugify/extension.hpp>
+#include <plg/numerics.hpp>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <memory>
@@ -14,19 +14,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-template <>
-struct std::hash<plugify::EnumHandle> {
-	std::size_t operator()(const plugify::EnumHandle& enumerator) const noexcept {
-		return std::hash<std::uintptr_t>{}(enumerator);
-	}
-};
+using namespace plugify;
 
 namespace py3lm {
-	struct PythonMethodData {
-		plugify::JitCallback jitCallback;
-		PyObject* pythonFunction{};
-	};
-
 	enum class PyAbstractType : size_t {
 		Type,
 		BaseObject,
@@ -114,23 +104,28 @@ namespace py3lm {
 	using PythonExternalMap = std::unordered_map<void*, PyObject*>;
 	using PythonTypeMap = std::unordered_map<PyTypeObject*, PythonType>;
 	using PythonEnumMap = std::map<int64_t, PyObject*>;
-	using PythonExternalEnumMap = std::unordered_map<plugify::EnumHandle, std::shared_ptr<PythonEnumMap>>;
+	using PythonExternalEnumMap = std::unordered_map<const EnumObject*, std::shared_ptr<PythonEnumMap>>;
 	using PythonInternalEnumMap = std::unordered_map<PyObject*, std::shared_ptr<PythonEnumMap>>;
 
-	class Python3LanguageModule final : public plugify::ILanguageModule {
+	struct PythonMethodData {
+		JitCallback jitCallback;
+		PyObject* pythonFunction{};
+	};
+
+	class Python3LanguageModule final : public ILanguageModule {
 	public:
 		Python3LanguageModule();
 		~Python3LanguageModule();
 
 		// ILanguageModule
-		plugify::InitResult Initialize(std::weak_ptr<plugify::IPlugifyProvider> provider, plugify::ModuleHandle module) override;
+		Result<InitData> Initialize(const Provider& provider, const Extension& module) override;
 		void Shutdown() override;
-		void OnUpdate(plugify::DateTime dt) override {};
-		void OnMethodExport(plugify::PluginHandle plugin) override;
-		plugify::LoadResult OnPluginLoad(plugify::PluginHandle plugin) override;
-		void OnPluginStart(plugify::PluginHandle plugin) override;
-		void OnPluginUpdate(plugify::PluginHandle plugin, plugify::DateTime dt) override;
-		void OnPluginEnd(plugify::PluginHandle plugin) override;
+		void OnUpdate(std::chrono::milliseconds dt) override {};
+		void OnMethodExport(const Extension& plugin) override;
+		Result<LoadData> OnPluginLoad(const Extension& plugin) override;
+		void OnPluginStart(const Extension& plugin) override;
+		void OnPluginUpdate(const Extension& plugin, std::chrono::milliseconds dt) override;
+		void OnPluginEnd(const Extension& plugin) override;
 		bool IsDebugBuild() override;
 
 	private:
@@ -139,8 +134,8 @@ namespace py3lm {
 		void AddToFunctionsMap(void* funcAddr, PyObject* object);
 
 	public:
-		PyObject* GetOrCreateFunctionObject(plugify::MethodHandle method, void* funcAddr);
-		std::optional<void*> GetOrCreateFunctionValue(plugify::MethodHandle method, PyObject* object);
+		PyObject* GetOrCreateFunctionObject(const Method& method, void* funcAddr);
+		std::optional<void*> GetOrCreateFunctionValue(const Method& method, PyObject* object);
 		PyObject* CreateVector2Object(const plg::vec2& vector);
 		std::optional<plg::vec2> Vector2ValueFromObject(PyObject* object);
 		PyObject* CreateVector3Object(const plg::vec3& vector);
@@ -150,24 +145,23 @@ namespace py3lm {
 		PyObject* CreateMatrix4x4Object(const plg::mat4x4& matrix);
 		std::optional<plg::mat4x4> Matrix4x4ValueFromObject(PyObject* object);
 		PythonType GetObjectType(PyObject* type) const;
-		PyObject* GetEnumObject(plugify::EnumHandle enumerator, int64_t value) const;
-		void CreateEnumObject(plugify::EnumHandle enumerator, PyObject* moduleDict);
+		PyObject* GetEnumObject(const EnumObject& enumerator, int64_t value) const;
+		void CreateEnumObject(const EnumObject& enumerator, PyObject* moduleDict);
 		void ResolveRequiredModule(std::string_view moduleName);
 		std::vector<std::string> ExtractRequiredModules(const std::string& modulePath);
 
-		const std::shared_ptr<plugify::IPlugifyProvider>& GetProvider() const { return _provider; }
+		const std::unique_ptr<Provider>& GetProvider() const { return _provider; }
 		void LogFatal(std::string_view msg) const;
 		void LogError() const;
 
 	private:
-		PyObject* FindPythonMethod(plugify::MemAddr addr) const;
-		PyObject* CreateInternalModule(plugify::PluginHandle plugin, PyObject* moduleObject = nullptr);
-		PyObject* CreateExternalModule(plugify::PluginHandle plugin, PyObject* moduleObject = nullptr);
-		void TryCreateModule(plugify::PluginHandle plugin, bool empty);
+		PyObject* FindPythonMethod(MemAddr addr) const;
+		PyObject* CreateInternalModule(const Extension& plugin, PyObject* moduleObject = nullptr);
+		PyObject* CreateExternalModule(const Extension& plugin, PyObject* moduleObject = nullptr);
+		void TryCreateModule(const Extension& plugin, bool empty);
 
 	private:
-		std::shared_ptr<plugify::IPlugifyProvider> _provider;
-		std::shared_ptr<asmjit::JitRuntime> _jitRuntime;
+		std::unique_ptr<Provider> _provider;
 		struct PluginData {
 			PyObject* module = nullptr;
 			PyObject* instance = nullptr;
@@ -175,7 +169,7 @@ namespace py3lm {
 			PyObject* start = nullptr;
 			PyObject* end = nullptr;
 		};
-		std::unordered_map<plugify::UniqueId, PluginData> _pluginsMap;
+		std::unordered_map<UniqueId, PluginData> _pluginsMap;
 		std::vector<PythonMethodData> _pythonMethods;
 		PyObject* _PluginTypeObject = nullptr;
 		PyObject* _PluginInfoTypeObject = nullptr;
@@ -189,13 +183,13 @@ namespace py3lm {
 		PyObject* _formatException = nullptr;
 		std::vector<std::vector<PyMethodDef>> _moduleMethods;
 		struct JitHolder {
-			plugify::JitCallback jitCallback;
-			plugify::JitCall jitCall;
+			JitCallback jitCallback;
+			JitCall jitCall;
 		};
 		std::vector<JitHolder> _moduleFunctions;
 		struct ExternalHolder {
-			plugify::JitCallback jitCallback;
-			plugify::JitCall jitCall;
+			JitCallback jitCallback;
+			JitCall jitCall;
 			std::unique_ptr<PyMethodDef> def;
 			PyObject* object;
 		};

@@ -281,7 +281,7 @@ def generate_enum_code(pplugin: dict, enums: set[str]) -> str:
                 process_prototype(param['prototype'])
 
     # Main loop: Process all exported methods in the plugin
-    for method in pplugin.get('exportedMethods', []):
+    for method in pplugin.get('methods', []):
         if 'retType' in method and 'enum' in method['retType']:
             process_enum(method['retType']['enum'], method['retType'].get('type', ''))
 
@@ -311,7 +311,7 @@ def generate_stub(plugin_name: str, pplugin: dict) -> str:
     if len(enums) == 0:
         content.pop(1)
 
-    for method in pplugin.get('exportedMethods', []):
+    for method in pplugin.get('methods', []):
         method_name = method.get('name', 'UnnamedMethod')
         param_types = method.get('paramTypes', [])
         ret_type = method.get('retType', {})
@@ -335,8 +335,16 @@ def main(manifest_path: str, output_dir: str, override: bool):
     if not os.path.isdir(output_dir):
         print(f'Output directory does not exist: {output_dir}')
         return 1
+        
+    try:
+        with open(manifest_path, 'r', encoding='utf-8') as file:
+            pplugin = json.load(file)
 
-    plugin_name = os.path.basename(manifest_path).rsplit('.', 3)[0]
+    except Exception as e:
+        print(f'An error occurred: {e}')
+        return 1
+
+    plugin_name = pplugin.get('name', os.path.basename(manifest_path).rsplit('.', 3)[0])
     output_path = os.path.join(output_dir, 'pps', f'{plugin_name}.pyi')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -345,9 +353,6 @@ def main(manifest_path: str, output_dir: str, override: bool):
         return 1
 
     try:
-        with open(manifest_path, 'r', encoding='utf-8') as file:
-            pplugin = json.load(file)
-
         content = generate_stub(plugin_name, pplugin)
         
         with open(output_path, 'w', encoding='utf-8') as file:

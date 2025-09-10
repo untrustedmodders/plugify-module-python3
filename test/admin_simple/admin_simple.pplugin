@@ -1,19 +1,14 @@
 {
 	"$schema": "https://raw.githubusercontent.com/untrustedmodders/plugify/refs/heads/main/schemas/plugin.schema.json",
-	"fileVersion": 1,
 	"version": "0.1.0",
-	"friendlyName": "Admin Simple",
+	"name": "Admin Simple",
 	"description": "Admin Simple",
-	"createdBy": "untrustedmodders",
-	"createdByURL": "https://github.com/untrustedmodders/",
-	"docsURL": "https://github.com/orgs/untrustedmodders/README.md",
-	"downloadURL": "https://github.com/orgs/untrustedmodders/admin_simple.zip",
-	"updateURL": "",
-	"entryPoint": "utils.admin_simple.AdminSimple",
-	"supportedPlatforms": [],
-	"languageModule": {
-		"name": "python3"
-	},
+	"author": "untrustedmodders",
+	"website": "https://github.com/untrustedmodders/",
+	"license": "MIT",
+	"entry": "utils.admin_simple.AdminSimple",
+	"platforms": [],
+	"language": "python3",
 	"dependencies": [],
-	"exportedMethods": []
+	"methods": []
 }
