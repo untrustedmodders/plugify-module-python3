@@ -25,7 +25,7 @@ The Plugify Python Language Module is a powerful extension for the Plugify proje
 You can install the C++ Language Module using the Plugify plugin manager by running the following command:
 
 ```bash
-plg install plugify-module-python3.12
+plg install plugify-module-python3
 ```
 
 #### Option 2: Manual Installation
@@ -48,7 +48,7 @@ plg install plugify-module-python3.12
 2. Clone this repository:
 
     ```bash
-    git clone https://github.com/untrustedmodders/plugify-module-python3.12.git --recursive
+    git clone https://github.com/untrustedmodders/plugify-module-python3.git --recursive
     ```
 
 3. Build the Python language module:

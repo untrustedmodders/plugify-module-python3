@@ -25,7 +25,7 @@
 Вы можете установить модуль Python с помощью менеджера плагинов Plugify, выполнив команду:
 
 ```bash
-plg install plugify-module-python3.12
+plg install plugify-module-python3
 ```
 
 #### Вариант 2: Ручная установка
@@ -48,7 +48,7 @@ plg install plugify-module-python3.12
 2. Клонируйте репозиторий:
 
    ```bash
-   git clone https://github.com/untrustedmodders/plugify-module-python3.12.git --recursive
+   git clone https://github.com/untrustedmodders/plugify-module-python3.git --recursive
    ```
 
 3. Соберите модуль языка Python:
