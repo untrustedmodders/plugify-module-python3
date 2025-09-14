@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.0.0](https://github.com/untrustedmodders/plugify-module-python3/compare/v1.1.3...v2.0.0) (2025-09-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* update for a new plugify
+
+### Features
+
+* update for a new plugify ([3a1bce8](https://github.com/untrustedmodders/plugify-module-python3/commit/3a1bce828db2d8b52b1c9fe03cf685858d0d3021))
+
+
+### Bug Fixes
+
+* update clang format ([c00a226](https://github.com/untrustedmodders/plugify-module-python3/commit/c00a2264b4269ba2d37285e6e2c562a1ec39544d))
+* update Readme ([70b2a8b](https://github.com/untrustedmodders/plugify-module-python3/commit/70b2a8b62e3af838e010fc4cba07b119eef4cff9))
+
 ## [1.1.3](https://github.com/untrustedmodders/plugify-module-python3.12/compare/v1.1.2...v1.1.3) (2025-08-01)
 
 
