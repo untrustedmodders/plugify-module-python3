@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.1...v2.0.2) (2025-09-15)
+
+
+### Bug Fixes
+
+* unreachable code warnings ([1106fd2](https://github.com/untrustedmodders/plugify-module-python3/commit/1106fd2025e19994cc3e531cd485c97407a07b7b))
+
 ## [2.0.1](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.0...v2.0.1) (2025-09-15)
 
 
