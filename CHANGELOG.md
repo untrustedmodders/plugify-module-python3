@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.4](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.3...v2.0.4) (2025-09-15)
+
+
+### Bug Fixes
+
+* rework pyincludes ([a5d9498](https://github.com/untrustedmodders/plugify-module-python3/commit/a5d9498b1adf89041772855b4891da83c17e5e36))
+
 ## [2.0.3](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.2...v2.0.3) (2025-09-15)
 
 
