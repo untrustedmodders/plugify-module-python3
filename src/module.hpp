@@ -120,7 +120,7 @@ namespace py3lm {
 		// ILanguageModule
 		Result<InitData> Initialize(const Provider& provider, const Extension& module) override;
 		void Shutdown() override;
-		void OnUpdate(std::chrono::milliseconds dt) override {};
+		void OnUpdate([[maybe_unused]] std::chrono::milliseconds dt) override {};
 		void OnMethodExport(const Extension& plugin) override;
 		Result<LoadData> OnPluginLoad(const Extension& plugin) override;
 		void OnPluginStart(const Extension& plugin) override;

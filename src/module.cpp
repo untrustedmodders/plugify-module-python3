@@ -90,59 +90,60 @@ namespace py3lm {
 		// -1		Encoding error
 		// -2		Invalid multibyte sequence
 		// -3		Surrogate pair
-		std::pair<short, char16_t> ConvertUtf8ToUtf16(std::string_view sequence) {
+		std::pair<int, char16_t> ConvertUtf8ToUtf16(std::string_view sequence) {
 			const auto c8toc16 = [](char ch) -> char16_t { return static_cast<char16_t>(static_cast<uint8_t>(ch)); };
 
 			if (sequence.empty()) {
-				return { -2, {} };
+				return { -2, u'\0' };
 			}
 			const char seqCh0 = sequence[0];
 			if (seqCh0 == '\0') {
-				return { 0, 0 };
+				return { 0, u'\0' };
 			}
 			if ((seqCh0 & 0b11111000) == 0b11110000) {
-				return { -3, {} };
+				return { -3, u'\0' };
 			}
 			if ((seqCh0 & 0b11110000) == 0b11100000) {
 				if (sequence.size() < 3) {
-					return { -2, {} };
+					return { -2, u'\0' };
 				}
 				const char seqCh1 = sequence[1];
 				const char seqCh2 = sequence[2];
 				if ((seqCh1 & 0b11000000) != 0b10000000 || (seqCh2 & 0b11000000) != 0b10000000) {
-					return { -2, {} };
+					return { -2, u'\0' };
 				}
 				const char16_t ch = (c8toc16(seqCh0 & 0b00001111) << 12) | (c8toc16(seqCh1 & 0b00111111) << 6) | c8toc16(seqCh2 & 0b00111111);
 				if (0xD800 <= static_cast<uint16_t>(ch) && static_cast<uint16_t>(ch) < 0xE000) {
-					return { -1, {} };
+					return { -1, u'\0' };
 				}
 				return { 3, ch };
 			}
 			if ((seqCh0 & 0b11100000) == 0b11000000) {
 				if (sequence.size() < 2) {
-					return { -2, {} };
+					return { -2, u'\0' };
 				}
 				const char seqCh1 = sequence[1];
 				if ((seqCh1 & 0b11000000) != 0b10000000) {
-					return { -2, {} };
+					return { -2, u'\0' };
 				}
-				return { 2, (c8toc16(seqCh0 & 0b00011111) << 6) | c8toc16(seqCh1 & 0b00111111) };
+				const char16_t ch = (c8toc16(seqCh0 & 0b00011111) << 6) | c8toc16(seqCh1 & 0b00111111);
+				return { 2, ch };
 			}
 			if ((seqCh0 & 0b10000000) == 0b00000000) {
 				return { 1, c8toc16(seqCh0) };
 			}
-			return { -1, {} };
+			return { -1, u'\0' };
 		}
 
 		// Return codes:
 		// [1, 3]	Number bytes returned
 		// 0		For 0x0000 symbol
 		// -1		Surrogate pair
-		std::pair<short, std::array<char, 4>> ConvertUtf16ToUtf8(char16_t ch16) {
+		std::pair<int, std::array<char, 4>> ConvertUtf16ToUtf8(char16_t ch16) {
 			const auto c16toc8 = [](char16_t ch) -> char { return static_cast<char>(static_cast<uint8_t>(ch)); };
 
-			if (ch16 == 0) {
-				return { 0, { } };
+			if (ch16 == u'\0') {
+				return { 0, {} };
 			}
 			if (static_cast<uint16_t>(ch16) < 0x80) {
 				return { 1, { c16toc8(ch16), '\0' } };
@@ -174,13 +175,14 @@ namespace py3lm {
 				if (value > static_cast<T>(std::numeric_limits<U>::max())) {
 					return false;
 				}
+				return true;
 			} else if constexpr (std::is_signed_v<T> && std::is_unsigned_v<U>) {
 				// T is signed, N is unsigned
 				if (value < 0 || static_cast<std::make_unsigned_t<T>>(value) > std::numeric_limits<U>::max()) {
 					return false;
 				}
+				return true;
 			}
-			return true;
 		}
 
 		// Function to find the index of the flipped bit
@@ -233,7 +235,7 @@ namespace py3lm {
 		}
 
 		template<typename T>
-		std::optional<T> ValueFromObject(PyObject* /*object*/) {
+		std::optional<T> ValueFromObject([[maybe_unused]] PyObject* object) {
 			static_assert(always_false_v<T>, "ValueFromObject specialization required");
 		}
 
@@ -251,7 +253,7 @@ namespace py3lm {
 			if (PyUnicode_Check(object)) {
 				const Py_ssize_t length = PyUnicode_GetLength(object);
 				if (length == 0) {
-					return 0;
+					return '\0';
 				}
 				if (length == 1) {
 					char ch = PyUnicode_AsUTF8(object)[0];
@@ -275,7 +277,7 @@ namespace py3lm {
 			if (PyUnicode_Check(object)) {
 				const Py_ssize_t length = PyUnicode_GetLength(object);
 				if (length == 0) {
-					return 0;
+					return u'\0';
 				}
 				if (length == 1) {
 					auto [rc, ch] = ConvertUtf8ToUtf16(PyUnicode_AsString(object));
@@ -1281,7 +1283,7 @@ namespace py3lm {
 		using void_t = void*;
 
 		template<typename T>
-		PyObject* CreatePyObject(const T& /*value*/) {
+		PyObject* CreatePyObject([[maybe_unused]] const T& value) {
 			static_assert(always_false_v<T>, "CreatePyObject specialization required");
 			return nullptr;
 		}
@@ -2915,7 +2917,7 @@ namespace py3lm {
 		}
 
 		// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-		void ExternalCallNoArgs(const Method* method, MemAddr data, uint64_t* parameters, size_t count, void* return_) {
+		void ExternalCallNoArgs(const Method* method, MemAddr data, [[maybe_unused]] uint64_t* parameters, [[maybe_unused]] size_t count, void* return_) {
 			//ParametersSpan params(parameters, count);
 			ReturnSlot ret(return_, ValueUtils::SizeOf(ValueType::Pointer));
 
@@ -3063,7 +3065,7 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* CustomPrint(PyObject* self, PyObject* args, PyObject* kwargs) {
+		PyObject* CustomPrint([[maybe_unused]] PyObject* self, PyObject* args, PyObject* kwargs) {
 			PyObject* sep = PyUnicode_FromString(" ");
 			PyObject* end = PyUnicode_FromString("\n");
 
@@ -3451,7 +3453,8 @@ namespace py3lm {
 				moduleObject = CreateExternalModule(plugin);
 			}
 			if (moduleObject) {
-				assert(PyDict_SetItemString(moduleDict, plugin.GetName().c_str(), moduleObject) == 0);
+				[[maybe_unused]] const auto res = PyDict_SetItemString(moduleDict, plugin.GetName().c_str(), moduleObject);
+				assert(res == 0);
 				Py_DECREF(moduleObject);
 			}
 		}
@@ -3471,9 +3474,10 @@ namespace py3lm {
 			if (plugin && plugin->GetState() == ExtensionState::Loaded) {
 				TryCreateModule(*plugin, false);
 			} else {
-				PyObject* const moduleDict = PyModule_GetDict(_ppsModule);
+				[[maybe_unused]] PyObject* const moduleDict = PyModule_GetDict(_ppsModule);
 				PyObject* const moduleObject = PyModule_New(pluginName.data());
-				assert(PyDict_SetItemString(moduleDict, pluginName.data(), moduleObject) == 0);
+				[[maybe_unused]] const auto res = PyDict_SetItemString(moduleDict, pluginName.data(), moduleObject);
+				assert(res == 0);
 				Py_DECREF(moduleObject);
 			}
 		}
@@ -4236,7 +4240,8 @@ namespace py3lm {
 				_provider->Log(std::format(LOG_PREFIX "Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
 				std::terminate();
 			}
-			assert(PyDict_SetItemString(moduleDict, method.GetName().c_str(), methodObject) == 0);
+			[[maybe_unused]] const auto res = PyDict_SetItemString(moduleDict, method.GetName().c_str(), methodObject);
+			assert(res  == 0);
 			GenerateEnum(method, moduleDict);
 		}
 
@@ -4316,7 +4321,8 @@ namespace py3lm {
 
 		PyObject* constantsDict = PyDict_New();
 		for (const auto& value : values) {
-			assert(PyDict_SetItemString(constantsDict, value.GetName().c_str(), PyLong_FromLongLong(value.GetValue())) == 0);
+			[[maybe_unused]] const auto res = PyDict_SetItemString(constantsDict, value.GetName().c_str(), PyLong_FromLongLong(value.GetValue()));
+			assert(res == 0);
 		}
 
 		enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumerator.GetName().c_str(), constantsDict);

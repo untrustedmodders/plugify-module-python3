@@ -152,11 +152,17 @@ elseif(APPLE)
 
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE python3)
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/include/python3.12" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude")
-
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PYTHON_ARCH}/${PYTHON_ABSTRACT_BUILD_TYPE_LOWER}/include/pyconfig.h" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude/python3.12")
-target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude/python3.12")
+add_library(pyinclude INTERFACE)
+target_include_directories(pyinclude INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/_pyinclude/python3.12")
+if(MSVC)
+    target_compile_options(pyinclude INTERFACE /wd4100)
+else()
+    target_compile_options(pyinclude INTERFACE -Wno-unused-parameter)
+endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE python3 pyinclude)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     PY3LM_PLATFORM_WINDOWS=$<BOOL:${WIN32}>
