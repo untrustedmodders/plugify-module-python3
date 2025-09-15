@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.3](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.2...v2.0.3) (2025-09-15)
+
+
+### Bug Fixes
+
+* windows build script ([f56c1df](https://github.com/untrustedmodders/plugify-module-python3/commit/f56c1df073d4632df5044129fe54cdf6387a2228))
+
 ## [2.0.2](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.1...v2.0.2) (2025-09-15)
 
 
