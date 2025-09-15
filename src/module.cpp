@@ -2382,7 +2382,6 @@ namespace py3lm {
 				return nullptr;
 			}
 			}
-			return nullptr;
 		}
 
 		PyObject* MakeExternalCallWithObject(const Property& retType, JitCall::CallingFunc func, const ArgsScope& a, Return& ret) {
@@ -2570,7 +2569,6 @@ namespace py3lm {
 				return nullptr;
 			}
 			}
-			return nullptr;
 		}
 
 		bool PushObjectAsParam(const Property& paramType, PyObject* pItem, ArgsScope& a) {
@@ -2678,8 +2676,6 @@ namespace py3lm {
 				return false;
 			}
 			}
-
-			return false;
 		}
 
 		bool PushObjectAsRefParam(const Property& paramType, PyObject* pItem, ArgsScope& a) {
@@ -2779,8 +2775,6 @@ namespace py3lm {
 				return false;
 			}
 			}
-
-			return false;
 		}
 
 		PyObject* StorageValueToEnumObject(const Property& paramType, const ArgsScope& a, size_t index) {
