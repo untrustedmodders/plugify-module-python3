@@ -8,10 +8,10 @@ if not exist "%PREFIX%\python3.12" mkdir "%PREFIX%\python3.12"
 if not exist "%PREFIX%" mkdir "%PREFIX%"
 
 REM Copy the DLL and module file
-copy bin\plugify-module-dotnet.dll "%PREFIX%\bin\" || exit 1
+copy bin\plugify-module-python3.dll "%PREFIX%\bin\" || exit 1
 xcopy lib "%PREFIX%\lib" /E /Y /I
 xcopy python3.12 "%PREFIX%\python3.12" /E /Y /I
-copy plugify-module-dotnet.pmodule "%PREFIX%\" || exit 1
+copy plugify-module-python3.pmodule "%PREFIX%\" || exit 1
 
 REM Create activation scripts
 if not exist "%PREFIX%\etc\conda\activate.d" mkdir "%PREFIX%\etc\conda\activate.d"
