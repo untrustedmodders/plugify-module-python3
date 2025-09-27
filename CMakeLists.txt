@@ -135,7 +135,7 @@ elseif(LINUX)
 
     set_property(TARGET ${PROJECT_NAME} PROPERTY LINK_FLAGS "-Wl,-rpath,\\\$ORIGIN/../python3.12")
 elseif(APPLE)
-    set(PYTHON_ARCH "osx-64")
+    set(PYTHON_ARCH "osx-arm64")
     set(PYTHON_DEBUG_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PYTHON_ARCH}/debug/bin/libpython3.12d.dylib")
     set(PYTHON_RELEASE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/python3.12/${PYTHON_ARCH}/release/bin/libpython3.12.dylib")
 
