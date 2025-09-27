@@ -83,8 +83,9 @@ elseif(UNIX)
 endif()
 
 if(PLUGIFY_HAS_SANITIZER)
-    target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>: -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined>)
-    target_link_libraries(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>: -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined>)
+    # https://github.com/llvm/llvm-project/pull/121228
+    target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>: -fsanitize=address -fno-omit-frame-pointer>) # -fsanitize=undefined
+    target_link_libraries(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>: -fsanitize=address -fno-omit-frame-pointer>) # -fsanitize=undefined
 endif()
 
 include(GenerateExportHeader)
