@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.9](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.8...v2.0.9) (2025-09-27)
+
+
+### Bug Fixes
+
+* rename osx python lib ([233953b](https://github.com/untrustedmodders/plugify-module-python3/commit/233953bc01adf32bab3b0e76ccdd30b4668a23c0))
+
 ## [2.0.8](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.7...v2.0.8) (2025-09-27)
 
 
