@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.7](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.6...v2.0.7) (2025-09-27)
+
+
+### Bug Fixes
+
+* change default build type ([203b655](https://github.com/untrustedmodders/plugify-module-python3/commit/203b655207725de81d2b67dda3d87fcb302692f5))
+* clang warnings ([c277e90](https://github.com/untrustedmodders/plugify-module-python3/commit/c277e90ce491a166a801db95ba69b4153ab08761))
+
 ## [2.0.6](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.5...v2.0.6) (2025-09-27)
 
 
