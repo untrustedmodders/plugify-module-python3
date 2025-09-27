@@ -22,17 +22,53 @@ build:
     - "*/libpython3.12.so*"  # [linux]
     - "*/plugify.dll"        # [win]
     - "*/python312.dll"      # [win]
+	
+    # Linux system libraries
+    - "*/ld-linux*.so.*"      # [linux]
+    - "*/libc.so.*"           # [linux]
+    - "*/libm.so.*"           # [linux]
+    - "*/libdl.so.*"          # [linux]
+    - "*/libpthread.so.*"     # [linux]
+    - "*/librt.so.*"          # [linux]
+    - "*/libplugify.so*"      # [linux]
+    - "*/libpython3.12.so*"   # [linux]
+    # macOS system libraries and frameworks
+    - "/usr/lib/libc++.1.dylib"           # [osx]
+    - "/usr/lib/libSystem.B.dylib"        # [osx]
+    - "/usr/lib/libc++abi.dylib"          # [osx]
+    - "/usr/lib/libutil.dylib"            # [osx]
+    - "/System/Library/Frameworks/*"      # [osx]
+    - "*/libplugify.dylib"                # [osx]
+    - "*/libplugify.*.dylib"              # [osx]
+    - "@rpath/libplugify.dylib"           # [osx]
+    - "@loader_path/libplugify.dylib"     # [osx]
+    - "*/libpython3.12.dylib"             # [osx]
+    - "*/libpython3.12.*.dylib"           # [osx]
+    - "@rpath/libpython3.12.dylib"        # [osx]
+    - "@loader_path/libpython3.12.dylib"  # [osx]
+    # Windows libraries
+    - "*/plugify.dll"           # [win]
+    - "*/python312.dll"         # [win]
 
 requirements:
   run:
     - __glibc >=2.17 # [linux64]
+    - __osx >=11.0    # [osx and arm64]
 
 test:
   commands:
+	# Linux tests
     - test -f $PREFIX/bin/libplugify-module-python3.so  # [linux]
     - test -d $PREFIX/lib                               # [linux]
     - test -d $PREFIX/python3.12                        # [linux]
     - test -f $PREFIX/plugify-module-python3.pmodule    # [linux]
+    # macOS tests
+    - test -f $PREFIX/bin/libplugify-module-python3.dylib  # [osx]
+    - test -d $PREFIX/lib                                  # [osx]
+    - test -d $PREFIX/python3.12                           # [osx]
+    - test -f $PREFIX/plugify-module-python3.pmodule       # [osx]
+    - otool -L $PREFIX/bin/libplugify-module-python3.dylib # [osx]
+    # Windows tests
     - if not exist %PREFIX%\\bin\\plugify-module-python3.dll exit 1  # [win]
     - if not exist %PREFIX%\\lib exit 1                              # [win]
     - if not exist %PREFIX%\\python3.12 exit 1                       # [win]

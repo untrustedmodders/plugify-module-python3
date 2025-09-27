@@ -1,7 +1,17 @@
 #!/bin/bash
-# build.sh - For Linux builds
+# build.sh - For Unix builds
 
 set -ex
+
+# Detect the platform and set the appropriate library extension
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    LIB_EXT="dylib"
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    LIB_EXT="so"
+else
+    echo "Unsupported platform: $OSTYPE"
+    exit 1
+fi
 
 # Create the target directories
 mkdir -p $PREFIX/bin
@@ -10,13 +20,13 @@ mkdir -p $PREFIX/python3.12
 mkdir -p $PREFIX
 
 # Copy the shared library and module file
-cp bin/libplugify-module-python3.so $PREFIX/bin/
+cp bin/libplugify-module-python3.$LIB_EXT $PREFIX/bin/
 cp -r lib/* $PREFIX/lib/
 cp -r python3.12/* $PREFIX/python3.12/
 cp plugify-module-python3.pmodule $PREFIX/
 
 # Set proper permissions
-chmod 755 $PREFIX/bin/libplugify-module-python3.so
+chmod 755 $PREFIX/bin/libplugify-module-python3.$LIB_EXT
 chmod -R 755 $PREFIX/lib
 chmod -R 755 $PREFIX/python3.12
 chmod 644 $PREFIX/plugify-module-python3.pmodule
