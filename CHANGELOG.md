@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.6](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.5...v2.0.6) (2025-09-27)
+
+
+### Bug Fixes
+
+* add missing include for clang ([520f3ef](https://github.com/untrustedmodders/plugify-module-python3/commit/520f3ef8f12b1d0a967dd2fe1d81437a73088bba))
+
 ## [2.0.5](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.4...v2.0.5) (2025-09-27)
 
 
