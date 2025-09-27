@@ -15,7 +15,7 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
-#include <exception>
+#include <module_export.h>
 
 using namespace plugify;
 
@@ -205,3 +205,6 @@ namespace py3lm {
 		PythonInternalEnumMap _internalEnumMap;
 	};
 }
+
+extern "C" PY3LM_EXPORT ILanguageModule* GetLanguageModule();
+

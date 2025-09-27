@@ -3,6 +3,7 @@
 #include <climits>
 #include <cuchar>
 #include <bitset>
+#include <exception>
 
 #include <plugify/logger.hpp>
 #include <plugify/provider.hpp>
@@ -10,8 +11,6 @@
 #include <plg/string.hpp>
 #include <plg/any.hpp>
 #include <plg/format.hpp>
-
-#include <module_export.h>
 
 #include "plugify/enum_object.hpp"
 #include "plugify/enum_value.hpp"
@@ -1460,16 +1459,16 @@ namespace py3lm {
 
 		template<typename T>
 		PyObject* CreatePyObjectList(const plg::vector<T>& arrayArg) {
-			const auto size = static_cast<Py_ssize_t>(arrayArg.size());
+			const auto size = arrayArg.size();
 			PyObject* const arrayObject = PyList_New(size);
 			if (arrayObject) {
-				for (Py_ssize_t i = 0; i < size; ++i) {
+				for (size_t i = 0; i < size; ++i) {
 					PyObject* const valueObject = CreatePyObject(arrayArg[i]);
 					if (!valueObject) {
 						Py_DECREF(arrayObject);
 						return nullptr;
 					}
-					PyList_SET_ITEM(arrayObject, i, valueObject);
+					PyList_SET_ITEM(arrayObject, static_cast<Py_ssize_t>(i), valueObject);
 				}
 			}
 			return arrayObject;
@@ -1482,16 +1481,16 @@ namespace py3lm {
 
 		template<typename T>
 		PyObject* CreatePyEnumObjectList(const EnumObject& enumerator, const plg::vector<T>& arrayArg) {
-			const auto size = static_cast<Py_ssize_t>(arrayArg.size());
+			const auto size = arrayArg.size();
 			PyObject* const arrayObject = PyList_New(size);
 			if (arrayObject) {
-				for (Py_ssize_t i = 0; i < size; ++i) {
+				for (size_t i = 0; i < size; ++i) {
 					PyObject* const valueObject = CreatePyEnumObject(enumerator, arrayArg[i]);
 					if (!valueObject) {
 						Py_DECREF(arrayObject);
 						return nullptr;
 					}
-					PyList_SET_ITEM(arrayObject, i, valueObject);
+					PyList_SET_ITEM(arrayObject, static_cast<Py_ssize_t>(i), valueObject);
 				}
 			}
 			return arrayObject;
@@ -2952,8 +2951,8 @@ namespace py3lm {
 
 			const auto& paramTypes = method->GetParamTypes();
 			const auto paramCount = paramTypes.size();
-			const Py_ssize_t size = PyTuple_Size(args);
-			if (size != static_cast<Py_ssize_t>(paramCount)) {
+			const size_t size = static_cast<size_t>(PyTuple_Size(args));
+			if (size != paramCount) {
 				const std::string error(std::format("Wrong number of parameters, {} when {} required.", size, paramCount));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
 				ret.Set<void*>(nullptr);
@@ -2971,14 +2970,14 @@ namespace py3lm {
 				BeginExternalCall(retType.GetType(), a);
 			}
 
-			for (Py_ssize_t i = 0; i < size; ++i) {
+			for (size_t i = 0; i < size; ++i) {
 				const Property& paramType = paramTypes[i];
 				if (paramType.IsRef()) {
 					++refParamsCount;
 				}
 				using PushParamFunc = bool (*)(const Property&, PyObject*, ArgsScope&);
 				PushParamFunc const pushParamFunc = paramType.IsRef() ? &PushObjectAsRefParam : &PushObjectAsParam;
-				const bool pushResult = pushParamFunc(paramType, PyTuple_GetItem(args, i), a);
+				const bool pushResult = pushParamFunc(paramType, PyTuple_GetItem(args, static_cast<Py_ssize_t>(i)), a);
 				if (!pushResult) {
 					// pushParamFunc set error
 					ret.Set<void*>(nullptr);
@@ -3002,7 +3001,7 @@ namespace py3lm {
 
 				PyTuple_SET_ITEM(retTuple, k++, retObj); // retObj ref taken by tuple
 
-				for (Py_ssize_t i = 0, j = hasHiddenParam; i < size; ++i) {
+				for (size_t i = 0, j = hasHiddenParam; i < size; ++i) {
 					const Property& paramType = paramTypes[i];
 					if (!paramType.IsRef()) {
 						continue;
@@ -4423,9 +4422,9 @@ namespace py3lm {
 	}
 
 	Python3LanguageModule g_py3lm;
+}
 
-	extern "C"
-	PY3LM_EXPORT ILanguageModule* GetLanguageModule() {
-		return &g_py3lm;
-	}
+extern "C"
+PY3LM_EXPORT ILanguageModule* GetLanguageModule() {
+	return &py3lm::g_py3lm;
 }
