@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.8](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.7...v2.0.8) (2025-09-27)
+
+
+### Bug Fixes
+
+* more clang warnings fixes ([0c32b51](https://github.com/untrustedmodders/plugify-module-python3/commit/0c32b51f8aa50203c24c8ef30e86f59b62015235))
+
 ## [2.0.7](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.6...v2.0.7) (2025-09-27)
 
 
