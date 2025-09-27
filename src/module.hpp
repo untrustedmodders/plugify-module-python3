@@ -4,7 +4,9 @@
 #include <plugify/call.hpp>
 #include <plugify/language_module.hpp>
 #include <plugify/extension.hpp>
+
 #include <plg/numerics.hpp>
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <memory>
@@ -13,6 +15,7 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
+#include <exception>
 
 using namespace plugify;
 
