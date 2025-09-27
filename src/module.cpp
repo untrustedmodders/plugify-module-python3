@@ -112,7 +112,7 @@ namespace py3lm {
 				if ((seqCh1 & 0b11000000) != 0b10000000 || (seqCh2 & 0b11000000) != 0b10000000) {
 					return { -2, u'\0' };
 				}
-				const char16_t ch = (c8toc16(seqCh0 & 0b00001111) << 12) | (c8toc16(seqCh1 & 0b00111111) << 6) | c8toc16(seqCh2 & 0b00111111);
+				const char16_t ch = static_cast<char16_t>((c8toc16(seqCh0 & 0b00001111) << 12) | (c8toc16(seqCh1 & 0b00111111) << 6) | c8toc16(seqCh2 & 0b00111111));
 				if (0xD800 <= static_cast<uint16_t>(ch) && static_cast<uint16_t>(ch) < 0xE000) {
 					return { -1, u'\0' };
 				}
@@ -126,7 +126,7 @@ namespace py3lm {
 				if ((seqCh1 & 0b11000000) != 0b10000000) {
 					return { -2, u'\0' };
 				}
-				const char16_t ch = (c8toc16(seqCh0 & 0b00011111) << 6) | c8toc16(seqCh1 & 0b00111111);
+				const char16_t ch = static_cast<uint16_t>((c8toc16(seqCh0 & 0b00011111) << 6) | c8toc16(seqCh1 & 0b00111111));
 				return { 2, ch };
 			}
 			if ((seqCh0 & 0b10000000) == 0b00000000) {

@@ -103,7 +103,7 @@ namespace py3lm {
 	using PythonInternalMap = std::unordered_map<PyObject*, void*>;
 	using PythonExternalMap = std::unordered_map<void*, PyObject*>;
 	using PythonTypeMap = std::unordered_map<PyTypeObject*, PythonType>;
-	using PythonEnumMap = std::flat_map<int64_t, PyObject*>;
+	using PythonEnumMap = std::map<int64_t, PyObject*>;
 	using PythonExternalEnumMap = std::unordered_map<const EnumObject*, std::shared_ptr<PythonEnumMap>>;
 	using PythonInternalEnumMap = std::unordered_map<PyObject*, std::shared_ptr<PythonEnumMap>>;
 
