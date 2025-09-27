@@ -1460,7 +1460,7 @@ namespace py3lm {
 		template<typename T>
 		PyObject* CreatePyObjectList(const plg::vector<T>& arrayArg) {
 			const auto size = arrayArg.size();
-			PyObject* const arrayObject = PyList_New(size);
+			PyObject* const arrayObject = PyList_New(static_cast<Py_ssize_t>(size));
 			if (arrayObject) {
 				for (size_t i = 0; i < size; ++i) {
 					PyObject* const valueObject = CreatePyObject(arrayArg[i]);
@@ -1482,7 +1482,7 @@ namespace py3lm {
 		template<typename T>
 		PyObject* CreatePyEnumObjectList(const EnumObject& enumerator, const plg::vector<T>& arrayArg) {
 			const auto size = arrayArg.size();
-			PyObject* const arrayObject = PyList_New(size);
+			PyObject* const arrayObject = PyList_New(static_cast<Py_ssize_t>(size));
 			if (arrayObject) {
 				for (size_t i = 0; i < size; ++i) {
 					PyObject* const valueObject = CreatePyEnumObject(enumerator, arrayArg[i]);
