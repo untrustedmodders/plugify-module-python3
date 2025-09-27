@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.5](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.4...v2.0.5) (2025-09-27)
+
+
+### Bug Fixes
+
+* add mac build ([38fd07f](https://github.com/untrustedmodders/plugify-module-python3/commit/38fd07f6116fc72d9782989412237babf6068154))
+* update plugify ([77938d7](https://github.com/untrustedmodders/plugify-module-python3/commit/77938d7088d23059e66c18f5f0c2cb12eb01abb0))
+* update plugify ([11f396f](https://github.com/untrustedmodders/plugify-module-python3/commit/11f396f9819630d3cedfe1a89d6a124c81c8c62a))
+
 ## [2.0.4](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.3...v2.0.4) (2025-09-15)
 
 
