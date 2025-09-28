@@ -140,6 +140,8 @@ jobs:
           cp -r $PY3_PATH/${{ matrix.platform }}/release/bin/* build/output/python3.12
           cp -r $PY3_PATH/${{ matrix.platform }}/release/lib/* build/output/python3.12
           cp "$PY3_PATH/LICENSE.txt" build/output/python3.12
+          # Cleanup dev files
+          find build/output -type f \( -name "*.exp" -o -name "*.ilk" -o -name "*.lib" -o -name "*.pdb" \) -delete
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

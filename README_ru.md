@@ -22,10 +22,10 @@
 
 #### Вариант 1: Установка через менеджер плагинов Plugify
 
-Вы можете установить модуль Python с помощью менеджера плагинов Plugify, выполнив команду:
+Вы можете установить модуль Python с помощью менеджера пакетов Mamba, выполнив команду:
 
 ```bash
-plg install plugify-module-python3
+mamba install -n your_env_name -c https://untrustedmodders.github.io/plugify-module-python3/ plugify-module-python3
 ```
 
 #### Вариант 2: Ручная установка
