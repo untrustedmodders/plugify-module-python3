@@ -71,6 +71,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${PY3LM_LINK_LIBRARIES})
 
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX /Zc:preprocessor $<$<CONFIG:Release>:/Zi>)
+    target_link_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wextra -Wconversion -Werror -Wshadow -Wpedantic $<$<CONFIG:Release>:-g1>)
 endif()
@@ -82,10 +83,15 @@ elseif(UNIX)
     target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/sym/version_script.lds")
 endif()
 
-if(PLUGIFY_HAS_SANITIZER)
+if(PLUGIFY_USE_SANITIZER)
     # https://github.com/llvm/llvm-project/pull/121228
-    target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>: -fsanitize=address -fno-omit-frame-pointer>) # -fsanitize=undefined
-    target_link_libraries(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>: -fsanitize=address -fno-omit-frame-pointer>) # -fsanitize=undefined
+	if(MSVC)
+        target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>: /fsanitize=address>)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>: _DISABLE_VECTOR_ANNOTATION>)
+    else()
+        target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>: -fsanitize=address -fsanitize=leak>) # -fsanitize=undefined disabled
+        target_link_libraries(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>: -fsanitize=address -fsanitize=leak>) # -fsanitize=undefined disabled
+    endif()
 endif()
 
 include(GenerateExportHeader)
