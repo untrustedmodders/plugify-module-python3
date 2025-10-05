@@ -1497,7 +1497,7 @@ namespace py3lm {
 		}
 
 		PyObject* ParamToEnumObject(const Property& paramType, const ParametersSpan& params, size_t index) {
-			const EnumObject& enumerator = *paramType.GetEnumerate();
+			const auto& enumerator = *paramType.GetEnumerate();
 			switch (paramType.GetType()) {
 			case ValueType::Int8:
 				return CreatePyEnumObject(enumerator, params.Get<int8_t>(index));
@@ -3043,10 +3043,10 @@ namespace py3lm {
 		void GenerateEnum(const Method& method, PyObject* moduleDict);
 
 		void GenerateEnum(const Property& paramType, PyObject* moduleDict) {
-			if (const auto* prototype = paramType.GetPrototype()) {
+			if (const auto prototype = paramType.GetPrototype()) {
 				GenerateEnum(*prototype, moduleDict);
 			}
-			if (const auto* enumerator = paramType.GetEnumerate()) {
+			if (const auto enumerator = paramType.GetEnumerate()) {
 				g_py3lm.CreateEnumObject(*enumerator, moduleDict);
 			}
 		}
