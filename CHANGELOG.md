@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.10](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.9...v2.0.10) (2025-10-06)
+
+
+### Bug Fixes
+
+* disable -fsanitize=undefined on linux ([e0f65ef](https://github.com/untrustedmodders/plugify-module-python3/commit/e0f65efc4177638bb9ebba159a30cca3ae112451))
+* disable asan in debug ([5d8e218](https://github.com/untrustedmodders/plugify-module-python3/commit/5d8e218d7ea58eba159d2177c2f38b0f54947592))
+* improve san and debug symbols on windows ([d825c5c](https://github.com/untrustedmodders/plugify-module-python3/commit/d825c5c1982434997548724c30920b8e4975117e))
+* update plugify ([cee3369](https://github.com/untrustedmodders/plugify-module-python3/commit/cee336992c2bb03e657a144cb8ed4f4c47513b5a))
+* update plugify ([e97287e](https://github.com/untrustedmodders/plugify-module-python3/commit/e97287e5dd78d78bec224b39e4807f0548f65b2a))
+* update plugify ([212d684](https://github.com/untrustedmodders/plugify-module-python3/commit/212d684e33875db6ab8e40b4137b8ffb1dc96b2b))
+
 ## [2.0.9](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.8...v2.0.9) (2025-09-27)
 
 
