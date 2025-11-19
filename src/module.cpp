@@ -3215,6 +3215,13 @@ namespace py3lm {
 			return MakeError("Failed to find plugify.plugin.extract_required_modules function");
 		}
 
+		_BindClassMethodsObject = PyObject_GetAttrString(plugifyPluginModule, "bind_class_methods");
+		if (!_BindClassMethodsObject || !PyCallable_Check(_BindClassMethodsObject)) {
+			Py_DECREF(plugifyPluginModule);
+			LogError();
+			return MakeError("Failed to find plugify.plugin.bind_class_methods function");
+		}
+
 		Py_DECREF(plugifyPluginModule);
 
 		_ppsModule = PyImport_ImportModule("plugify.pps");
@@ -3376,6 +3383,10 @@ namespace py3lm {
 				Py_DECREF(_ExtractRequiredModulesObject);
 			}
 
+			if (_BindClassMethodsObject) {
+				Py_DECREF(_BindClassMethodsObject);
+			}
+
 			if (_PluginTypeObject) {
 				Py_DECREF(_PluginTypeObject);
 			}
@@ -3414,6 +3425,7 @@ namespace py3lm {
 		_Vector4TypeObject = nullptr;
 		_Matrix4x4TypeObject = nullptr;
 		_ExtractRequiredModulesObject = nullptr;
+		_BindClassMethodsObject = nullptr;
 		_PluginTypeObject = nullptr;
 		_PluginInfoTypeObject = nullptr;
 		_internalMap.clear();

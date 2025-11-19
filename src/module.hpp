@@ -181,6 +181,7 @@ namespace py3lm {
 		PyObject* _Vector4TypeObject = nullptr;
 		PyObject* _Matrix4x4TypeObject = nullptr;
 		PyObject* _ExtractRequiredModulesObject = nullptr;
+		PyObject* _BindClassMethodsObject = nullptr;
 		PyObject* _ppsModule = nullptr;
 		PyObject* _enumModule = nullptr;
 		PyObject* _formatException = nullptr;
