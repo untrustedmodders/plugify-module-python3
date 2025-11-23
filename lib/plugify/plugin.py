@@ -3,7 +3,7 @@ import os
 import importlib.util
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Callable, List, Optional, Dict, Tuple
+from typing import Any, Callable, List, Optional, Union, Tuple
 
 
 class Plugin:
@@ -258,16 +258,14 @@ class Ownership(Enum):
     OWNED = True
     BORROWED = False
 
-
 # Store class registry for retAlias lookups
 _class_registry = {}
 
-
 def bind_class_methods(
         cls: type,
-        constructors: List[Callable],
+        constructors: Union[List[Callable], Tuple[Callable, ...]],
         destructor: Optional[Callable],
-        methods: List[Tuple[str, Callable, bool, Optional[List[Tuple[str, bool]]], Optional[Tuple[str, bool]]]],
+        methods: Union[List[Tuple[str, Callable, bool, Optional[List[Tuple[str, bool]]]]], Tuple[Tuple[str, Callable, bool, Optional[List[Tuple[str, bool]]], ...]]],
         invalid_value: Any = 0
 ):
     """
@@ -275,54 +273,60 @@ def bind_class_methods(
 
     Args:
         cls: The class to extend with methods
-        constructors: List of constructor functions (can be empty for handle-only construction)
+        constructors: Tuple/List of constructor functions
         destructor: Destructor function (can be None)
-        methods: List of [name, func, bindSelf, paramAliases, retAlias]
+        methods: Tuple/List of (name, func, bindSelf, paramAliases, retAlias)
                  - name (str): Method name
                  - func (callable): Underlying C function
-                 - bindSelf (bool): Whether to pass self._handle as first param
-                 - paramAliases (list): List of pairs with 'name' and 'owner' values
-                 - retAlias (dict): Pair with 'name' and 'owner' values
+                 - bindSelf (bool): If True, pass self._handle; if False, make static method
+                 - paramAliases: tuple of Alias named tuples or tuples (name, owner)
+                 - retAlias: Alias named tuple or tuple (name, owner) or empty tuple
         invalid_value: Value representing an invalid/closed handle (default: 0)
     """
 
     class_name = cls.__name__
 
-    # 1. Add __init__ method
     def __init__(self, *args, **kwargs):
-        """
-        Initialize the wrapper. Supports two modes:
-        1. Direct handle construction: ClassName(handle, Ownership.OWNED/BORROWED)
-        2. Constructor call: ClassName(*constructor_args)
-        """
+        # Initialize to invalid state first (in case of exceptions)
+        self._handle = invalid_value
+        self._owned = Ownership.BORROWED
+
         # Check if this is handle + ownership construction
+        # Pattern: ClassName(handle_value, Ownership.OWNED/BORROWED)
         if len(args) >= 2 and isinstance(args[1], Ownership):
             self._handle = args[0]
             self._owned = args[1]
-        else:
-            # Constructor call
-            if len(constructors) == 0:
-                raise ValueError(f"{class_name} requires handle and ownership for construction")
-            elif len(constructors) == 1:
-                # Single constructor - call it directly
-                self._handle = constructors[0](*args, **kwargs)
-            else:
-                # Multiple constructors - first arg should be the constructor function
-                if len(args) == 0:
-                    raise ValueError(
-                        f"{class_name} with multiple constructors requires constructor function as first argument")
-                func = args[0]
-                if func not in constructors:
-                    raise ValueError(f"Invalid constructor function for {class_name}")
-                self._handle = func(*args[1:], **kwargs)
+            return
 
-            self._owned = Ownership.OWNED
+        # Constructor call mode
+        if len(constructors) == 0:
+            raise ValueError(f"{class_name} requires handle and ownership for construction")
+
+        # Try constructors
+        last_error = None
+        for constructor in constructors:
+            try:
+                self._handle = constructor(*args, **kwargs)
+                self._owned = Ownership.OWNED
+                return  # Success!
+            except Exception as e:
+                last_error = e
+                continue
+
+        # If we get here, all constructors failed
+        if last_error:
+            raise last_error
+        else:
+            raise ValueError(f"No constructor matched the arguments for {class_name}")
 
     cls.__init__ = __init__
 
-    # 2. Add lifecycle methods (close, __del__, __enter__, __exit__)
     def close(self):
         """Close/destroy the handle if owned."""
+        # Protect against being called before __init__ completes or on already-closed handles
+        if not hasattr(self, '_handle'):
+            return
+
         if self._handle != invalid_value and self._owned == Ownership.OWNED:
             if destructor is not None:
                 destructor(self._handle)
@@ -347,9 +351,10 @@ def bind_class_methods(
 
     cls.__exit__ = __exit__
 
-    # 3. Add utility methods (release, reset, get, valid)
     def release(self) -> Any:
         """Release ownership of the handle and return it."""
+        if not hasattr(self, '_handle'):
+            return invalid_value
         tmp = self._handle
         self._handle = invalid_value
         self._owned = Ownership.BORROWED
@@ -365,20 +370,23 @@ def bind_class_methods(
 
     def get(self) -> Any:
         """Get the raw handle value without transferring ownership."""
+        if not hasattr(self, '_handle'):
+            return invalid_value
         return self._handle
 
     cls.get = get
 
     def valid(self) -> bool:
         """Check if the handle is valid."""
+        if not hasattr(self, '_handle'):
+            return False
         return self._handle != invalid_value
 
     cls.valid = valid
 
-    # Register this class for retAlias lookups
     _class_registry[class_name] = cls
 
-    # 4. Add bound methods from the methods list
+    # Process methods
     for method_info in methods:
         method_name = method_info[0]
         func = method_info[1]
@@ -386,68 +394,75 @@ def bind_class_methods(
         param_aliases = method_info[3]
         ret_alias = method_info[4]
 
-        # Create the bound method with closure over parameters
-        def create_method(
-                func: Callable,
-                bind_self: bool,
-                param_aliases: Optional[List[Tuple[str, bool]]],
-                ret_alias: Optional[Tuple[str, bool]],
-                method_name: str
-        ):
-            def method(self, *args, **kwargs):
-                # Check if handle is valid
-                if self._handle == invalid_value:
-                    raise RuntimeError(f"{class_name} handle is closed")
+        # Helper to handle return value wrapping
+        def wrap_return(result, ret_alias, invalid_value):
+            if ret_alias and len(ret_alias) >= 2:
+                ret_class_name = ret_alias[0] if isinstance(ret_alias, tuple) else ret_alias.name
+                owner = ret_alias[1] if isinstance(ret_alias, tuple) else ret_alias.owner
+                ownership = Ownership.OWNED if owner else Ownership.BORROWED
 
-                # Process arguments - convert to list for modification
-                args_list = list(args)
+                ret_class = _class_registry.get(ret_class_name)
+                if not ret_class:
+                    import sys
+                    frame = sys._getframe(2)  # Go up 2 frames
+                    while frame:
+                        if ret_class_name in frame.f_globals:
+                            ret_class = frame.f_globals[ret_class_name]
+                            _class_registry[ret_class_name] = ret_class
+                            break
+                        frame = frame.f_back
 
-                # Handle paramAliases - extract handles from wrapper objects
-                if param_aliases:
-                    for i, alias_info in enumerate(param_aliases):
-                        if alias_info and i < len(args_list):
-                            alias_name = alias_info[0]
-                            owner = alias_info[1]
+                if ret_class and result != invalid_value:
+                    return ret_class(result, ownership)
+                elif result == invalid_value:
+                    return None
 
-                            if alias_name and args_list[i] is not None:
-                                arg = args_list[i]
-                                # Check if the argument has the expected methods
-                                if hasattr(arg, 'release') and hasattr(arg, 'get'):
-                                    if owner:
-                                        # Transfer ownership - use release()
-                                        args_list[i] = arg.release()
-                                    else:
-                                        # Borrow - use get()
-                                        args_list[i] = arg.get()
+            return result
 
-                # Call the underlying function
-                if bind_self:
-                    # Pass self._handle as first parameter
-                    result = func(self._handle, *args_list, **kwargs)
-                else:
-                    # Don't pass self._handle
+        # Helper to process parameter aliases
+        def process_param_aliases(args, param_aliases):
+            args_list = list(args)
+            for i, alias_info in enumerate(param_aliases):
+                if alias_info and len(alias_info) >= 2 and i < len(args_list):
+                    alias_name = alias_info[0] if isinstance(alias_info, tuple) else alias_info.name
+                    owner = alias_info[1] if isinstance(alias_info, tuple) else alias_info.owner
+
+                    if alias_name and args_list[i] is not None:
+                        arg = args_list[i]
+                        if hasattr(arg, 'release') and hasattr(arg, 'get'):
+                            if owner:
+                                args_list[i] = arg.release()
+                            else:
+                                args_list[i] = arg.get()
+            return args_list
+
+        if not bind_self:
+            # Static method - doesn't need self or handle
+            def create_static_method(func, param_aliases, ret_alias, method_name, invalid_value):
+                def static_method(*args, **kwargs):
+                    args_list = process_param_aliases(args, param_aliases)
                     result = func(*args_list, **kwargs)
+                    return wrap_return(result, ret_alias, invalid_value)
 
-                # Handle retAlias - wrap return value in class
-                if ret_alias:
-                    ret_name = ret_alias[0]
-                    owner = ret_alias[1]
+                static_method.__name__ = method_name
+                return staticmethod(static_method)
 
-                    # Look up the class
-                    ret_class = _class_registry.get(ret_name)
-                    if ret_class and result != invalid_value:
-                        ownership = Ownership.OWNED if owner else Ownership.BORROWED
-                        return ret_class(result, ownership)
-                    elif result == invalid_value:
-                        return None
+            setattr(cls, method_name, create_static_method(func, param_aliases, ret_alias, method_name, invalid_value))
 
-                return result
+        else:
+            # Instance method - binds self._handle
+            def create_method(func, param_aliases, ret_alias, method_name, invalid_value, class_name):
+                def method(self, *args, **kwargs):
+                    if self._handle == invalid_value:
+                        raise RuntimeError(f"{class_name} handle is closed")
 
-            # Preserve function name for better debugging
-            method.__name__ = method_name
-            return method
+                    args_list = process_param_aliases(args, param_aliases)
+                    result = func(self._handle, *args_list, **kwargs)
+                    return wrap_return(result, ret_alias, invalid_value)
 
-        # Bind the method to the class
-        setattr(cls, method_name, create_method(func, bind_self, param_aliases, ret_alias, method_name))
+                method.__name__ = method_name
+                return method
+
+            setattr(cls, method_name, create_method(func, param_aliases, ret_alias, method_name, invalid_value, class_name))
 
     return cls

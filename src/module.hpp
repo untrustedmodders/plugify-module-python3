@@ -150,6 +150,7 @@ namespace py3lm {
 		PythonType GetObjectType(PyObject* type) const;
 		PyObject* GetEnumObject(const EnumObject& enumerator, int64_t value) const;
 		void CreateEnumObject(const EnumObject& enumerator, PyObject* moduleDict);
+		void CreateClassObject(const Class& classInfo, PyObject* moduleDict);
 		void ResolveRequiredModule(std::string_view moduleName);
 		std::vector<std::string> ExtractRequiredModules(const std::string& modulePath);
 

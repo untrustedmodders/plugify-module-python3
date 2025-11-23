@@ -1,6 +1,9 @@
+import gc
+import os
 import sys
 from plugify.plugin import Plugin, Vector2, Vector3, Vector4, Matrix4x4
 from plugify.pps import (cross_call_master as master)
+#import cross_call_master as master
 
 
 def bool_str(b):
@@ -69,8 +72,8 @@ def pod_to_string(pod):
 # <<< Test part >>>
 
 class CrossCallWorker(Plugin):
-	def plugin_start(self):
-		print('CrossCallWorker::plugin_start')
+    def plugin_start(self):
+        print('CrossCallWorker::plugin_start')
 
 
 def no_param_return_void():
@@ -372,7 +375,7 @@ def param_enum(p1, p2):
 def param_enum_ref(p1, p2):
     e = master.Example
     p1 = e.Forth
-    p2 = [e.First, e.Second, Example.Third]
+    p2 = [e.First, e.Second, e.Third]
     return p1 + sum(p2), p1, p2
 
 
@@ -1908,7 +1911,7 @@ class CallbackHolder:
 
     @staticmethod
     def mock_func33(variant):
-        variant = "MockFunc33";
+        variant = "MockFunc33"
         return None, variant
     
     
@@ -2294,6 +2297,187 @@ def reverse_call_func_enum():
     return result
 
 
+def log(message: str) -> None:
+    """Only logs in debug mode"""
+    if os.getenv('VERBOSE'):
+        print(message)
+
+
+def basic_lifecycle() -> str:
+    log("TEST 1: Basic Lifecycle")
+    log("───────────────────────")
+
+    initial_alive = master.ResourceHandle.GetAliveCount()
+    initial_created = master.ResourceHandle.GetTotalCreated()
+
+    with master.ResourceHandle(1, "Test1") as resource:
+        log(f"v Created ResourceHandle ID: {resource.GetId()}")
+        log(f"v Alive count increased: {master.ResourceHandle.GetAliveCount()}")
+
+    final_alive = master.ResourceHandle.GetAliveCount()
+    final_created = master.ResourceHandle.GetTotalCreated()
+    final_destroyed = master.ResourceHandle.GetTotalDestroyed()
+
+    log(f"v Destructor called, alive count: {final_alive}")
+    log(f"v Total created: {final_created - initial_created}")
+    log(f"v Total destroyed: {final_destroyed}")
+
+    if final_alive == initial_alive and final_created == final_destroyed:
+        log("v TEST 1 PASSED: Lifecycle working correctly\n")
+        return "true"
+    else:
+        log("x TEST 1 FAILED: Lifecycle mismatch!\n")
+        return "false"
+
+
+def state_management() -> str:
+    log("TEST 2: State Management")
+    log("────────────────────────")
+
+    with master.ResourceHandle(2, "StateTest") as resource:
+        resource.IncrementCounter()
+        resource.IncrementCounter()
+        resource.IncrementCounter()
+        counter = resource.GetCounter()
+        log(f"v Counter incremented 3 times: {counter}")
+
+        resource.SetName("StateTestModified")
+        new_name = resource.GetName()
+        log(f"v Name changed to: {new_name}")
+
+        resource.AddData(1.1)
+        resource.AddData(2.2)
+        resource.AddData(3.3)
+        data = resource.GetData()
+        log(f"v Added {len(data)} data points")
+
+        if counter == 3 and new_name == "StateTestModified" and len(data) == 3:
+            log("v TEST 2 PASSED: State management working\n")
+            return "true"
+        else:
+            log("x TEST 2 FAILED: State not preserved!\n")
+            return "false"
+
+
+def multiple_instances() -> str:
+    log("TEST 3: Multiple Instances")
+    log("──────────────────────────")
+
+    before_alive = master.ResourceHandle.GetAliveCount()
+
+    with master.ResourceHandle(10, "Instance1") as r1, \
+            master.ResourceHandle(20, "Instance2") as r2, \
+            master.ResourceHandle() as r3:
+
+        during_alive = master.ResourceHandle.GetAliveCount()
+        log(f"v Created 3 instances, alive: {during_alive}")
+        log(f"v R1 ID: {r1.GetId()}, R2 ID: {r2.GetId()}, R3 ID: {r3.GetId()}")
+
+        if during_alive - before_alive == 3:
+            log("v All 3 instances tracked correctly")
+
+    after_alive = master.ResourceHandle.GetAliveCount()
+
+    if after_alive == before_alive:
+        log("v TEST 3 PASSED: All instances destroyed properly\n")
+        return "true"
+    else:
+        log(f"x TEST 3 FAILED: Leak detected! Before: {before_alive}, After: {after_alive}\n")
+        return "false"
+
+
+def counter_without_destructor() -> str:
+    log("TEST 4: Counter (No Destructor)")
+    log("────────────────────────────────")
+
+    counter = master.Counter(100)
+    log(f"v Created Counter with value: {counter.GetValue()}")
+
+    counter.Increment()
+    counter.Increment()
+    counter.Add(50)
+    value = counter.GetValue()
+    log(f"v After operations, value: {value}")
+
+    is_positive = counter.IsPositive()
+    log(f"v Is positive: {is_positive}")
+
+    if value == 152 and is_positive:
+        log("v TEST 4 PASSED: Counter operations working\n")
+        return "true"
+    else:
+        log("x TEST 4 FAILED: Counter operations incorrect\n")
+        return "false"
+
+
+def static_methods() -> str:
+    log("TEST 5: Static Methods")
+    log("──────────────────────")
+
+    alive = master.ResourceHandle.GetAliveCount()
+    created = master.ResourceHandle.GetTotalCreated()
+    destroyed = master.ResourceHandle.GetTotalDestroyed()
+    log(f"v ResourceHandle stats - Alive: {alive}, Created: {created}, Destroyed: {destroyed}")
+
+    cmp1 = master.Counter.Compare(100, 50)
+    cmp2 = master.Counter.Compare(50, 100)
+    cmp3 = master.Counter.Compare(50, 50)
+    log(f"v Counter.Compare(100, 50) = {cmp1} (expected 1)")
+    log(f"v Counter.Compare(50, 100) = {cmp2} (expected -1)")
+    log(f"v Counter.Compare(50, 50) = {cmp3} (expected 0)")
+
+    sum_result = master.Counter.Sum([1, 2, 3, 4, 5])
+    log(f"v Counter.Sum([1,2,3,4,5]) = {sum_result} (expected 15)")
+
+    if cmp1 == 1 and cmp2 == -1 and cmp3 == 0 and sum_result == 15:
+        log("v TEST 5 PASSED: Static methods working\n")
+        return "true"
+    else:
+        log("x TEST 5 FAILED: Static methods incorrect\n")
+        return "false"
+
+
+def memory_leak_detection() -> str:
+    log("TEST 6: Memory Leak Detection")
+    log("──────────────────────────────")
+
+    before_alive = master.ResourceHandle.GetAliveCount()
+
+    leaked = master.ResourceHandle(999, "IntentionalLeak")
+    log(f"v Created resource ID: {leaked.GetId()}")
+    leaked = None
+
+    gc.collect()
+
+    after_alive = master.ResourceHandle.GetAliveCount()
+
+    log(f"v Before leak test: {before_alive} alive")
+    log(f"v After GC: {after_alive} alive")
+
+    if after_alive == before_alive:
+        log("v TEST 6 PASSED: Finalizer cleaned up leaked resource\n")
+        return "true"
+    else:
+        log("x TEST 6 FAILED: Resource still alive (will be cleaned at plugin shutdown)\n")
+        return "false"
+
+
+def exception_handling() -> str:
+    log("TEST 7: Exception Handling")
+    log("──────────────────────────")
+
+    resource = master.ResourceHandle(777, "ExceptionTest")
+    resource.__exit__(None, None, None)
+
+    try:
+        resource.GetId()
+        log("x TEST 7 FAILED: No exception thrown!\n")
+        return "false"
+    except RuntimeError as ex:
+        log(f"v Caught expected exception: {type(ex).__name__}")
+        log("v TEST 7 PASSED: Exception handling working\n")
+        return "true"
+
 reverse_test = {
     'NoParamReturnVoid': reverse_no_param_return_void,
     'NoParamReturnBool': reverse_no_param_return_bool,
@@ -2434,6 +2618,14 @@ reverse_test = {
     'CallFunc32': reverse_call_func32,
     'CallFunc33': reverse_call_func33,
     'CallFuncEnum': reverse_call_func_enum,
+
+    'ClassBasicLifecycle':           basic_lifecycle,
+    'ClassStateManagement':          state_management,
+    'ClassMultipleInstances':        multiple_instances,
+    'ClassCounterWithoutDestructor': counter_without_destructor,
+    'ClassStaticMethods':            static_methods,
+    'ClassMemoryLeakDetection':      memory_leak_detection,
+    'ClassExceptionHandling':        exception_handling,
 }
 
 
