@@ -1826,7 +1826,6 @@ namespace py3lm {
 						ParamConvertionFunc const convertFunc = paramType.GetEnumerate() ?
 							(paramType.IsRef() ? &ParamRefToEnumObject : &ParamToEnumObject) :
 							(paramType.IsRef() ? &ParamRefToObject : &ParamToObject);
-						convertFunc(paramType, params, index);
 						PyObject* const arg = convertFunc(paramType, params, index);
 						if (!arg) {
 							// convertFunc may set error
@@ -3048,21 +3047,21 @@ namespace py3lm {
 			return value;
 		}
 
-		void GenerateEnum(const Method& method, PyObject* moduleDict);
+		void CreateEnumObject(const Method& method, PyObject* moduleDict);
 
-		void GenerateEnum(const Property& paramType, PyObject* moduleDict) {
+		void CreateEnumObject(const Property& paramType, PyObject* moduleDict) {
 			if (const auto prototype = paramType.GetPrototype()) {
-				GenerateEnum(*prototype, moduleDict);
+				CreateEnumObject(*prototype, moduleDict);
 			}
 			if (const auto enumerator = paramType.GetEnumerate()) {
-				g_py3lm.CreateEnumObject(*enumerator, moduleDict);
+				g_py3lm.CreateEnumsObject(*enumerator, moduleDict);
 			}
 		}
 
-		void GenerateEnum(const Method& method, PyObject* moduleDict) {
-			GenerateEnum(method.GetRetType(), moduleDict);
+		void CreateEnumObject(const Method& method, PyObject* moduleDict) {
+			CreateEnumObject(method.GetRetType(), moduleDict);
 			for (const auto& paramType : method.GetParamTypes()) {
-				GenerateEnum(paramType, moduleDict);
+				CreateEnumObject(paramType, moduleDict);
 			}
 		}
 
@@ -3621,9 +3620,15 @@ namespace py3lm {
 		}
 	}
 
-	std::vector<std::string> Python3LanguageModule::ExtractRequiredModules(const std::string& modulePath) {
+	std::vector<std::string> Python3LanguageModule::ExtractRequiredModules(std::string_view modulePath) {
 		std::vector<std::string> requiredModules;
-		PyObject* const result = PyObject_CallOneArg(_ExtractRequiredModulesObject, PyUnicode_FromString(modulePath.c_str()));
+		PyObject* const pathArg = CreatePyObject(modulePath);
+		if (!pathArg) {
+			LogError();
+			return requiredModules;
+		}
+		PyObject* const result = PyObject_CallOneArg(_ExtractRequiredModulesObject, pathArg);
+		Py_DECREF(pathArg);
 
 		if (result) {
 			if (PySet_Check(result)) {
@@ -3698,7 +3703,7 @@ namespace py3lm {
 			return MakeError("Failed to import '{}' module", moduleName);
 		}
 
-		PyObject* const classNameString = PyUnicode_FromStringAndSize(className.data(), static_cast<Py_ssize_t>(className.size()));
+		PyObject* const classNameString = CreatePyObject(className);
 		if (!classNameString) {
 			Py_DECREF(pluginModule);
 			return MakeError("Allocate class name string failed");
@@ -3818,7 +3823,6 @@ namespace py3lm {
 				continue;
 			}
 			methodsHolders.emplace_back(method, std::move(*generateResult));
-			GenerateEnum(method, pluginDict);
 		}
 
 		PyObject* updatePlugin = PyObject_GetAttrString(pluginInstance, "plugin_update");
@@ -3846,11 +3850,6 @@ namespace py3lm {
 			Py_DECREF(pluginInstance);
 			Py_DECREF(pluginModule);
 			return MakeError("Invalid methods:\n{}", plg::join(exportErrors, "\n"));
-		}
-
-		const auto& exportedClasses = plugin.GetClasses();
-		for (const auto & exportedClass : exportedClasses) {
-			CreateClassObject(exportedClass, pluginDict);
 		}
 
 		const auto [it, result] = _pluginsMap.try_emplace(plugin.GetId(), pluginModule, pluginInstance, updatePlugin, startPlugin, endPlugin);
@@ -3881,16 +3880,19 @@ namespace py3lm {
 			LogError();
 			_provider->Log(std::format(LOG_PREFIX "{}: call of 'plugin_start' failed", plugin.GetName()), Severity::Error);
 		}
+		Py_DECREF(returnObject);
 	}
 
 	void Python3LanguageModule::OnPluginUpdate(const Extension& plugin, std::chrono::milliseconds dt) {
 		GILLock lock{};
 		PyObject* const deltaTime = CreatePyObject(std::chrono::duration<float>(dt).count());
 		PyObject* const returnObject = PyObject_CallOneArg(plugin.GetUserData().RCast<PluginData*>()->update, deltaTime);
+		Py_DECREF(deltaTime);
 		if (!returnObject) {
 			LogError();
 			_provider->Log(std::format(LOG_PREFIX "{}: call of 'plugin_update' failed", plugin.GetName()), Severity::Error);
 		}
+		Py_DECREF(returnObject);
 	}
 
 	void Python3LanguageModule::OnPluginEnd(const Extension& plugin) {
@@ -3900,6 +3902,7 @@ namespace py3lm {
 			LogError();
 			_provider->Log(std::format(LOG_PREFIX "{}: call of 'plugin_end' failed", plugin.GetName()), Severity::Error);
 		}
+		Py_DECREF(returnObject);
 	}
 
 	bool Python3LanguageModule::IsDebugBuild() {
@@ -4385,7 +4388,7 @@ namespace py3lm {
 			}
 			[[maybe_unused]] const auto res = PyDict_SetItemString(moduleDict, method.GetName().c_str(), methodObject);
 			assert(res  == 0);
-			GenerateEnum(method, moduleDict);
+			CreateEnumObject(method, moduleDict);
 		}
 
 		for (const auto & exportedClass : plugin.GetClasses()) {
@@ -4448,7 +4451,7 @@ namespace py3lm {
 		PyModule_AddFunctions(moduleObject, moduleMethods.data());
 
 		for (const auto& method : plugin.GetMethods()) {
-			GenerateEnum(method, moduleDict);
+			CreateEnumObject(method, moduleDict);
 		}
 
 		for (const auto & exportedClass : plugin.GetClasses()) {
@@ -4587,7 +4590,7 @@ namespace py3lm {
         Py_DECREF(result);
 	}
 
-	void Python3LanguageModule::CreateEnumObject(const EnumObject& enumerator, PyObject* moduleDict) {
+	void Python3LanguageModule::CreateEnumsObject(const EnumObject& enumerator, PyObject* moduleDict) {
 		PyObject* enumClass = PyDict_GetItemString(moduleDict, enumerator.GetName().c_str());
 		if (enumClass) {
 			const auto it = _internalEnumMap.find(enumClass);
@@ -4604,7 +4607,9 @@ namespace py3lm {
 
 		PyObject* constantsDict = PyDict_New();
 		for (const auto& value : values) {
-			[[maybe_unused]] const auto res = PyDict_SetItemString(constantsDict, value.GetName().c_str(), PyLong_FromLongLong(value.GetValue()));
+			PyObject* const pyValue = PyLong_FromLongLong(value.GetValue());
+			[[maybe_unused]] const auto res = PyDict_SetItemString(constantsDict, value.GetName().c_str(), pyValue);
+			Py_DECREF(pyValue);
 			assert(res == 0);
 		}
 
@@ -4626,7 +4631,9 @@ namespace py3lm {
 		auto& enumMap = it->second;
 		for (const auto& value : values) {
 			const int64_t i = value.GetValue();
-			(*enumMap)[i] = PyObject_CallOneArg(enumClass, CreatePyObject(i));
+			PyObject* const pyIndex = CreatePyObject(i);
+			(*enumMap)[i] = PyObject_CallOneArg(enumClass, pyIndex);
+			Py_DECREF(pyIndex);
 		}
 
 		_internalEnumMap.try_emplace(enumClass, enumMap);
@@ -4655,12 +4662,18 @@ namespace py3lm {
 		if (it != _typeMap.end()) {
 			return std::get<PythonType>(*it);
 		}
-		const char* name;
+		const char* name = "Unknown";
 		if (pytype != nullptr) {
 			PyObject* const typeName = PyType_GetName(pytype);
-			name = PyUnicode_AsUTF8(typeName);
-		} else {
-			name = "Invalid";
+			if (typeName) {
+				const char* utf8Name = PyUnicode_AsUTF8(typeName);
+				if (utf8Name) {
+					// Note: We use pytype->tp_name which is a stable pointer owned by the type object
+					// instead of the temporary string from PyType_GetName
+					name = pytype->tp_name ? pytype->tp_name : "Unknown";
+				}
+				Py_DECREF(typeName);
+			}
 		}
 		return { PyAbstractType::Invalid, name };
 	}
