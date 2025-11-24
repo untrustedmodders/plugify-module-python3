@@ -4244,6 +4244,7 @@ namespace py3lm {
 			if (!methodObject) {
 				_provider->Log(std::format(LOG_PREFIX "Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
 				std::terminate();
+				return nullptr;
 			}
 			[[maybe_unused]] const auto res = PyDict_SetItemString(moduleDict, method.GetName().c_str(), methodObject);
 			assert(res  == 0);
@@ -4261,8 +4262,8 @@ namespace py3lm {
 
 			const MemAddr callAddr = call.GetJitFunc(method, addr);
 			if (!callAddr) {
-				const std::string error(std::format("Lang module JIT failed to generate c++ call wrapper '{}'", call.GetError()));
-				PyErr_SetString(PyExc_RuntimeError, error.c_str());
+				_provider->Log(std::format(LOG_PREFIX "Lang module JIT failed to generate c++ call wrapper '{}'", call.GetError()), Severity::Fatal);
+				std::terminate();
 				return nullptr;
 			}
 
@@ -4277,8 +4278,11 @@ namespace py3lm {
 
 			// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			const MemAddr methodAddr = callback.GetJitFunc(sig, &method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
-			if (!methodAddr)
-				break;
+			if (!methodAddr) {
+				_provider->Log(std::format(LOG_PREFIX "Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", callback.GetError()), Severity::Fatal);
+				std::terminate();
+				return nullptr;
+			}
 
 			PyMethodDef& def = moduleMethods.emplace_back();
 			def.ml_name = method.GetName().c_str();
@@ -4302,7 +4306,7 @@ namespace py3lm {
 
 		PyModule_AddFunctions(moduleObject, moduleMethods.data());
 
-		for (const auto& [method, _] : plugin.GetMethodsData()) {
+		for (const auto& method : plugin.GetMethods()) {
 			GenerateEnum(method, moduleDict);
 		}
 
