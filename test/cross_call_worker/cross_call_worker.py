@@ -2478,6 +2478,48 @@ def exception_handling() -> str:
         log("v TEST 7 PASSED: Exception handling working\n")
         return "true"
 
+
+def ownership_transfer() -> str:
+    log("TEST 7: Ownership Transfer (get + release)")
+    log("─────────────────────────────────────────")
+
+    initial_alive = master.ResourceHandle.GetAliveCount()
+    initial_created = master.ResourceHandle.GetTotalCreated()
+
+    resource = master.ResourceHandle(42, "OwnershipTest")
+    log(f"v Created ResourceHandle ID: {resource.GetId()}")
+
+    # Get internal wrapper (simulate internal pointer access)
+    wrapper = resource.get()
+    log(f"v get() returned internal wrapper: {wrapper}")
+
+    # Release ownership
+    handle = resource.release()
+    log(f"v release() returned handle: {handle}")
+
+    if wrapper != handle:  # adjust class type if different
+        log(f"x TEST 7 FAILED: get() did not return internal wrapper, got {type(wrapper)}")
+        return "false"
+
+    try:
+        resource.GetId()
+        log("x TEST 7 FAILED: ResourceHandle still accessible after release()")
+        return "false"
+    except RuntimeError:
+        log("v ResourceHandle is invalid after release()")
+
+    # Check that handle is now owned externally and alive count updated correctly
+    alive_after_release = master.ResourceHandle.GetAliveCount()
+    if alive_after_release != initial_alive + 1:
+        log(f"x TEST 7 FAILED: Alive count mismatch after release. Expected {initial_alive+1}, got {alive_after_release}")
+        return "false"
+
+    master.ResourceHandleDestroy(handle)
+
+    log("v TEST 8 PASSED: Ownership transfer working correctly\n")
+    return "true"
+
+
 reverse_test = {
     'NoParamReturnVoid': reverse_no_param_return_void,
     'NoParamReturnBool': reverse_no_param_return_bool,
@@ -2619,13 +2661,14 @@ reverse_test = {
     'CallFunc33': reverse_call_func33,
     'CallFuncEnum': reverse_call_func_enum,
 
-    'ClassBasicLifecycle':           basic_lifecycle,
-    'ClassStateManagement':          state_management,
-    'ClassMultipleInstances':        multiple_instances,
+    'ClassBasicLifecycle': basic_lifecycle,
+    'ClassStateManagement': state_management,
+    'ClassMultipleInstances': multiple_instances,
     'ClassCounterWithoutDestructor': counter_without_destructor,
-    'ClassStaticMethods':            static_methods,
-    'ClassMemoryLeakDetection':      memory_leak_detection,
-    'ClassExceptionHandling':        exception_handling,
+    'ClassStaticMethods': static_methods,
+    'ClassMemoryLeakDetection': memory_leak_detection,
+    'ClassExceptionHandling': exception_handling,
+    'ClassOwnershipTransfer': ownership_transfer,
 }
 
 
