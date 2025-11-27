@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.0.11](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.10...v2.0.11) (2025-11-27)
+
+
+### Bug Fixes
+
+* add initial method for class bind ([135d30b](https://github.com/untrustedmodders/plugify-module-python3/commit/135d30b89527f42bdfc4bf9723fe7d5111b79e58))
+* change success/fail symbols ([1ec51e3](https://github.com/untrustedmodders/plugify-module-python3/commit/1ec51e38c42402f2befb468f2532d8c9267eed36))
+* improve error handing on fatal jit generation ([e6a3082](https://github.com/untrustedmodders/plugify-module-python3/commit/e6a3082bac6ddd58bcf442d92f172f31bdb5d2ce))
+* leaks on finalize ([0627a67](https://github.com/untrustedmodders/plugify-module-python3/commit/0627a672f0606e715418becde019b7d3a1b1cd12))
+* matrix4x4 formatting ([c95cf2c](https://github.com/untrustedmodders/plugify-module-python3/commit/c95cf2c3c6e0b851ab2ab3f8899ccf4d230bb89c))
+* rework class generation ([355235a](https://github.com/untrustedmodders/plugify-module-python3/commit/355235a2b055c0c89d709ec2144102f552bf02ce))
+* update deps ([bb3c817](https://github.com/untrustedmodders/plugify-module-python3/commit/bb3c817f9e60f7125e2717a78e58b2415e6de944))
+* update notify ([782b919](https://github.com/untrustedmodders/plugify-module-python3/commit/782b919860f3f53e3c207f70658fcaed80df0ae9))
+
 ## [2.0.10](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.9...v2.0.10) (2025-10-06)
 
 
