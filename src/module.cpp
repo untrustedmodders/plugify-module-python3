@@ -3065,46 +3065,44 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* GetInvalidValueForType(ValueType type, std::string_view invalidValue) {
+		PyObject* GetInvalidValueForType(ValueType handleType, std::string_view invalidValue) {
 			if (!invalidValue.empty()) {
-				// Try to parse as number
-				if (invalidValue.contains('.')) {
-					if (const auto val = plg::cast_to<double>(invalidValue)) {
-						return CreatePyObject(*val);
-					}
+				// Single numeric parse path
+				auto parseInteger = [&]() -> std::optional<int64_t> {
+					return plg::cast_to<int64_t>(invalidValue);
+				};
+				auto parseFloat = [&]() -> std::optional<double> {
+					return plg::cast_to<double>(invalidValue);
+				};
+
+				const bool isFloat = invalidValue.contains('.') ||
+									 handleType == ValueType::Float ||
+									 handleType == ValueType::Double;
+
+				if (isFloat) {
+					if (auto v = parseFloat()) return CreatePyObject(*v);
 				} else {
-					if (const auto val = plg::cast_to<int64_t>(invalidValue)) {
-						return CreatePyObject(*val);
-					}
+					if (auto v = parseInteger()) return CreatePyObject(*v);
 				}
 
-				// Return as string if parsing fails
 				return CreatePyObject(invalidValue);
 			}
 
-			// Default invalid values based on type
-			switch (type) {
-				case ValueType::Pointer:
-					return CreatePyObject(static_cast<void*>(nullptr));
-				case ValueType::Int64:
-					return CreatePyObject(0LL);
-				case ValueType::UInt64:
-					return CreatePyObject(0ULL);
-				case ValueType::UInt32:
-				case ValueType::UInt16:
-				case ValueType::UInt8:
-					return CreatePyObject(0U);
-				case ValueType::Int32:
-				case ValueType::Int16:
-				case ValueType::Int8:
-					return CreatePyObject(0);
-				case ValueType::Bool:
-					return CreatePyObject(false);
-				case ValueType::String:
-					return CreatePyObject(std::string_view(""));
-				default: {
-					return CreatePyObject();
-				}
+			switch (handleType) {
+				case ValueType::Bool:		return CreatePyObject(false);
+				case ValueType::Int8:		return CreatePyObject(int8_t{0});
+				case ValueType::Int16:		return CreatePyObject(int16_t{0});
+				case ValueType::Int32:		return CreatePyObject(int32_t{0});
+				case ValueType::Int64:		return CreatePyObject(int64_t{0});
+				case ValueType::UInt8:		return CreatePyObject(uint8_t{0});
+				case ValueType::UInt16:		return CreatePyObject(uint16_t{0});
+				case ValueType::UInt32:		return CreatePyObject(uint32_t{0});
+				case ValueType::UInt64:		return CreatePyObject(uint64_t{0});
+				case ValueType::Float:		return CreatePyObject(float{0});
+				case ValueType::Double:		return CreatePyObject(double{0});
+				case ValueType::Pointer:	return CreatePyObject(static_cast<void*>(nullptr));
+				case ValueType::String:		return CreatePyObject(std::string_view(""));
+				default:					return CreatePyObject();
 			}
 		}
 
@@ -3150,7 +3148,9 @@ namespace py3lm {
 			PyObject* func = PyDict_GetItemString(moduleDict, methodName.c_str());
 			if (!func) {
 				PyErr_Clear();
-				func = Py_None;
+				g_py3lm.GetProvider()->Log(std::format(LOG_PREFIX "Method function not found: {}", binding.GetMethod()), Severity::Fatal);
+				Py_DECREF(tuple);
+				return nullptr;
 			}
 			Py_INCREF(func);
 			PyTuple_SET_ITEM(tuple, Py_ssize_t{ 1 }, func);
@@ -4384,15 +4384,14 @@ namespace py3lm {
 			if (!methodObject) {
 				_provider->Log(std::format(LOG_PREFIX "Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
 				std::terminate();
-				return nullptr;
 			}
 			[[maybe_unused]] const auto res = PyDict_SetItemString(moduleDict, method.GetName().c_str(), methodObject);
 			assert(res  == 0);
 			CreateEnumObject(method, moduleDict);
 		}
 
-		for (const auto & exportedClass : plugin.GetClasses()) {
-			CreateClassObject(exportedClass, moduleDict);
+		for (const auto& cls : plugin.GetClasses()) {
+			CreateClassObject(cls, moduleDict);
 		}
 
 		return moduleObject;
@@ -4408,7 +4407,6 @@ namespace py3lm {
 			if (!callAddr) {
 				_provider->Log(std::format(LOG_PREFIX "Lang module JIT failed to generate c++ call wrapper '{}'", call.GetError()), Severity::Fatal);
 				std::terminate();
-				return nullptr;
 			}
 
 			JitCallback callback{};
@@ -4425,7 +4423,6 @@ namespace py3lm {
 			if (!methodAddr) {
 				_provider->Log(std::format(LOG_PREFIX "Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", callback.GetError()), Severity::Fatal);
 				std::terminate();
-				return nullptr;
 			}
 
 			PyMethodDef& def = moduleMethods.emplace_back();
@@ -4454,83 +4451,85 @@ namespace py3lm {
 			CreateEnumObject(method, moduleDict);
 		}
 
-		for (const auto & exportedClass : plugin.GetClasses()) {
-			CreateClassObject(exportedClass, moduleDict);
+		for (const auto& cls : plugin.GetClasses()) {
+			CreateClassObject(cls, moduleDict);
 		}
 
 		return moduleObject;
 	}
 
-	void Python3LanguageModule::CreateClassObject(const Class& classInfo, PyObject* moduleDict) {
-        const std::string& className = classInfo.GetName();
+	void Python3LanguageModule::CreateClassObject(const Class& cls, PyObject* moduleDict) {
+		const std::string& className = cls.GetName();
 
-        // 1. Get or create the class object
-        PyObject* classObj = PyDict_GetItemString(moduleDict, className.c_str());
-        if (!classObj) {
-            // Class doesn't exist, create an empty one
-            PyErr_Clear();
+		// 1. Get or create the class object
+		PyObject* classObj = PyDict_GetItemString(moduleDict, className.c_str());
+		if (!classObj) {
+			// Class doesn't exist, create an empty one
+			PyErr_Clear();
 
-            // Create empty class: type(name, bases, dict)
-            PyObject* const classNameString = PyUnicode_FromString(className.c_str());
-            PyObject* const bases = PyTuple_New(Py_ssize_t{ 0 });  // No base classes
-            PyObject* const classDict = PyDict_New();
+			// Create empty class: type(name, bases, dict)
+			PyObject* const classNameString = PyUnicode_FromString(className.c_str());
+			PyObject* const bases = PyTuple_New(Py_ssize_t{ 0 });  // No base classes
+			PyObject* const classDict = PyDict_New();
 
-            classObj = PyObject_CallFunctionObjArgs(
-                reinterpret_cast<PyObject *>(&PyType_Type),
-                classNameString,
-                bases,
-                classDict,
-                nullptr
-            );
+			classObj = PyObject_CallFunctionObjArgs(
+				reinterpret_cast<PyObject *>(&PyType_Type),
+				classNameString,
+				bases,
+				classDict,
+				nullptr
+			);
 
-            Py_DECREF(classNameString);
-            Py_DECREF(bases);
-            Py_DECREF(classDict);
+			Py_DECREF(classNameString);
+			Py_DECREF(bases);
+			Py_DECREF(classDict);
 
-            if (!classObj) {
-                return;
-            }
+			if (!classObj) {
+				return;
+			}
 
-            // Add class to module
-            PyDict_SetItemString(moduleDict, className.c_str(), classObj);
-        } else {
-        	Py_INCREF(classObj);
-        }
+			// Add class to module
+			PyDict_SetItemString(moduleDict, className.c_str(), classObj);
+		} else {
+			Py_INCREF(classObj);
+		}
 
-        // 2. Build constructors list
-        const auto& constructorNames = classInfo.GetConstructors();
-        PyObject* const constructorsTuple = PyTuple_New(static_cast<Py_ssize_t>(constructorNames.size()));
+		// 2. Build constructors list
+		const auto& constructorNames = cls.GetConstructors();
+		PyObject* const constructorsTuple = PyTuple_New(static_cast<Py_ssize_t>(constructorNames.size()));
 		if (!constructorsTuple) {
 			Py_DECREF(classObj);
 			return;
 		}
 		for (size_t i = 0; i < constructorNames.size(); ++i) {
-            PyObject* constructorFunc = PyDict_GetItemString(moduleDict, constructorNames[i].c_str());
-            if (!constructorFunc) {
-                PyErr_Clear();
-                constructorFunc = Py_None;
-            }
+			PyObject* constructorFunc = PyDict_GetItemString(moduleDict, constructorNames[i].c_str());
+			if (!constructorFunc) {
+				PyErr_Clear();
+				_provider->Log(std::format(LOG_PREFIX "Constructor function not found: {}", constructorNames[i]), Severity::Fatal);
+				return;
+			}
 			Py_INCREF(constructorFunc);
-            PyTuple_SET_ITEM(constructorsTuple, i, constructorFunc);
-        }
+			PyTuple_SET_ITEM(constructorsTuple, i, constructorFunc);
+		}
 
-        // 3. Get destructor function
-        PyObject* destructorFunc;
-        const std::string& destructorName = classInfo.GetDestructor();
-        if (!destructorName.empty()) {
-            destructorFunc = PyDict_GetItemString(moduleDict, destructorName.c_str());
-            if (!destructorFunc) {
-                PyErr_Clear();
-                destructorFunc = Py_None;
-            }
-        } else {
-        	destructorFunc = Py_None;
-        }
-        Py_INCREF(destructorFunc);
+		// 3. Get destructor function
+		PyObject* destructorFunc;
+		const std::string& destructorName = cls.GetDestructor();
+		if (!destructorName.empty()) {
+			destructorFunc = PyDict_GetItemString(moduleDict, destructorName.c_str());
+			if (!destructorFunc) {
+				PyErr_Print();
+				_provider->Log(std::format(LOG_PREFIX "Destructor function not found: {}", destructorName), Severity::Fatal);
+				return;
+			}
+		} else {
+			destructorFunc = Py_None;
+		}
+		Py_INCREF(destructorFunc);
 
-        // 4. Build methods list
-        const auto& bindings = classInfo.GetBindings();
-        PyObject* const methodsTuple = PyTuple_New(static_cast<Py_ssize_t>(bindings.size()));
+		// 4. Build methods list
+		const auto& bindings = cls.GetBindings();
+		PyObject* const methodsTuple = PyTuple_New(static_cast<Py_ssize_t>(bindings.size()));
 		if (!methodsTuple) {
 			Py_DECREF(destructorFunc);
 			Py_DECREF(constructorsTuple);
@@ -4538,7 +4537,7 @@ namespace py3lm {
 			return;
 		}
 		for (size_t i = 0; i < bindings.size(); ++i) {
-            PyObject* const bindingList = BindingToTuple(bindings[i], moduleDict);
+			PyObject* const bindingList = BindingToTuple(bindings[i], moduleDict);
 			if (!bindingList) {
 				// Clean up on error
 				Py_DECREF(methodsTuple);
@@ -4548,13 +4547,13 @@ namespace py3lm {
 				return;
 			}
 			PyTuple_SET_ITEM(methodsTuple, static_cast<Py_ssize_t>(i), bindingList);
-        }
+		}
 
-        // 5. Get invalid value
-        PyObject* const invalidValue = GetInvalidValueForType(
-            classInfo.GetHandleType(),
-            classInfo.GetInvalidValue()
-        );
+		// 5. Get invalid value
+		PyObject* const invalidValue = GetInvalidValueForType(
+			cls.GetHandleType(),
+			cls.GetInvalidValue()
+		);
 		if (!invalidValue) {
 			Py_DECREF(methodsTuple);
 			Py_DECREF(destructorFunc);
@@ -4563,8 +4562,8 @@ namespace py3lm {
 			return;
 		}
 
-        // 6. Call bind_class_methods(cls, constructors, destructor, methods, invalid_value)
-        PyObject* const args = PyTuple_New(Py_ssize_t{ 5 });
+		// 6. Call bind_class_methods(cls, constructors, destructor, methods, invalid_value)
+		PyObject* const args = PyTuple_New(Py_ssize_t{ 5 });
 		if (!args) {
 			Py_DECREF(invalidValue);
 			Py_DECREF(methodsTuple);
@@ -4574,24 +4573,26 @@ namespace py3lm {
 			return;
 		}
 		PyTuple_SET_ITEM(args, Py_ssize_t{ 0 }, classObj);
-        PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, constructorsTuple);
-        PyTuple_SET_ITEM(args, Py_ssize_t{ 2 }, destructorFunc);
-        PyTuple_SET_ITEM(args, Py_ssize_t{ 3 }, methodsTuple);
-        PyTuple_SET_ITEM(args, Py_ssize_t{ 4 }, invalidValue);
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 1 }, constructorsTuple);
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 2 }, destructorFunc);
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 3 }, methodsTuple);
+		PyTuple_SET_ITEM(args, Py_ssize_t{ 4 }, invalidValue);
 
-        PyObject* const result = PyObject_CallObject(_BindClassMethodsObject, args);
-        Py_DECREF(args);
+		PyObject* const result = PyObject_CallObject(_BindClassMethodsObject, args);
+		Py_DECREF(args);
 
-        if (!result) {
-            PyErr_Print();
-            return;
-        }
+		if (!result) {
+			LogError();
+			_provider->Log(std::format(LOG_PREFIX "{}: call of 'bind_class_methods' failed", className), Severity::Error);
+			return;
+		}
 
-        Py_DECREF(result);
+		Py_DECREF(result);
 	}
 
 	void Python3LanguageModule::CreateEnumsObject(const EnumObject& enumerator, PyObject* moduleDict) {
-		PyObject* enumClass = PyDict_GetItemString(moduleDict, enumerator.GetName().c_str());
+		const std::string& enumName = enumerator.GetName();
+		PyObject* enumClass = PyDict_GetItemString(moduleDict, enumName.c_str());
 		if (enumClass) {
 			const auto it = _internalEnumMap.find(enumClass);
 			if (it != _internalEnumMap.end()) {
@@ -4600,24 +4601,24 @@ namespace py3lm {
 			return;
 		}
 
-		const auto& values = enumerator.GetValues();
-		if (values.empty()) {
+		const auto& enumValues = enumerator.GetValues();
+		if (enumValues.empty()) {
 			return;
 		}
 
 		PyObject* constantsDict = PyDict_New();
-		for (const auto& value : values) {
-			PyObject* const pyValue = PyLong_FromLongLong(value.GetValue());
-			[[maybe_unused]] const auto res = PyDict_SetItemString(constantsDict, value.GetName().c_str(), pyValue);
+		for (const auto& enumValue : enumValues) {
+			PyObject* const pyValue = PyLong_FromLongLong(enumValue.GetValue());
+			[[maybe_unused]] const auto res = PyDict_SetItemString(constantsDict, enumValue.GetName().c_str(), pyValue);
 			Py_DECREF(pyValue);
 			assert(res == 0);
 		}
 
-		enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumerator.GetName().c_str(), constantsDict);
+		enumClass = PyObject_CallMethod(_enumModule, "IntEnum", "sO", enumName.c_str(), constantsDict);
 
 		Py_DECREF(constantsDict);
 
-		if (enumClass && PyDict_SetItemString(moduleDict, enumerator.GetName().c_str(), enumClass) < 0) {
+		if (enumClass && PyDict_SetItemString(moduleDict, enumName.c_str(), enumClass) < 0) {
 			LogError();
 			Py_DECREF(enumClass);
 			return;
@@ -4629,8 +4630,8 @@ namespace py3lm {
 		}
 
 		auto& enumMap = it->second;
-		for (const auto& value : values) {
-			const int64_t i = value.GetValue();
+		for (const auto& enumValue : enumValues) {
+			const int64_t i = enumValue.GetValue();
 			PyObject* const pyIndex = CreatePyObject(i);
 			(*enumMap)[i] = PyObject_CallOneArg(enumClass, pyIndex);
 			Py_DECREF(pyIndex);

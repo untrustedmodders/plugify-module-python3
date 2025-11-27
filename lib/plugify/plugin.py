@@ -397,8 +397,8 @@ def bind_class_methods(
         # Helper to handle return value wrapping
         def wrap_return(result, ret_alias, invalid_value):
             if ret_alias and len(ret_alias) >= 2:
-                ret_class_name = ret_alias[0] if isinstance(ret_alias, tuple) else ret_alias.name
-                owner = ret_alias[1] if isinstance(ret_alias, tuple) else ret_alias.owner
+                ret_class_name = ret_alias[0]
+                owner = ret_alias[1]
                 ownership = Ownership.OWNED if owner else Ownership.BORROWED
 
                 ret_class = _class_registry.get(ret_class_name)
@@ -424,8 +424,8 @@ def bind_class_methods(
             args_list = list(args)
             for i, alias_info in enumerate(param_aliases):
                 if alias_info and len(alias_info) >= 2 and i < len(args_list):
-                    alias_name = alias_info[0] if isinstance(alias_info, tuple) else alias_info.name
-                    owner = alias_info[1] if isinstance(alias_info, tuple) else alias_info.owner
+                    alias_name = alias_info[0]
+                    owner = alias_info[1]
 
                     if alias_name and args_list[i] is not None:
                         arg = args_list[i]
