@@ -170,7 +170,8 @@ class Matrix4x4:
         raise ValueError("Can only divide by a scalar")
 
     def __repr__(self):
-        return "\n".join([f"Row {i}: {self.m[i]}" for i in range(4)])
+        rows = ", ".join(f"[{', '.join(map(str, r))}]" for r in self.m)
+        return f"Matrix4x4({rows})"
 
     def transpose(self):
         return Matrix4x4([[self.m[j][i] for j in range(4)] for i in range(4)])
