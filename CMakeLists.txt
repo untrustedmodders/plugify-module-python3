@@ -193,11 +193,11 @@ set(PY3LM_GITHUB_ACTIONS "0" CACHE STRING "Build with github actions")
 
 if(PY3LM_GITHUB_ACTIONS)
     execute_process(COMMAND cmake -E create_symlink
-        "${CMAKE_SOURCE_DIR}/lib"
-        "${CMAKE_BINARY_DIR}/lib"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib"
+        "${CMAKE_CURRENT_BINARY_DIR}/lib"
     )
     execute_process(COMMAND cmake -E create_symlink
-        "${CMAKE_SOURCE_DIR}/python3.12"
-        "${CMAKE_BINARY_DIR}/python3.12"
+        "${CMAKE_CURRENT_SOURCE_DIR}/python3.12"
+        "${CMAKE_CURRENT_BINARY_DIR}/python3.12"
     )
 endif()
