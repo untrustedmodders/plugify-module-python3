@@ -294,31 +294,41 @@ def bind_class_methods(
 
         # Check if this is handle + ownership construction
         # Pattern: ClassName(handle_value, Ownership.OWNED/BORROWED)
-        if len(args) >= 2 and isinstance(args[1], Ownership):
+        if len(args) == 2 and isinstance(args[1], Ownership):
             self._handle = args[0]
             self._owned = args[1]
             return
 
+        # Check if this is handle-only construction (assume OWNED by default)
+        # Pattern: ClassName(handle_value)
+        if len(args) == 1 and len(constructors) == 0:
+            self._handle = args[0]
+            self._owned = Ownership.OWNED
+            return
+
         # Constructor call mode
         if len(constructors) == 0:
-            raise ValueError(f"{class_name} requires handle and ownership for construction")
+            raise ValueError(
+                f"{className} has no constructors. "
+                f"Use: {className}(handle, Ownership.OWNED/BORROWED) or "
+                f"{className}(handle) to wrap an existing handle."
+            )
 
         # Try constructors
-        last_error = None
-        for constructor in constructors:
+        errors = []
+        for i, constructor in enumerate(constructors):
             try:
                 self._handle = constructor(*args, **kwargs)
                 self._owned = Ownership.OWNED
                 return  # Success!
             except Exception as e:
-                last_error = e
-                continue
+                errors.append(f"Constructor {i}: {e}")
 
         # If we get here, all constructors failed
-        if last_error:
-            raise last_error
-        else:
-            raise ValueError(f"No constructor matched the arguments for {class_name}")
+        raise ValueError(
+            f"No constructor matched the arguments for {className}.\n"
+            f"Tried {len(constructors)} constructor(s):\n" + "\n".join(errors)
+        )
 
     cls.__init__ = __init__
 
