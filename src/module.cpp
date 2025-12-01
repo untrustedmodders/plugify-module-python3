@@ -3106,20 +3106,20 @@ namespace py3lm {
 			}
 		}
 
-		PyObject* AliasToTuple(const Alias& alias) {
-			if (alias.GetName().empty()) {
+		PyObject* AliasToTuple(const std::optional<Alias>& alias) {
+			if (!alias) {
 				return CreatePyObject();
 			}
 
 			PyObject* tuple = PyTuple_New(Py_ssize_t{ 2 });
 			if (!tuple) return nullptr;
 
-			PyObject* name = CreatePyObject(alias.GetName());
+			PyObject* name = CreatePyObject(alias->GetName());
 			if (!name) {
 				Py_DECREF(tuple);
 				return nullptr;
 			}
-			PyObject* owner = CreatePyObject(alias.IsOwner());
+			PyObject* owner = CreatePyObject(alias->IsOwner());
 			if (!owner) {
 				Py_DECREF(tuple);
 				return nullptr;
