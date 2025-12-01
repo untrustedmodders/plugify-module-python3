@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.13](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.12...v2.0.13) (2025-12-01)
+
+
+### Bug Fixes
+
+* add class construction with handle if no other ctors are available ([58dbac9](https://github.com/untrustedmodders/plugify-module-python3/commit/58dbac9609f1db9c76b52db998ee55b1ff7b2048))
+* add current to paths in cmake ([52fa385](https://github.com/untrustedmodders/plugify-module-python3/commit/52fa385b1a827cf3a56d24c05da9062f8ed18773))
+* update plugify ([d3e65a6](https://github.com/untrustedmodders/plugify-module-python3/commit/d3e65a681c58ea2ed7eb2cb68dc385e23d5feca2))
+
 ## [2.0.12](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.11...v2.0.12) (2025-11-28)
 
 
