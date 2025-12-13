@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.14](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.13...v2.0.14) (2025-12-13)
+
+
+### Bug Fixes
+
+* update plugify ([92ee520](https://github.com/untrustedmodders/plugify-module-python3/commit/92ee5205a7df2904b589fd9e25d090322129fbb8))
+
 ## [2.0.13](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.12...v2.0.13) (2025-12-01)
 
 
