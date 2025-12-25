@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.15](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.14...v2.0.15) (2025-12-25)
+
+
+### Bug Fixes
+
+* add arena ([0f457eb](https://github.com/untrustedmodders/plugify-module-python3/commit/0f457eb9a228d627b0240eb1b2ab37b1eb526d3f))
+* remove heap allocation for arg storage ([8634aa7](https://github.com/untrustedmodders/plugify-module-python3/commit/8634aa733329c9908e233615df74c05a1e847421))
+
 ## [2.0.14](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.13...v2.0.14) (2025-12-13)
 
 
