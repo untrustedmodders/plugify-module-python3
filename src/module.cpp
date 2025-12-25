@@ -604,17 +604,17 @@ namespace py3lm {
 		}
 
 		template<typename T>
-		void* CreateValue(PyObject* pItem) {
+		void* CreateValue(Arena& arena, PyObject* pItem) {
 			if (auto value = ValueFromObject<T>(pItem)) {
-				return new T(std::move(*value));
+				return arena.Create<T>(std::move(*value));
 			}
 			return nullptr;
 		}
 
 		template<typename T>
-		void* CreateArray(PyObject* pItem) {
+		void* CreateArray(Arena& arena, PyObject* pItem) {
 			if (auto array = ArrayFromObject<T>(pItem)) {
-				return new plg::vector<T>(std::move(*array));
+				return arena.Create<plg::vector<T>>(std::move(*array));
 			}
 			return nullptr;
 		}
@@ -1991,6 +1991,7 @@ namespace py3lm {
 		struct ArgsScope {
 			Parameters params;
 			std::inplace_vector<std::pair<void*, ValueType>, Signature::kMaxFuncArgs> storage; // used to store array temp memory
+			Arena arena;
 
 			explicit ArgsScope(size_t size) : params(size) {
 				storage.reserve(size);
@@ -2000,163 +2001,163 @@ namespace py3lm {
 				for (auto& [ptr, type] : storage) {
 					switch (type) {
 					case ValueType::Bool: {
-						delete static_cast<bool*>(ptr);
+						std::destroy_at(static_cast<bool*>(ptr));
 						break;
 					}
 					case ValueType::Char8: {
-						delete static_cast<char*>(ptr);
+						std::destroy_at(static_cast<char*>(ptr));
 						break;
 					}
 					case ValueType::Char16: {
-						delete static_cast<char16_t*>(ptr);
+						std::destroy_at(static_cast<char16_t*>(ptr));
 						break;
 					}
 					case ValueType::Int8: {
-						delete static_cast<int8_t*>(ptr);
+						std::destroy_at(static_cast<int8_t*>(ptr));
 						break;
 					}
 					case ValueType::Int16: {
-						delete static_cast<int16_t*>(ptr);
+						std::destroy_at(static_cast<int16_t*>(ptr));
 						break;
 					}
 					case ValueType::Int32: {
-						delete static_cast<int32_t*>(ptr);
+						std::destroy_at(static_cast<int32_t*>(ptr));
 						break;
 					}
 					case ValueType::Int64: {
-						delete static_cast<int64_t*>(ptr);
+						std::destroy_at(static_cast<int64_t*>(ptr));
 						break;
 					}
 					case ValueType::UInt8: {
-						delete static_cast<uint8_t*>(ptr);
+						std::destroy_at(static_cast<uint8_t*>(ptr));
 						break;
 					}
 					case ValueType::UInt16: {
-						delete static_cast<uint16_t*>(ptr);
+						std::destroy_at(static_cast<uint16_t*>(ptr));
 						break;
 					}
 					case ValueType::UInt32: {
-						delete static_cast<uint32_t*>(ptr);
+						std::destroy_at(static_cast<uint32_t*>(ptr));
 						break;
 					}
 					case ValueType::UInt64: {
-						delete static_cast<uint64_t*>(ptr);
+						std::destroy_at(static_cast<uint64_t*>(ptr));
 						break;
 					}
 					case ValueType::Pointer: {
-						delete static_cast<void**>(ptr);
+						std::destroy_at(static_cast<void**>(ptr));
 						break;
 					}
 					case ValueType::Float: {
-						delete static_cast<float*>(ptr);
+						std::destroy_at(static_cast<float*>(ptr));
 						break;
 					}
 					case ValueType::Double: {
-						delete static_cast<double*>(ptr);
+						std::destroy_at(static_cast<double*>(ptr));
 						break;
 					}
 					case ValueType::String: {
-						delete static_cast<plg::string*>(ptr);
+						std::destroy_at(static_cast<plg::string*>(ptr));
 						break;
 					}
 					case ValueType::Any: {
-						delete static_cast<plg::any*>(ptr);
+						std::destroy_at(static_cast<plg::any*>(ptr));
 						break;
 					}
 					case ValueType::ArrayBool: {
-						delete static_cast<plg::vector<bool>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<bool>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayChar8: {
-						delete static_cast<plg::vector<char>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<char>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayChar16: {
-						delete static_cast<plg::vector<char16_t>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<char16_t>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayInt8: {
-						delete static_cast<plg::vector<int8_t>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<int8_t>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayInt16: {
-						delete static_cast<plg::vector<int16_t>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<int16_t>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayInt32: {
-						delete static_cast<plg::vector<int32_t>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<int32_t>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayInt64: {
-						delete static_cast<plg::vector<int64_t>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<int64_t>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayUInt8: {
-						delete static_cast<plg::vector<uint8_t>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<uint8_t>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayUInt16: {
-						delete static_cast<plg::vector<uint16_t>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<uint16_t>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayUInt32: {
-						delete static_cast<plg::vector<uint32_t>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<uint32_t>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayUInt64: {
-						delete static_cast<plg::vector<uint64_t>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<uint64_t>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayPointer: {
-						delete static_cast<plg::vector<void*>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<void*>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayFloat: {
-						delete static_cast<plg::vector<float>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<float>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayDouble: {
-						delete static_cast<plg::vector<double>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<double>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayString: {
-						delete static_cast<plg::vector<plg::string>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<plg::string>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayAny: {
-						delete static_cast<plg::vector<plg::any>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<plg::any>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayVector2: {
-						delete static_cast<plg::vector<plg::vec2>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<plg::vec2>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayVector3: {
-						delete static_cast<plg::vector<plg::vec3>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<plg::vec3>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayVector4: {
-						delete static_cast<plg::vector<plg::vec4>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<plg::vec4>*>(ptr));
 						break;
 					}
 					case ValueType::ArrayMatrix4x4: {
-						delete static_cast<plg::vector<plg::mat4x4>*>(ptr);
+						std::destroy_at(static_cast<plg::vector<plg::mat4x4>*>(ptr));
 						break;
 					}
 					case ValueType::Vector2: {
-						delete static_cast<plg::vec2*>(ptr);
+						std::destroy_at(static_cast<plg::vec2*>(ptr));
 						break;
 					}
 					case ValueType::Vector3: {
-						delete static_cast<plg::vec3*>(ptr);
+						std::destroy_at(static_cast<plg::vec3*>(ptr));
 						break;
 					}
 					case ValueType::Vector4: {
-						delete static_cast<plg::vec4*>(ptr);
+						std::destroy_at(static_cast<plg::vec4*>(ptr));
 						break;
 					}
 					case ValueType::Matrix4x4: {
-						delete static_cast<plg::mat4x4*>(ptr);
+						std::destroy_at(static_cast<plg::mat4x4*>(ptr));
 						break;
 					}
 					default: {
@@ -2174,132 +2175,132 @@ namespace py3lm {
 			void* value;
 			switch (retType) {
 				case ValueType::String: {
-					value = new plg::string();
+					value = a.arena.Create<plg::string>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::Any: {
-					value = new plg::any();
+					value = a.arena.Create<plg::any>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayBool: {
-					value = new plg::vector<bool>();
+					value = a.arena.Create<plg::vector<bool>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayChar8: {
-					value = new plg::vector<char>();
+					value = a.arena.Create<plg::vector<char>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayChar16: {
-					value = new plg::vector<char16_t>();
+					value = a.arena.Create<plg::vector<char16_t>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayInt8: {
-					value = new plg::vector<int8_t>();
+					value = a.arena.Create<plg::vector<int8_t>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayInt16: {
-					value = new plg::vector<int16_t>();
+					value = a.arena.Create<plg::vector<int16_t>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayInt32: {
-					value = new plg::vector<int32_t>();
+					value = a.arena.Create<plg::vector<int32_t>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayInt64: {
-					value = new plg::vector<int64_t>();
+					value = a.arena.Create<plg::vector<int64_t>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayUInt8: {
-					value = new plg::vector<uint8_t>();
+					value = a.arena.Create<plg::vector<uint8_t>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayUInt16: {
-					value = new plg::vector<uint16_t>();
+					value = a.arena.Create<plg::vector<uint16_t>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayUInt32: {
-					value = new plg::vector<uint32_t>();
+					value = a.arena.Create<plg::vector<uint32_t>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayUInt64: {
-					value = new plg::vector<uint64_t>();
+					value = a.arena.Create<plg::vector<uint64_t>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayPointer: {
-					value = new plg::vector<void*>();
+					value = a.arena.Create<plg::vector<void*>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayFloat: {
-					value = new plg::vector<float>();
+					value = a.arena.Create<plg::vector<float>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayDouble: {
-					value = new plg::vector<double>();
+					value = a.arena.Create<plg::vector<double>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayString: {
-					value = new plg::vector<plg::string>();
+					value = a.arena.Create<plg::vector<plg::string>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayAny: {
-					value = new plg::vector<plg::any>();
+					value = a.arena.Create<plg::vector<plg::any>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayVector2: {
-					value = new plg::vector<plg::vec2>();
+					value = a.arena.Create<plg::vector<plg::vec2>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayVector3: {
-					value = new plg::vector<plg::vec3>();
+					value = a.arena.Create<plg::vector<plg::vec3>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayVector4: {
-					value = new plg::vector<plg::vec4>();
+					value = a.arena.Create<plg::vector<plg::vec4>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::ArrayMatrix4x4: {
-					value = new plg::vector<plg::mat4x4>();
+					value = a.arena.Create<plg::vector<plg::mat4x4>>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::Vector2: {
-					value = new plg::vec2();
+					value = a.arena.Create<plg::vec2>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::Vector3: {
-					value = new plg::vec3();
+					value = a.arena.Create<plg::vec3>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::Vector4: {
-					value = new plg::vec4();
+					value = a.arena.Create<plg::vec4>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
 				case ValueType::Matrix4x4: {
-					value = new plg::mat4x4();
+					value = a.arena.Create<plg::mat4x4>();
 					a.storage.emplace_back(value, retType);
 					break;
 				}
@@ -2623,59 +2624,59 @@ namespace py3lm {
 				case ValueType::Double:
 					return PushValParam(ValueFromObject<double>(pItem));
 				case ValueType::String:
-					return PushRefParam(CreateValue<plg::string>(pItem));
+					return PushRefParam(CreateValue<plg::string>(a.arena, pItem));
 				case ValueType::Any:
-					return PushRefParam(CreateValue<plg::any>(pItem));
+					return PushRefParam(CreateValue<plg::any>(a.arena, pItem));
 				case ValueType::Function:
 					return PushValParam(GetOrCreateFunctionValue(*paramType.GetPrototype(), pItem));
 				case ValueType::ArrayBool:
-					return PushRefParam(CreateArray<bool>(pItem));
+					return PushRefParam(CreateArray<bool>(a.arena, pItem));
 				case ValueType::ArrayChar8:
-					return PushRefParam(CreateArray<char>(pItem));
+					return PushRefParam(CreateArray<char>(a.arena, pItem));
 				case ValueType::ArrayChar16:
-					return PushRefParam(CreateArray<char16_t>(pItem));
+					return PushRefParam(CreateArray<char16_t>(a.arena, pItem));
 				case ValueType::ArrayInt8:
-					return PushRefParam(CreateArray<int8_t>(pItem));
+					return PushRefParam(CreateArray<int8_t>(a.arena, pItem));
 				case ValueType::ArrayInt16:
-					return PushRefParam(CreateArray<int16_t>(pItem));
+					return PushRefParam(CreateArray<int16_t>(a.arena, pItem));
 				case ValueType::ArrayInt32:
-					return PushRefParam(CreateArray<int32_t>(pItem));
+					return PushRefParam(CreateArray<int32_t>(a.arena, pItem));
 				case ValueType::ArrayInt64:
-					return PushRefParam(CreateArray<int64_t>(pItem));
+					return PushRefParam(CreateArray<int64_t>(a.arena, pItem));
 				case ValueType::ArrayUInt8:
-					return PushRefParam(CreateArray<uint8_t>(pItem));
+					return PushRefParam(CreateArray<uint8_t>(a.arena, pItem));
 				case ValueType::ArrayUInt16:
-					return PushRefParam(CreateArray<uint16_t>(pItem));
+					return PushRefParam(CreateArray<uint16_t>(a.arena, pItem));
 				case ValueType::ArrayUInt32:
-					return PushRefParam(CreateArray<uint32_t>(pItem));
+					return PushRefParam(CreateArray<uint32_t>(a.arena, pItem));
 				case ValueType::ArrayUInt64:
-					return PushRefParam(CreateArray<uint64_t>(pItem));
+					return PushRefParam(CreateArray<uint64_t>(a.arena, pItem));
 				case ValueType::ArrayPointer:
-					return PushRefParam(CreateArray<void*>(pItem));
+					return PushRefParam(CreateArray<void*>(a.arena, pItem));
 				case ValueType::ArrayFloat:
-					return PushRefParam(CreateArray<float>(pItem));
+					return PushRefParam(CreateArray<float>(a.arena, pItem));
 				case ValueType::ArrayDouble:
-					return PushRefParam(CreateArray<double>(pItem));
+					return PushRefParam(CreateArray<double>(a.arena, pItem));
 				case ValueType::ArrayString:
-					return PushRefParam(CreateArray<plg::string>(pItem));
+					return PushRefParam(CreateArray<plg::string>(a.arena, pItem));
 				case ValueType::ArrayAny:
-					return PushRefParam(CreateArray<plg::any>(pItem));
+					return PushRefParam(CreateArray<plg::any>(a.arena, pItem));
 				case ValueType::ArrayVector2:
-					return PushRefParam(CreateArray<plg::vec2>(pItem));
+					return PushRefParam(CreateArray<plg::vec2>(a.arena, pItem));
 				case ValueType::ArrayVector3:
-					return PushRefParam(CreateArray<plg::vec3>(pItem));
+					return PushRefParam(CreateArray<plg::vec3>(a.arena, pItem));
 				case ValueType::ArrayVector4:
-					return PushRefParam(CreateArray<plg::vec4>(pItem));
+					return PushRefParam(CreateArray<plg::vec4>(a.arena, pItem));
 				case ValueType::ArrayMatrix4x4:
-					return PushRefParam(CreateArray<plg::mat4x4>(pItem));
+					return PushRefParam(CreateArray<plg::mat4x4>(a.arena, pItem));
 				case ValueType::Vector2:
-					return PushRefParam(CreateValue<plg::vec2>(pItem));
+					return PushRefParam(CreateValue<plg::vec2>(a.arena, pItem));
 				case ValueType::Vector3:
-					return PushRefParam(CreateValue<plg::vec3>(pItem));
+					return PushRefParam(CreateValue<plg::vec3>(a.arena, pItem));
 				case ValueType::Vector4:
-					return PushRefParam(CreateValue<plg::vec4>(pItem));
+					return PushRefParam(CreateValue<plg::vec4>(a.arena, pItem));
 				case ValueType::Matrix4x4:
-					return PushRefParam(CreateValue<plg::mat4x4>(pItem));
+					return PushRefParam(CreateValue<plg::mat4x4>(a.arena, pItem));
 			default: {
 				const std::string error(std::format("PushObjectAsParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -2696,85 +2697,85 @@ namespace py3lm {
 
 			switch (paramType.GetType()) {
 			case ValueType::Bool:
-				return PushRefParam(CreateValue<bool>(pItem));
+				return PushRefParam(CreateValue<bool>(a.arena, pItem));
 			case ValueType::Char8:
-				return PushRefParam(CreateValue<char>(pItem));
+				return PushRefParam(CreateValue<char>(a.arena, pItem));
 			case ValueType::Char16:
-				return PushRefParam(CreateValue<char16_t>(pItem));
+				return PushRefParam(CreateValue<char16_t>(a.arena, pItem));
 			case ValueType::Int8:
-				return PushRefParam(CreateValue<int8_t>(pItem));
+				return PushRefParam(CreateValue<int8_t>(a.arena, pItem));
 			case ValueType::Int16:
-				return PushRefParam(CreateValue<int16_t>(pItem));
+				return PushRefParam(CreateValue<int16_t>(a.arena, pItem));
 			case ValueType::Int32:
-				return PushRefParam(CreateValue<int32_t>(pItem));
+				return PushRefParam(CreateValue<int32_t>(a.arena, pItem));
 			case ValueType::Int64:
-				return PushRefParam(CreateValue<int64_t>(pItem));
+				return PushRefParam(CreateValue<int64_t>(a.arena, pItem));
 			case ValueType::UInt8:
-				return PushRefParam(CreateValue<uint8_t>(pItem));
+				return PushRefParam(CreateValue<uint8_t>(a.arena, pItem));
 			case ValueType::UInt16:
-				return PushRefParam(CreateValue<uint16_t>(pItem));
+				return PushRefParam(CreateValue<uint16_t>(a.arena, pItem));
 			case ValueType::UInt32:
-				return PushRefParam(CreateValue<uint32_t>(pItem));
+				return PushRefParam(CreateValue<uint32_t>(a.arena, pItem));
 			case ValueType::UInt64:
-				return PushRefParam(CreateValue<uint64_t>(pItem));
+				return PushRefParam(CreateValue<uint64_t>(a.arena, pItem));
 			case ValueType::Pointer:
-				return PushRefParam(CreateValue<void*>(pItem));
+				return PushRefParam(CreateValue<void*>(a.arena, pItem));
 			case ValueType::Float:
-				return PushRefParam(CreateValue<float>(pItem));
+				return PushRefParam(CreateValue<float>(a.arena, pItem));
 			case ValueType::Double:
-				return PushRefParam(CreateValue<double>(pItem));
+				return PushRefParam(CreateValue<double>(a.arena, pItem));
 			case ValueType::String:
-				return PushRefParam(CreateValue<plg::string>(pItem));
+				return PushRefParam(CreateValue<plg::string>(a.arena, pItem));
 			case ValueType::Any:
-				return PushRefParam(CreateValue<plg::any>(pItem));
+				return PushRefParam(CreateValue<plg::any>(a.arena, pItem));
 			case ValueType::ArrayBool:
-				return PushRefParam(CreateArray<bool>(pItem));
+				return PushRefParam(CreateArray<bool>(a.arena, pItem));
 			case ValueType::ArrayChar8:
-				return PushRefParam(CreateArray<char>(pItem));
+				return PushRefParam(CreateArray<char>(a.arena, pItem));
 			case ValueType::ArrayChar16:
-				return PushRefParam(CreateArray<char16_t>(pItem));
+				return PushRefParam(CreateArray<char16_t>(a.arena, pItem));
 			case ValueType::ArrayInt8:
-				return PushRefParam(CreateArray<int8_t>(pItem));
+				return PushRefParam(CreateArray<int8_t>(a.arena, pItem));
 			case ValueType::ArrayInt16:
-				return PushRefParam(CreateArray<int16_t>(pItem));
+				return PushRefParam(CreateArray<int16_t>(a.arena, pItem));
 			case ValueType::ArrayInt32:
-				return PushRefParam(CreateArray<int32_t>(pItem));
+				return PushRefParam(CreateArray<int32_t>(a.arena, pItem));
 			case ValueType::ArrayInt64:
-				return PushRefParam(CreateArray<int64_t>(pItem));
+				return PushRefParam(CreateArray<int64_t>(a.arena, pItem));
 			case ValueType::ArrayUInt8:
-				return PushRefParam(CreateArray<uint8_t>(pItem));
+				return PushRefParam(CreateArray<uint8_t>(a.arena, pItem));
 			case ValueType::ArrayUInt16:
-				return PushRefParam(CreateArray<uint16_t>(pItem));
+				return PushRefParam(CreateArray<uint16_t>(a.arena, pItem));
 			case ValueType::ArrayUInt32:
-				return PushRefParam(CreateArray<uint32_t>(pItem));
+				return PushRefParam(CreateArray<uint32_t>(a.arena, pItem));
 			case ValueType::ArrayUInt64:
-				return PushRefParam(CreateArray<uint64_t>(pItem));
+				return PushRefParam(CreateArray<uint64_t>(a.arena, pItem));
 			case ValueType::ArrayPointer:
-				return PushRefParam(CreateArray<void*>(pItem));
+				return PushRefParam(CreateArray<void*>(a.arena, pItem));
 			case ValueType::ArrayFloat:
-				return PushRefParam(CreateArray<float>(pItem));
+				return PushRefParam(CreateArray<float>(a.arena, pItem));
 			case ValueType::ArrayDouble:
-				return PushRefParam(CreateArray<double>(pItem));
+				return PushRefParam(CreateArray<double>(a.arena, pItem));
 			case ValueType::ArrayString:
-				return PushRefParam(CreateArray<plg::string>(pItem));
+				return PushRefParam(CreateArray<plg::string>(a.arena, pItem));
 			case ValueType::ArrayAny:
-				return PushRefParam(CreateArray<plg::any>(pItem));
+				return PushRefParam(CreateArray<plg::any>(a.arena, pItem));
 			case ValueType::ArrayVector2:
-				return PushRefParam(CreateArray<plg::vec2>(pItem));
+				return PushRefParam(CreateArray<plg::vec2>(a.arena, pItem));
 			case ValueType::ArrayVector3:
-				return PushRefParam(CreateArray<plg::vec3>(pItem));
+				return PushRefParam(CreateArray<plg::vec3>(a.arena, pItem));
 			case ValueType::ArrayVector4:
-				return PushRefParam(CreateArray<plg::vec4>(pItem));
+				return PushRefParam(CreateArray<plg::vec4>(a.arena, pItem));
 			case ValueType::ArrayMatrix4x4:
-				return PushRefParam(CreateArray<plg::mat4x4>(pItem));
+				return PushRefParam(CreateArray<plg::mat4x4>(a.arena, pItem));
 			case ValueType::Vector2:
-				return PushRefParam(CreateValue<plg::vec2>(pItem));
+				return PushRefParam(CreateValue<plg::vec2>(a.arena, pItem));
 			case ValueType::Vector3:
-				return PushRefParam(CreateValue<plg::vec3>(pItem));
+				return PushRefParam(CreateValue<plg::vec3>(a.arena, pItem));
 			case ValueType::Vector4:
-				return PushRefParam(CreateValue<plg::vec4>(pItem));
+				return PushRefParam(CreateValue<plg::vec4>(a.arena, pItem));
 			case ValueType::Matrix4x4:
-				return PushRefParam(CreateValue<plg::mat4x4>(pItem));
+				return PushRefParam(CreateValue<plg::mat4x4>(a.arena, pItem));
 			default: {
 				const std::string error(std::format("PushObjectAsRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
 				PyErr_SetString(PyExc_RuntimeError, error.c_str());

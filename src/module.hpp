@@ -115,6 +115,45 @@ namespace py3lm {
 		PyObject* pythonFunction{};
 	};
 
+	template<size_t N, size_t alignment = alignof(std::max_align_t)>
+	class StackArena {
+		alignas(alignment) std::byte buffer[N];
+		size_t offset = 0;
+
+	public:
+		StackArena() = default;
+
+		void* Alloc(size_t sz, size_t align = alignof(max_align_t)) {
+			uintptr_t current = reinterpret_cast<uintptr_t>(buffer + offset);
+			uintptr_t aligned = AlignUp(current);
+			size_t newOffset = aligned - reinterpret_cast<uintptr_t>(buffer) + sz;
+
+			if (newOffset > N) return nullptr;
+			offset = newOffset;
+			return reinterpret_cast<void*>(aligned);
+		}
+
+		template <typename T, typename... Args>
+		T* Create(Args&&... args) {
+			void* mem = Alloc(sizeof(T), alignof(T));
+			assert(mem && "StackArena out of memory");
+			return std::construct_at(reinterpret_cast<T*>(mem), std::forward<Args>(args)...);
+		}
+
+		void Reset() noexcept { offset = 0; }
+
+		static constexpr size_t Size() noexcept { return N; }
+
+		size_t Remaining() const noexcept { return N - offset; }
+
+		size_t Used() const noexcept { return offset; }
+
+	private:
+		static size_t AlignUp(std::size_t n) noexcept { return (n + (alignment-1)) & ~(alignment-1); }
+	};
+
+	using Arena = StackArena<4096>;
+
 	class Python3LanguageModule final : public ILanguageModule {
 	public:
 		Python3LanguageModule();
