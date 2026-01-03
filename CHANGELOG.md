@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.16](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.15...v2.0.16) (2026-01-03)
+
+
+### Bug Fixes
+
+* add build type to configure step ([3168356](https://github.com/untrustedmodders/plugify-module-python3/commit/316835649e7d1f804f971f246667e6f05e184999))
+
 ## [2.0.15](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.14...v2.0.15) (2025-12-25)
 
 
