@@ -368,6 +368,180 @@ def param_all_primitives(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13,
     return 56
 
 
+def param_all_aliases(
+    aBool,
+    aChar8,
+    aChar16,
+    aInt8,
+    aInt16,
+    aInt32,
+    aInt64,
+    aPtr,
+    aFloat,
+    aDouble,
+    aString,
+    aAny,
+    aVec2,
+    aVec3,
+    aVec4,
+    aMat4x4,
+    aBoolVec,
+    aChar8Vec,
+    aChar16Vec,
+    aInt8Vec,
+    aInt16Vec,
+    aInt32Vec,
+    aInt64Vec,
+    aPtrVec,
+    aFloatVec,
+    aDoubleVec,
+    aStringVec,
+    aAnyVec,
+    aVec2Vec,
+    aVec3Vec,
+    aVec4Vec
+):
+    buffer = (
+        f"{bool_str(aBool)}|"
+        f"{char8_str(aChar8)}|"
+        f"{ord_zero(aChar16)}|"
+        f"{aInt8}|{aInt16}|{aInt32}|{aInt64}|"
+        f"{ptr_str(aPtr)}|"
+        f"{float_str(aFloat)}|"
+        f"{float_str(aDouble)}|"
+        f"{aString}|"
+        f"{plain_str(aAny)}|"
+        f"{pod_to_string(aVec2)}|"
+        f"{pod_to_string(aVec3)}|"
+        f"{pod_to_string(aVec4)}|"
+        f"{pod_to_string(aMat4x4)}|"
+        f"{vector_to_string(aBoolVec, bool_str)}|"
+        f"{vector_to_string(aChar8Vec, char8_str)}|"
+        f"{vector_to_string(aChar16Vec, char16_str)}|"
+        f"{vector_to_string(aInt8Vec)}|"
+        f"{vector_to_string(aInt16Vec)}|"
+        f"{vector_to_string(aInt32Vec)}|"
+        f"{vector_to_string(aInt64Vec)}|"
+        f"{vector_to_string(aPtrVec, ptr_str)}|"
+        f"{vector_to_string(aFloatVec, float_str)}|"
+        f"{vector_to_string(aDoubleVec)}|"
+        f"{vector_to_string(aStringVec, quote_str)}|"
+        f"{vector_to_string(aAnyVec, plain_str)}|"
+        f"{vector_to_string(aVec2Vec)}|"
+        f"{vector_to_string(aVec3Vec)}|"
+        f"{vector_to_string(aVec4Vec)}"
+    )
+    return -1
+
+
+def param_all_ref_aliases(
+    aBool,
+    aChar8,
+    aChar16,
+    aInt8,
+    aInt16,
+    aInt32,
+    aInt64,
+    aPtr,
+    aFloat,
+    aDouble,
+    aString,
+    aAny,
+    aVec2,
+    aVec3,
+    aVec4,
+    aMat4x4,
+    aBoolVec,
+    aChar8Vec,
+    aChar16Vec,
+    aInt8Vec,
+    aInt16Vec,
+    aInt32Vec,
+    aInt64Vec,
+    aPtrVec,
+    aFloatVec,
+    aDoubleVec,
+    aStringVec,
+    aAnyVec,
+    aVec2Vec,
+    aVec3Vec,
+    aVec4Vec
+):
+    aBool = True
+    aChar8 = 'A'
+    aChar16 = '0'
+    aInt8 = 1
+    aInt16 = 2
+    aInt32 = 3
+    aInt64 = 4
+    aPtr = 0
+    aFloat = 5.0
+    aDouble = 5.0
+    aString = "seven"
+    aAny = "six"
+
+    aVec2 = Vector2(0.1, 0.2)
+    aVec3 = Vector3(0.3, 0.4, 0.5)
+    aVec4 = Vector4(0.6, 0.7, 0.8, 0.9)
+    aMat4x4 = Matrix4x4([
+        [1.4, 1.1, 1.2, 1.3],
+        [2.4, 2.1, 2.2, 2.3],
+        [3.4, 3.1, 3.2, 3.3],
+        [4.4, 4.1, 4.2, 4.3],
+    ])
+
+    aBoolVec = [aBool]
+    aChar8Vec = [aChar8]
+    aChar16Vec = [aChar16]
+    aInt8Vec = [aInt8]
+    aInt16Vec = [aInt16]
+    aInt32Vec = [aInt32]
+    aInt64Vec = [aInt64]
+    aPtrVec = [aPtr]
+    aFloatVec = [aFloat]
+    aDoubleVec = [aDouble]
+    aStringVec = [aString]
+    aAnyVec = [aAny]
+    aVec2Vec = [aVec2]
+    aVec3Vec = [aVec3]
+    aVec4Vec = [aVec4]
+
+    return (
+        24,
+        aBool,
+        aChar8,
+        aChar16,
+        aInt8,
+        aInt16,
+        aInt32,
+        aInt64,
+        aPtr,
+        aFloat,
+        aDouble,
+        aString,
+        aAny,
+        aVec2,
+        aVec3,
+        aVec4,
+        aMat4x4,
+        aBoolVec,
+        aChar8Vec,
+        aChar16Vec,
+        aInt8Vec,
+        aInt16Vec,
+        aInt32Vec,
+        aInt64Vec,
+        aPtrVec,
+        aFloatVec,
+        aDoubleVec,
+        aStringVec,
+        aAnyVec,
+        aVec2Vec,
+        aVec3Vec,
+        aVec4Vec
+    )
+
+
 def param_enum(p1, p2):
     return p1 + sum(p2)
 
@@ -553,6 +727,220 @@ def call_func_vec4(func):
 
 def call_func_mat4x4(func):
     return func()
+
+
+def call_func_alias_bool(func):
+    return func()
+
+
+def call_func_alias_char8(func):
+    return func()
+
+
+def call_func_alias_char16(func):
+    return func()
+
+
+def call_func_alias_int8(func):
+    return func()
+
+
+def call_func_alias_int16(func):
+    return func()
+
+
+def call_func_alias_int32(func):
+    return func()
+
+
+def call_func_alias_int64(func):
+    return func()
+
+
+def call_func_alias_uint8(func):
+    return func()
+
+
+def call_func_alias_uint16(func):
+    return func()
+
+
+def call_func_alias_uint32(func):
+    return func()
+
+
+def call_func_alias_uint64(func):
+    return func()
+
+
+def call_func_alias_ptr(func):
+    return func()
+
+
+def call_func_alias_float(func):
+    return func()
+
+
+def call_func_alias_double(func):
+    return func()
+
+
+def call_func_alias_function(func):
+    return func()
+
+
+def call_func_alias_string(func):
+    return func()
+
+
+def call_func_alias_any(func):
+    return func()
+
+
+def call_func_alias_bool_vector(func):
+    return func()
+
+
+def call_func_alias_char8_vector(func):
+    return func()
+
+
+def call_func_alias_char16_vector(func):
+    return func()
+
+
+def call_func_alias_int8_vector(func):
+    return func()
+
+
+def call_func_alias_int16_vector(func):
+    return func()
+
+
+def call_func_alias_int32_vector(func):
+    return func()
+
+
+def call_func_alias_int64_vector(func):
+    return func()
+
+
+def call_func_alias_uint8_vector(func):
+    return func()
+
+
+def call_func_alias_uint16_vector(func):
+    return func()
+
+
+def call_func_alias_uint32_vector(func):
+    return func()
+
+
+def call_func_alias_uint64_vector(func):
+    return func()
+
+
+def call_func_alias_ptr_vector(func):
+    return func()
+
+
+def call_func_alias_float_vector(func):
+    return func()
+
+
+def call_func_alias_double_vector(func):
+    return func()
+
+
+def call_func_alias_string_vector(func):
+    return func()
+
+
+def call_func_alias_any_vector(func):
+    return func()
+
+
+def call_func_alias_vec2_vector(func):
+    return func()
+
+
+def call_func_alias_vec3_vector(func):
+    return func()
+
+
+def call_func_alias_vec4_vector(func):
+    return func()
+
+
+def call_func_alias_mat4x4_vector(func):
+    return func()
+
+
+def call_func_alias_vec2(func):
+    return func()
+
+
+def call_func_alias_vec3(func):
+    return func()
+
+
+def call_func_alias_vec4(func):
+    return func()
+
+
+def call_func_alias_mat4x4(func):
+    return func()
+
+
+def call_func_alias_all(func):
+    aBool = True
+    aChar8 = 'A'
+    aChar16 = '0'
+    aInt8 = 1
+    aInt16 = 2
+    aInt32 = 3
+    aInt64 = 4
+    aPtr = 0
+    aFloat = 5.5
+    aDouble = 6.6
+    aString = "seven"
+    aAny = "six"
+
+    aVec2 = Vector2(0.1, 0.2)
+    aVec3 = Vector3(0.3, 0.4, 0.5)
+    aVec4 = Vector4(0.6, 0.7, 0.8, 0.9)
+    aMat4x4 = Matrix4x4([
+        [1.4, 1.1, 1.2, 1.3],
+        [2.4, 2.1, 2.2, 2.3],
+        [3.4, 3.1, 3.2, 3.3],
+        [4.4, 4.1, 4.2, 4.3],
+    ])
+
+    aBoolVec = [aBool]
+    aChar8Vec = [aChar8]
+    aChar16Vec = [aChar16]
+    aInt8Vec = [aInt8]
+    aInt16Vec = [aInt16]
+    aInt32Vec = [aInt32]
+    aInt64Vec = [aInt64]
+    aPtrVec = [aPtr]
+    aFloatVec = [aFloat]
+    aDoubleVec = [aDouble]
+    aStringVec = [aString]
+    aAnyVec = [aAny]
+    aVec2Vec = [aVec2]
+    aVec3Vec = [aVec3]
+    aVec4Vec = [aVec4]
+
+    return func(
+        aBool, aChar8, aChar16, aInt8, aInt16, aInt32, aInt64,
+        aPtr, aFloat, aDouble, aString, aAny,
+        aVec2, aVec3, aVec4, aMat4x4,
+        aBoolVec, aChar8Vec, aChar16Vec, aInt8Vec, aInt16Vec,
+        aInt32Vec, aInt64Vec, aPtrVec, aFloatVec, aDoubleVec,
+        aStringVec, aAnyVec, aVec2Vec, aVec3Vec, aVec4Vec
+    )
 
 
 def call_func1(func):
@@ -1341,15 +1729,112 @@ def reverse_param_all_primitives():
     return f'{result}'
 
 
+def reverse_param_all_aliases():
+    aBool = True
+    aChar8 = 'A'
+    aChar16 = '0'
+    aInt8 = 1
+    aInt16 = 2
+    aInt32 = 3
+    aInt64 = 4
+    aPtr = 0
+    aFloat = 5.5
+    aDouble = 6.6
+    aString = "seven"
+    aAny = "six"
+
+    aVec2 = Vector2(0.1, 0.2)
+    aVec3 = Vector3(0.3, 0.4, 0.5)
+    aVec4 = Vector4(0.6, 0.7, 0.8, 0.9)
+    aMat4x4 = Matrix4x4([
+        1.4, 1.1, 1.2, 1.3,
+        2.4, 2.1, 2.2, 2.3,
+        3.4, 3.1, 3.2, 3.3,
+        4.4, 4.1, 4.2, 4.3,
+    ])
+
+    aBoolVec = [aBool]
+    aChar8Vec = [aChar8]
+    aChar16Vec = [aChar16]
+    aInt8Vec = [aInt8]
+    aInt16Vec = [aInt16]
+    aInt32Vec = [aInt32]
+    aInt64Vec = [aInt64]
+    aPtrVec = [aPtr]
+    aFloatVec = [aFloat]
+    aDoubleVec = [aDouble]
+    aStringVec = [aString]
+    aAnyVec = [aAny]
+    aVec2Vec = [aVec2]
+    aVec3Vec = [aVec3]
+    aVec4Vec = [aVec4]
+
+    result = master.ParamAllAliasesCallback(
+        aBool, aChar8, aChar16, aInt8, aInt16, aInt32, aInt64,
+        aPtr, aFloat, aDouble, aString, aAny,
+        aVec2, aVec3, aVec4, aMat4x4,
+        aBoolVec, aChar8Vec, aChar16Vec, aInt8Vec, aInt16Vec,
+        aInt32Vec, aInt64Vec, aPtrVec, aFloatVec, aDoubleVec,
+        aStringVec, aAnyVec, aVec2Vec, aVec3Vec, aVec4Vec
+    )
+    return f'{result}'
+
+
+def reverse_param_all_ref_aliases():
+    aBool = False
+    aChar8 = '\x00'
+    aChar16 = '\x00'
+    aInt8 = 0
+    aInt16 = 0
+    aInt32 = 0
+    aInt64 = 0
+    aPtr = 0
+    aFloat = 0.0
+    aDouble = 0.0
+    aString = ""
+    aAny = 0
+
+    aVec2 = Vector2()
+    aVec3 = Vector3()
+    aVec4 = Vector4()
+    aMat4x4 = Matrix4x4.zero()
+
+    aBoolVec = [aBool]
+    aChar8Vec = [aChar8]
+    aChar16Vec = [aChar16]
+    aInt8Vec = [aInt8]
+    aInt16Vec = [aInt16]
+    aInt32Vec = [aInt32]
+    aInt64Vec = [aInt64]
+    aPtrVec = [aPtr]
+    aFloatVec = [aFloat]
+    aDoubleVec = [aDouble]
+    aStringVec = [aString]
+    aAnyVec = [aAny]
+    aVec2Vec = [aVec2]
+    aVec3Vec = [aVec3]
+    aVec4Vec = [aVec4]
+
+    result = master.ParamAllRefAliasesCallback(
+        aBool, aChar8, aChar16, aInt8, aInt16, aInt32, aInt64,
+        aPtr, aFloat, aDouble, aString, aAny,
+        aVec2, aVec3, aVec4, aMat4x4,
+        aBoolVec, aChar8Vec, aChar16Vec, aInt8Vec, aInt16Vec,
+        aInt32Vec, aInt64Vec, aPtrVec, aFloatVec, aDoubleVec,
+        aStringVec, aAnyVec, aVec2Vec, aVec3Vec, aVec4Vec
+    )
+    return f'{result[0]}'
+
+
 def reverse_param_enum():
     e = master.Example
-    result = master.ParamEnumCallback(e.Forth, [e.First, e.Second, e.Third]);
+    result = master.ParamEnumCallback(e.Forth, [e.First, e.Second, e.Third])
     return f'{result}'
     
 
 def reverse_param_enum_ref():
     e = master.Example
-    result, p1, p2 = master.ParamEnumRefCallback(e.First, [e.First, e.First, e.Second]);
+    result, p1, p2 = master.ParamEnumRefCallback(e.First, [e.First, e.First, e.Second])
     return f'{result}|{enum_str(p1)}|{vector_to_string(p2, enum_str)}'
 
 
@@ -1369,7 +1854,7 @@ def reverse_param_variant():
         0.001, 
         987654.456789
         ]
-    master.ParamVariantCallback(p1, p2);
+    master.ParamVariantCallback(p1, p2)
 
 
 def reverse_param_variant_ref():
@@ -1387,7 +1872,7 @@ def reverse_param_variant_ref():
         0xfedcbaabcdef, 
         0.001, 
         987654.456789
-        ]);
+        ])
     return f'{vector_to_string(p1)}|{{{bool_str(p2[0])}, {float_str(p2[1])}, {p2[2]}}}'
 
 
@@ -1465,71 +1950,71 @@ class CallbackHolder:
         return 'A'
 
     @staticmethod
-    def mock_bool_array():
+    def mock_bool_vector():
         return [True, False]
 
     @staticmethod
-    def mock_char8_array():
+    def mock_char8_vector():
         return ['A', 'B']
 
     @staticmethod
-    def mock_char16_array():
+    def mock_char16_vector():
         return ['A', 'B']
 
     @staticmethod
-    def mock_int8_array():
+    def mock_int8_vector():
         return [10, 20]
 
     @staticmethod
-    def mock_int16_array():
+    def mock_int16_vector():
         return [100, 200]
 
     @staticmethod
-    def mock_int32_array():
+    def mock_int32_vector():
         return [1000, 2000]
 
     @staticmethod
-    def mock_int64_array():
+    def mock_int64_vector():
         return [10000, 20000]
 
     @staticmethod
-    def mock_uint8_array():
+    def mock_uint8_vector():
         return [20, 30]
 
     @staticmethod
-    def mock_uint16_array():
+    def mock_uint16_vector():
         return [200, 300]
 
     @staticmethod
-    def mock_uint32_array():
+    def mock_uint32_vector():
         return [2000, 3000]
 
     @staticmethod
-    def mock_uint64_array():
+    def mock_uint64_vector():
         return [20000, 30000]
 
     @staticmethod
-    def mock_ptr_array():
+    def mock_ptr_vector():
         return [0, 1]
 
     @staticmethod
-    def mock_float_array():
+    def mock_float_vector():
         return [1.1, 2.2]
 
     @staticmethod
-    def mock_double_array():
+    def mock_double_vector():
         return [3.3, 4.4]
 
     @staticmethod
-    def mock_string_array():
+    def mock_string_vector():
         return ['Hello', 'World']
 
     @staticmethod
-    def mock_any_array():
+    def mock_any_vector():
         return ['Hello', 3.14, 6.28, 1, 0xdeadbeaf]
         
     @staticmethod
-    def mock_vec2_array():
+    def mock_vec2_vector():
         return [
             Vector2(0.5, -1.2),
             Vector2(3.4, 7.8),
@@ -1539,7 +2024,7 @@ class CallbackHolder:
         ]
 
     @staticmethod
-    def mock_vec3_array():
+    def mock_vec3_vector():
         return [
             Vector3(2.1, 3.2, 4.3),
             Vector3(-5.4, 6.5, -7.6),
@@ -1549,7 +2034,7 @@ class CallbackHolder:
         ]
 
     @staticmethod
-    def mock_vec4_array():
+    def mock_vec4_vector():
         return [
             Vector4(0.1, 1.2, 2.3, 3.4),
             Vector4(-4.5, 5.6, 6.7, -7.8),
@@ -1559,7 +2044,7 @@ class CallbackHolder:
         ]
 
     @staticmethod
-    def mock_mat4x4_array():
+    def mock_mat4x4_vector():
         return [
             # Identity matrix
             Matrix4x4(),
@@ -1603,6 +2088,280 @@ class CallbackHolder:
         mat = Matrix4x4.zero()
         mat.m[0][0] = 1.0
         return mat
+
+    @staticmethod
+    def mock_alias_bool():
+        return True
+
+    @staticmethod
+    def mock_alias_char8():
+        return 'A'
+
+    @staticmethod
+    def mock_alias_char16():
+        return 'Z'
+
+    @staticmethod
+    def mock_alias_int8():
+        return 10
+
+    @staticmethod
+    def mock_alias_int16():
+        return 100
+
+    @staticmethod
+    def mock_alias_int32():
+        return 1000
+
+    @staticmethod
+    def mock_alias_int64():
+        return 10000
+
+    @staticmethod
+    def mock_alias_uint8():
+        return 20
+
+    @staticmethod
+    def mock_alias_uint16():
+        return 200
+
+    @staticmethod
+    def mock_alias_uint32():
+        return 2000
+
+    @staticmethod
+    def mock_alias_uint64():
+        return 20000
+
+    @staticmethod
+    def mock_alias_ptr():
+        return 0
+
+    @staticmethod
+    def mock_alias_float():
+        return 3.14
+
+    @staticmethod
+    def mock_alias_double():
+        return 6.28
+
+    @staticmethod
+    def mock_alias_function():
+        return None
+
+    @staticmethod
+    def mock_alias_string():
+        return "Test string"
+
+    @staticmethod
+    def mock_alias_any():
+        return 'A'
+
+    @staticmethod
+    def mock_alias_bool_vector():
+        return [True, False]
+
+    @staticmethod
+    def mock_alias_char8_vector():
+        return ['A', 'B']
+
+    @staticmethod
+    def mock_alias_char16_vector():
+        return ['A', 'B']
+
+    @staticmethod
+    def mock_alias_int8_vector():
+        return [10, 20]
+
+    @staticmethod
+    def mock_alias_int16_vector():
+        return [100, 200]
+
+    @staticmethod
+    def mock_alias_int32_vector():
+        return [1000, 2000]
+
+    @staticmethod
+    def mock_alias_int64_vector():
+        return [10000, 20000]
+
+    @staticmethod
+    def mock_alias_uint8_vector():
+        return [20, 30]
+
+    @staticmethod
+    def mock_alias_uint16_vector():
+        return [200, 300]
+
+    @staticmethod
+    def mock_alias_uint32_vector():
+        return [2000, 3000]
+
+    @staticmethod
+    def mock_alias_uint64_vector():
+        return [20000, 30000]
+
+    @staticmethod
+    def mock_alias_ptr_vector():
+        return [0, 1]
+
+    @staticmethod
+    def mock_alias_float_vector():
+        return [1.1, 2.2]
+
+    @staticmethod
+    def mock_alias_double_vector():
+        return [3.3, 4.4]
+
+    @staticmethod
+    def mock_alias_string_vector():
+        return ["Hello", "World"]
+
+    @staticmethod
+    def mock_alias_any_vector():
+        return ["Hello", 3.14, 6.28, 1, 0xDEADBEAF]
+
+    @staticmethod
+    def mock_alias_vec2_vector():
+        return [
+            Vector2(0.5, -1.2),
+            Vector2(3.4, 7.8),
+            Vector2(-6.7, 2.3),
+            Vector2(8.9, -4.5),
+            Vector2(0.0, 0.0),
+        ]
+
+    @staticmethod
+    def mock_alias_vec3_vector():
+        return [
+            Vector3(2.1, 3.2, 4.3),
+            Vector3(-5.4, 6.5, -7.6),
+            Vector3(8.7, 9.8, 0.1),
+            Vector3(1.2, -3.3, 4.4),
+            Vector3(-5.5, 6.6, -7.7),
+        ]
+
+    @staticmethod
+    def mock_alias_vec4_vector():
+        return [
+            Vector4(0.1, 1.2, 2.3, 3.4),
+            Vector4(-4.5, 5.6, 6.7, -7.8),
+            Vector4(8.9, -9.0, 10.1, -11.2),
+            Vector4(12.3, 13.4, 14.5, 15.6),
+            Vector4(-16.7, 17.8, 18.9, -19.0),
+        ]
+
+    @staticmethod
+    def mock_alias_mat4x4_vector():
+        return [
+            Matrix4x4.identity(),
+            Matrix4x4([
+                0.5, 1.0, 1.5, 2.0,
+                2.5, 3.0, 3.5, 4.0,
+                4.5, 5.0, 5.5, 6.0,
+                6.5, 7.0, 7.5, 8.0,
+            ]),
+            Matrix4x4([
+                -1.0, -2.0, -3.0, -4.0,
+                -5.0, -6.0, -7.0, -8.0,
+                -9.0, -10.0, -11.0, -12.0,
+                -13.0, -14.0, -15.0, -16.0,
+            ]),
+            Matrix4x4([
+                1.1, 2.2, 3.3, 4.4,
+                5.5, 6.6, 7.7, 8.8,
+                9.9, 10.0, 11.1, 12.2,
+                13.3, 14.4, 15.5, 16.6,
+            ]),
+        ]
+
+    @staticmethod
+    def mock_alias_all(
+            aBool,
+            aChar8,
+            aChar16,
+            aInt8,
+            aInt16,
+            aInt32,
+            aInt64,
+            aPtr,
+            aFloat,
+            aDouble,
+            aString,
+            aAny,
+            aVec2,
+            aVec3,
+            aVec4,
+            aMat4x4,
+            aBoolVec,
+            aChar8Vec,
+            aChar16Vec,
+            aInt8Vec,
+            aInt16Vec,
+            aInt32Vec,
+            aInt64Vec,
+            aPtrVec,
+            aFloatVec,
+            aDoubleVec,
+            aStringVec,
+            aAnyVec,
+            aVec2Vec,
+            aVec3Vec,
+            aVec4Vec,
+            aMat4x4Vec,
+    ):
+        return (
+            f"{bool_str(aBool)}|"
+            f"{char8_str(aChar8)}|"
+            f"{ord(aChar16)}|"
+            f"{aInt8}|{aInt16}|{aInt32}|{aInt64}|"
+            f"{ptr_str(aPtr)}|"
+            f"{float_str(aFloat)}|"
+            f"{float_str(aDouble)}|"
+            f"{aString}|"
+            f"{plain_str(aAny)}|"
+            f"{pod_to_string(aVec2)}|"
+            f"{pod_to_string(aVec3)}|"
+            f"{pod_to_string(aVec4)}|"
+            f"{pod_to_string(aMat4x4)}|"
+            f"{vector_to_string(aBoolVec, bool_str)}|"
+            f"{vector_to_string(aChar8Vec, char8_str)}|"
+            f"{vector_to_string(aChar16Vec, char16_str)}|"
+            f"{vector_to_string(aInt8Vec)}|"
+            f"{vector_to_string(aInt16Vec)}|"
+            f"{vector_to_string(aInt32Vec)}|"
+            f"{vector_to_string(aInt64Vec)}|"
+            f"{vector_to_string(aPtrVec, ptr_str)}|"
+            f"{vector_to_string(aFloatVec, float_str)}|"
+            f"{vector_to_string(aDoubleVec)}|"
+            f"{vector_to_string(aStringVec, quote_str)}|"
+            f"{vector_to_string(aAnyVec, plain_str)}|"
+            f"{vector_to_string(aVec2Vec)}|"
+            f"{vector_to_string(aVec3Vec)}|"
+            f"{vector_to_string(aVec4Vec)}|"
+            f"{vector_to_string(aMat4x4Vec)}"
+        )
+
+    @staticmethod
+    def mock_alias_vec2():
+        return Vector2(1.0, 2.0)
+
+    @staticmethod
+    def mock_alias_vec3():
+        return Vector3(1.0, 2.0, 3.0)
+
+    @staticmethod
+    def mock_alias_vec4():
+        return Vector4(1.0, 2.0, 3.0, 4.0)
+
+    @staticmethod
+    def mock_alias_mat4x4():
+        return Matrix4x4([
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0,
+        ])
 
     @staticmethod
     def mock_func1(vec3: Vector3):
@@ -1934,7 +2693,7 @@ def reverse_call_func_bool():
 
 def reverse_call_func_char8():
     result = master.CallFuncChar8Callback(CallbackHolder.mock_char8)
-    return f'{ord_zero(result)}'
+    return f'{chr(ord_zero(result))}'
 
 
 def reverse_call_func_char16():
@@ -2004,106 +2763,106 @@ def reverse_call_func_string():
 
 def reverse_call_func_any():
     result = master.CallFuncAnyCallback(CallbackHolder.mock_any)
-    return result
+    return str(ord_zero(result))
 
 
 def reverse_call_func_bool_vector():
-    result = master.CallFuncBoolVectorCallback(CallbackHolder.mock_bool_array)
+    result = master.CallFuncBoolVectorCallback(CallbackHolder.mock_bool_vector)
     return vector_to_string(result, bool_str)
 
 
 def reverse_call_func_char8_vector():
-    result = master.CallFuncChar8VectorCallback(CallbackHolder.mock_char8_array)
+    result = master.CallFuncChar8VectorCallback(CallbackHolder.mock_char8_vector)
     return vector_to_string(result, char8_str)
 
 
 def reverse_call_func_char16_vector():
-    result = master.CallFuncChar16VectorCallback(CallbackHolder.mock_char16_array)
+    result = master.CallFuncChar16VectorCallback(CallbackHolder.mock_char16_vector)
     return vector_to_string(result, char16_str)
 
 
 def reverse_call_func_int8_vector():
-    result = master.CallFuncInt8VectorCallback(CallbackHolder.mock_int8_array)
+    result = master.CallFuncInt8VectorCallback(CallbackHolder.mock_int8_vector)
     return vector_to_string(result)
 
 
 def reverse_call_func_int16_vector():
-    result = master.CallFuncInt16VectorCallback(CallbackHolder.mock_int16_array)
+    result = master.CallFuncInt16VectorCallback(CallbackHolder.mock_int16_vector)
     return vector_to_string(result)
 
 
 def reverse_call_func_int32_vector():
-    result = master.CallFuncInt32VectorCallback(CallbackHolder.mock_int32_array)
+    result = master.CallFuncInt32VectorCallback(CallbackHolder.mock_int32_vector)
     return vector_to_string(result)
 
 
 def reverse_call_func_int64_vector():
-    result = master.CallFuncInt64VectorCallback(CallbackHolder.mock_int64_array)
+    result = master.CallFuncInt64VectorCallback(CallbackHolder.mock_int64_vector)
     return vector_to_string(result)
 
 
 def reverse_call_func_uint8_vector():
-    result = master.CallFuncUInt8VectorCallback(CallbackHolder.mock_uint8_array)
+    result = master.CallFuncUInt8VectorCallback(CallbackHolder.mock_uint8_vector)
     return vector_to_string(result)
 
 
 def reverse_call_func_uint16_vector():
-    result = master.CallFuncUInt16VectorCallback(CallbackHolder.mock_uint16_array)
+    result = master.CallFuncUInt16VectorCallback(CallbackHolder.mock_uint16_vector)
     return vector_to_string(result)
 
 
 def reverse_call_func_uint32_vector():
-    result = master.CallFuncUInt32VectorCallback(CallbackHolder.mock_uint32_array)
+    result = master.CallFuncUInt32VectorCallback(CallbackHolder.mock_uint32_vector)
     return vector_to_string(result)
 
 
 def reverse_call_func_uint64_vector():
-    result = master.CallFuncUInt64VectorCallback(CallbackHolder.mock_uint64_array)
+    result = master.CallFuncUInt64VectorCallback(CallbackHolder.mock_uint64_vector)
     return vector_to_string(result)
 
 
 def reverse_call_func_ptr_vector():
-    result = master.CallFuncPtrVectorCallback(CallbackHolder.mock_ptr_array)
+    result = master.CallFuncPtrVectorCallback(CallbackHolder.mock_ptr_vector)
     return vector_to_string(result, ptr_str)
 
 
 def reverse_call_func_float_vector():
-    result = master.CallFuncFloatVectorCallback(CallbackHolder.mock_float_array)
+    result = master.CallFuncFloatVectorCallback(CallbackHolder.mock_float_vector)
     return vector_to_string(result, float_str)
 
 
 def reverse_call_func_double_vector():
-    result = master.CallFuncDoubleVectorCallback(CallbackHolder.mock_double_array)
+    result = master.CallFuncDoubleVectorCallback(CallbackHolder.mock_double_vector)
     return vector_to_string(result)
 
 
 def reverse_call_func_string_vector():
-    result = master.CallFuncStringVectorCallback(CallbackHolder.mock_string_array)
+    result = master.CallFuncStringVectorCallback(CallbackHolder.mock_string_vector)
     return vector_to_string(result, quote_str)
 
 
 def reverse_call_func_any_vector():
-    result = master.CallFuncAnyVectorCallback(CallbackHolder.mock_any_array)
+    result = master.CallFuncAnyVectorCallback(CallbackHolder.mock_any_vector)
     return vector_to_string(result, plain_str)
 
 
 def reverse_call_func_vec2_vector():
-    result = master.CallFuncVec2VectorCallback(CallbackHolder.mock_vec2_array)
+    result = master.CallFuncVec2VectorCallback(CallbackHolder.mock_vec2_vector)
     return vector_to_string(result, pod_to_string)
 
 
 def reverse_call_func_vec3_vector():
-    result = master.CallFuncVec3VectorCallback(CallbackHolder.mock_vec3_array)
+    result = master.CallFuncVec3VectorCallback(CallbackHolder.mock_vec3_vector)
     return vector_to_string(result, pod_to_string)
 
 
 def reverse_call_func_vec4_vector():
-    result = master.CallFuncVec4VectorCallback(CallbackHolder.mock_vec4_array)
+    result = master.CallFuncVec4VectorCallback(CallbackHolder.mock_vec4_vector)
     return vector_to_string(result, pod_to_string)
 
 
 def reverse_call_func_mat4x4_vector():
-    result = master.CallFuncMat4x4VectorCallback(CallbackHolder.mock_mat4x4_array)
+    result = master.CallFuncMat4x4VectorCallback(CallbackHolder.mock_mat4x4_vector)
     return vector_to_string(result, pod_to_string)
 
 
@@ -2126,6 +2885,165 @@ def reverse_call_func_mat4x4():
     result = master.CallFuncMat4x4Callback(CallbackHolder.mock_mat4x4)
     return pod_to_string(result)
 
+def reverse_call_func_alias_bool():
+    result = master.CallFuncAliasBoolCallback(CallbackHolder.mock_alias_bool)
+    return bool_str(result)
+
+def reverse_call_func_alias_char8():
+    result = master.CallFuncAliasChar8Callback(CallbackHolder.mock_alias_char8)
+    return f'{ord_zero(result)}'
+
+def reverse_call_func_alias_char16():
+    result = master.CallFuncAliasChar16Callback(CallbackHolder.mock_alias_char16)
+    return f'{ord_zero(result)}'
+
+def reverse_call_func_alias_int8():
+    result = master.CallFuncAliasInt8Callback(CallbackHolder.mock_alias_int8)
+    return str(result)
+
+def reverse_call_func_alias_int16():
+    result = master.CallFuncAliasInt16Callback(CallbackHolder.mock_alias_int16)
+    return str(result)
+
+def reverse_call_func_alias_int32():
+    result = master.CallFuncAliasInt32Callback(CallbackHolder.mock_alias_int32)
+    return str(result)
+
+def reverse_call_func_alias_int64():
+    result = master.CallFuncAliasInt64Callback(CallbackHolder.mock_alias_int64)
+    return str(result)
+
+def reverse_call_func_alias_uint8():
+    result = master.CallFuncAliasUInt8Callback(CallbackHolder.mock_alias_uint8)
+    return str(result)
+
+def reverse_call_func_alias_uint16():
+    result = master.CallFuncAliasUInt16Callback(CallbackHolder.mock_alias_uint16)
+    return str(result)
+
+def reverse_call_func_alias_uint32():
+    result = master.CallFuncAliasUInt32Callback(CallbackHolder.mock_alias_uint32)
+    return str(result)
+
+def reverse_call_func_alias_uint64():
+    result = master.CallFuncAliasUInt64Callback(CallbackHolder.mock_alias_uint64)
+    return str(result)
+
+def reverse_call_func_alias_ptr():
+    result = master.CallFuncAliasPtrCallback(CallbackHolder.mock_alias_ptr)
+    return ptr_str(result)
+
+def reverse_call_func_alias_float():
+    result = master.CallFuncAliasFloatCallback(CallbackHolder.mock_alias_float)
+    return float_str(result)
+
+def reverse_call_func_alias_double():
+    result = master.CallFuncAliasDoubleCallback(CallbackHolder.mock_alias_double)
+    return str(result)
+
+def reverse_call_func_alias_string():
+    result = master.CallFuncAliasStringCallback(CallbackHolder.mock_alias_string)
+    return result
+
+def reverse_call_func_alias_any():
+    result = master.CallFuncAliasAnyCallback(CallbackHolder.mock_alias_any)
+    return result
+
+def reverse_call_func_alias_bool_vector():
+    result = master.CallFuncAliasBoolVectorCallback(CallbackHolder.mock_alias_bool_vector)
+    return vector_to_string(result, bool_str)
+
+def reverse_call_func_alias_char8_vector():
+    result = master.CallFuncAliasChar8VectorCallback(CallbackHolder.mock_alias_char8_vector)
+    return vector_to_string(result, char8_str)
+
+def reverse_call_func_alias_char16_vector():
+    result = master.CallFuncAliasChar16VectorCallback(CallbackHolder.mock_alias_char16_vector)
+    return vector_to_string(result, char16_str)
+
+def reverse_call_func_alias_int8_vector():
+    result = master.CallFuncAliasInt8VectorCallback(CallbackHolder.mock_alias_int8_vector)
+    return vector_to_string(result)
+
+def reverse_call_func_alias_int16_vector():
+    result = master.CallFuncAliasInt16VectorCallback(CallbackHolder.mock_alias_int16_vector)
+    return vector_to_string(result)
+
+def reverse_call_func_alias_int32_vector():
+    result = master.CallFuncAliasInt32VectorCallback(CallbackHolder.mock_alias_int32_vector)
+    return vector_to_string(result)
+
+def reverse_call_func_alias_int64_vector():
+    result = master.CallFuncAliasInt64VectorCallback(CallbackHolder.mock_alias_int64_vector)
+    return vector_to_string(result)
+
+def reverse_call_func_alias_uint8_vector():
+    result = master.CallFuncAliasUInt8VectorCallback(CallbackHolder.mock_alias_uint8_vector)
+    return vector_to_string(result)
+
+def reverse_call_func_alias_uint16_vector():
+    result = master.CallFuncAliasUInt16VectorCallback(CallbackHolder.mock_alias_uint16_vector)
+    return vector_to_string(result)
+
+def reverse_call_func_alias_uint32_vector():
+    result = master.CallFuncAliasUInt32VectorCallback(CallbackHolder.mock_alias_uint32_vector)
+    return vector_to_string(result)
+
+def reverse_call_func_alias_uint64_vector():
+    result = master.CallFuncAliasUInt64VectorCallback(CallbackHolder.mock_alias_uint64_vector)
+    return vector_to_string(result)
+
+def reverse_call_func_alias_ptr_vector():
+    result = master.CallFuncAliasPtrVectorCallback(CallbackHolder.mock_alias_ptr_vector)
+    return vector_to_string(result, ptr_str)
+
+def reverse_call_func_alias_float_vector():
+    result = master.CallFuncAliasFloatVectorCallback(CallbackHolder.mock_alias_float_vector)
+    return vector_to_string(result, float_str)
+
+def reverse_call_func_alias_double_vector():
+    result = master.CallFuncAliasDoubleVectorCallback(CallbackHolder.mock_alias_double_vector)
+    return vector_to_string(result)
+
+def reverse_call_func_alias_string_vector():
+    result = master.CallFuncAliasStringVectorCallback(CallbackHolder.mock_alias_string_vector)
+    return vector_to_string(result, quote_str)
+
+def reverse_call_func_alias_any_vector():
+    result = master.CallFuncAliasAnyVectorCallback(CallbackHolder.mock_alias_any_vector)
+    return vector_to_string(result, plain_str)
+
+def reverse_call_func_alias_vec2_vector():
+    result = master.CallFuncAliasVec2VectorCallback(CallbackHolder.mock_alias_vec2_vector)
+    return vector_to_string(result, pod_to_string)
+
+def reverse_call_func_alias_vec3_vector():
+    result = master.CallFuncAliasVec3VectorCallback(CallbackHolder.mock_alias_vec3_vector)
+    return vector_to_string(result, pod_to_string)
+
+def reverse_call_func_alias_vec4_vector():
+    result = master.CallFuncAliasVec4VectorCallback(CallbackHolder.mock_alias_vec4_vector)
+    return vector_to_string(result, pod_to_string)
+
+def reverse_call_func_alias_mat4x4_vector():
+    result = master.CallFuncAliasMat4x4VectorCallback(CallbackHolder.mock_alias_mat4x4_vector)
+    return vector_to_string(result, pod_to_string)
+
+def reverse_call_func_alias_vec2():
+    result = master.CallFuncAliasVec2Callback(CallbackHolder.mock_alias_vec2)
+    return pod_to_string(result)
+
+def reverse_call_func_alias_vec3():
+    result = master.CallFuncAliasVec3Callback(CallbackHolder.mock_alias_vec3)
+    return pod_to_string(result)
+
+def reverse_call_func_alias_vec4():
+    result = master.CallFuncAliasVec4Callback(CallbackHolder.mock_alias_vec4)
+    return pod_to_string(result)
+
+def reverse_call_func_alias_mat4x4():
+    result = master.CallFuncAliasMat4x4Callback(CallbackHolder.mock_alias_mat4x4)
+    return pod_to_string(result)
 
 def reverse_call_func1():
     result = master.CallFunc1Callback(CallbackHolder.mock_func1)
@@ -2581,6 +3499,8 @@ reverse_test = {
     'ParamRef10': reverse_param_ref10,
     'ParamRefArrays': reverse_param_ref_vectors,
     'ParamAllPrimitives': reverse_param_all_primitives,
+    'ParamAllAliases': reverse_param_all_aliases,
+    'ParamAllRefAliases': reverse_param_all_ref_aliases,
     'ParamEnum': reverse_param_enum,
     'ParamEnumRef': reverse_param_enum_ref,
     'ParamVariant': reverse_param_variant,
