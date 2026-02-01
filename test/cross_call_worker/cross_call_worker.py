@@ -2307,8 +2307,7 @@ class CallbackHolder:
             aAnyVec,
             aVec2Vec,
             aVec3Vec,
-            aVec4Vec,
-            aMat4x4Vec,
+            aVec4Vec
     ):
         return (
             f"{bool_str(aBool)}|"
@@ -2339,7 +2338,6 @@ class CallbackHolder:
             f"{vector_to_string(aVec2Vec)}|"
             f"{vector_to_string(aVec3Vec)}|"
             f"{vector_to_string(aVec4Vec)}|"
-            f"{vector_to_string(aMat4x4Vec)}"
         )
 
     @staticmethod
@@ -2885,165 +2883,211 @@ def reverse_call_func_mat4x4():
     result = master.CallFuncMat4x4Callback(CallbackHolder.mock_mat4x4)
     return pod_to_string(result)
 
+
 def reverse_call_func_alias_bool():
     result = master.CallFuncAliasBoolCallback(CallbackHolder.mock_alias_bool)
     return bool_str(result)
+
 
 def reverse_call_func_alias_char8():
     result = master.CallFuncAliasChar8Callback(CallbackHolder.mock_alias_char8)
     return f'{ord_zero(result)}'
 
+
 def reverse_call_func_alias_char16():
     result = master.CallFuncAliasChar16Callback(CallbackHolder.mock_alias_char16)
     return f'{ord_zero(result)}'
+
 
 def reverse_call_func_alias_int8():
     result = master.CallFuncAliasInt8Callback(CallbackHolder.mock_alias_int8)
     return str(result)
 
+
 def reverse_call_func_alias_int16():
     result = master.CallFuncAliasInt16Callback(CallbackHolder.mock_alias_int16)
     return str(result)
+
 
 def reverse_call_func_alias_int32():
     result = master.CallFuncAliasInt32Callback(CallbackHolder.mock_alias_int32)
     return str(result)
 
+
 def reverse_call_func_alias_int64():
     result = master.CallFuncAliasInt64Callback(CallbackHolder.mock_alias_int64)
     return str(result)
+
 
 def reverse_call_func_alias_uint8():
     result = master.CallFuncAliasUInt8Callback(CallbackHolder.mock_alias_uint8)
     return str(result)
 
+
 def reverse_call_func_alias_uint16():
     result = master.CallFuncAliasUInt16Callback(CallbackHolder.mock_alias_uint16)
     return str(result)
+
 
 def reverse_call_func_alias_uint32():
     result = master.CallFuncAliasUInt32Callback(CallbackHolder.mock_alias_uint32)
     return str(result)
 
+
 def reverse_call_func_alias_uint64():
     result = master.CallFuncAliasUInt64Callback(CallbackHolder.mock_alias_uint64)
     return str(result)
+
 
 def reverse_call_func_alias_ptr():
     result = master.CallFuncAliasPtrCallback(CallbackHolder.mock_alias_ptr)
     return ptr_str(result)
 
+
 def reverse_call_func_alias_float():
     result = master.CallFuncAliasFloatCallback(CallbackHolder.mock_alias_float)
     return float_str(result)
+
 
 def reverse_call_func_alias_double():
     result = master.CallFuncAliasDoubleCallback(CallbackHolder.mock_alias_double)
     return str(result)
 
+
 def reverse_call_func_alias_string():
     result = master.CallFuncAliasStringCallback(CallbackHolder.mock_alias_string)
     return result
+
 
 def reverse_call_func_alias_any():
     result = master.CallFuncAliasAnyCallback(CallbackHolder.mock_alias_any)
     return result
 
+
 def reverse_call_func_alias_bool_vector():
     result = master.CallFuncAliasBoolVectorCallback(CallbackHolder.mock_alias_bool_vector)
     return vector_to_string(result, bool_str)
+
 
 def reverse_call_func_alias_char8_vector():
     result = master.CallFuncAliasChar8VectorCallback(CallbackHolder.mock_alias_char8_vector)
     return vector_to_string(result, char8_str)
 
+
 def reverse_call_func_alias_char16_vector():
     result = master.CallFuncAliasChar16VectorCallback(CallbackHolder.mock_alias_char16_vector)
     return vector_to_string(result, char16_str)
+
 
 def reverse_call_func_alias_int8_vector():
     result = master.CallFuncAliasInt8VectorCallback(CallbackHolder.mock_alias_int8_vector)
     return vector_to_string(result)
 
+
 def reverse_call_func_alias_int16_vector():
     result = master.CallFuncAliasInt16VectorCallback(CallbackHolder.mock_alias_int16_vector)
     return vector_to_string(result)
+
 
 def reverse_call_func_alias_int32_vector():
     result = master.CallFuncAliasInt32VectorCallback(CallbackHolder.mock_alias_int32_vector)
     return vector_to_string(result)
 
+
 def reverse_call_func_alias_int64_vector():
     result = master.CallFuncAliasInt64VectorCallback(CallbackHolder.mock_alias_int64_vector)
     return vector_to_string(result)
+
 
 def reverse_call_func_alias_uint8_vector():
     result = master.CallFuncAliasUInt8VectorCallback(CallbackHolder.mock_alias_uint8_vector)
     return vector_to_string(result)
 
+
 def reverse_call_func_alias_uint16_vector():
     result = master.CallFuncAliasUInt16VectorCallback(CallbackHolder.mock_alias_uint16_vector)
     return vector_to_string(result)
+
 
 def reverse_call_func_alias_uint32_vector():
     result = master.CallFuncAliasUInt32VectorCallback(CallbackHolder.mock_alias_uint32_vector)
     return vector_to_string(result)
 
+
 def reverse_call_func_alias_uint64_vector():
     result = master.CallFuncAliasUInt64VectorCallback(CallbackHolder.mock_alias_uint64_vector)
     return vector_to_string(result)
+
 
 def reverse_call_func_alias_ptr_vector():
     result = master.CallFuncAliasPtrVectorCallback(CallbackHolder.mock_alias_ptr_vector)
     return vector_to_string(result, ptr_str)
 
+
 def reverse_call_func_alias_float_vector():
     result = master.CallFuncAliasFloatVectorCallback(CallbackHolder.mock_alias_float_vector)
     return vector_to_string(result, float_str)
+
 
 def reverse_call_func_alias_double_vector():
     result = master.CallFuncAliasDoubleVectorCallback(CallbackHolder.mock_alias_double_vector)
     return vector_to_string(result)
 
+
 def reverse_call_func_alias_string_vector():
     result = master.CallFuncAliasStringVectorCallback(CallbackHolder.mock_alias_string_vector)
     return vector_to_string(result, quote_str)
+
 
 def reverse_call_func_alias_any_vector():
     result = master.CallFuncAliasAnyVectorCallback(CallbackHolder.mock_alias_any_vector)
     return vector_to_string(result, plain_str)
 
+
 def reverse_call_func_alias_vec2_vector():
     result = master.CallFuncAliasVec2VectorCallback(CallbackHolder.mock_alias_vec2_vector)
     return vector_to_string(result, pod_to_string)
+
 
 def reverse_call_func_alias_vec3_vector():
     result = master.CallFuncAliasVec3VectorCallback(CallbackHolder.mock_alias_vec3_vector)
     return vector_to_string(result, pod_to_string)
 
+
 def reverse_call_func_alias_vec4_vector():
     result = master.CallFuncAliasVec4VectorCallback(CallbackHolder.mock_alias_vec4_vector)
     return vector_to_string(result, pod_to_string)
+
 
 def reverse_call_func_alias_mat4x4_vector():
     result = master.CallFuncAliasMat4x4VectorCallback(CallbackHolder.mock_alias_mat4x4_vector)
     return vector_to_string(result, pod_to_string)
 
+
 def reverse_call_func_alias_vec2():
     result = master.CallFuncAliasVec2Callback(CallbackHolder.mock_alias_vec2)
     return pod_to_string(result)
+
 
 def reverse_call_func_alias_vec3():
     result = master.CallFuncAliasVec3Callback(CallbackHolder.mock_alias_vec3)
     return pod_to_string(result)
 
+
 def reverse_call_func_alias_vec4():
     result = master.CallFuncAliasVec4Callback(CallbackHolder.mock_alias_vec4)
     return pod_to_string(result)
 
+
 def reverse_call_func_alias_mat4x4():
     result = master.CallFuncAliasMat4x4Callback(CallbackHolder.mock_alias_mat4x4)
     return pod_to_string(result)
+
+
+def reverse_call_func_alias_all():
+    result = master.CallFuncAliasAllCallback(CallbackHolder.mock_alias_all)
+    return pod_to_string(result)
+
 
 def reverse_call_func1():
     result = master.CallFunc1Callback(CallbackHolder.mock_func1)
@@ -3546,6 +3590,47 @@ reverse_test = {
     'CallFuncVec3': reverse_call_func_vec3,
     'CallFuncVec4': reverse_call_func_vec4,
     'CallFuncMat4x4': reverse_call_func_mat4x4,
+    'CallFuncAliasBool': reverse_call_func_alias_bool,
+    'CallFuncAliasChar8': reverse_call_func_alias_char8,
+    'CallFuncAliasChar16': reverse_call_func_alias_char16,
+    'CallFuncAliasInt8': reverse_call_func_alias_int8,
+    'CallFuncAliasInt16': reverse_call_func_alias_int16,
+    'CallFuncAliasInt32': reverse_call_func_alias_int32,
+    'CallFuncAliasInt64': reverse_call_func_alias_int64,
+    'CallFuncAliasUInt8': reverse_call_func_alias_uint8,
+    'CallFuncAliasUInt16': reverse_call_func_alias_uint16,
+    'CallFuncAliasUInt32': reverse_call_func_alias_uint32,
+    'CallFuncAliasUInt64': reverse_call_func_alias_uint64,
+    'CallFuncAliasPtr': reverse_call_func_alias_ptr,
+    'CallFuncAliasFloat': reverse_call_func_alias_float,
+    'CallFuncAliasDouble': reverse_call_func_alias_double,
+    'CallFuncAliasString': reverse_call_func_alias_string,
+    'CallFuncAliasAny': reverse_call_func_alias_any,
+    'CallFuncAliasBoolVector': reverse_call_func_alias_bool_vector,
+    'CallFuncAliasChar8Vector': reverse_call_func_alias_char8_vector,
+    'CallFuncAliasChar16Vector': reverse_call_func_alias_char16_vector,
+    'CallFuncAliasInt8Vector': reverse_call_func_alias_int8_vector,
+    'CallFuncAliasInt16Vector': reverse_call_func_alias_int16_vector,
+    'CallFuncAliasInt32Vector': reverse_call_func_alias_int32_vector,
+    'CallFuncAliasInt64Vector': reverse_call_func_alias_int64_vector,
+    'CallFuncAliasUInt8Vector': reverse_call_func_alias_uint8_vector,
+    'CallFuncAliasUInt16Vector': reverse_call_func_alias_uint16_vector,
+    'CallFuncAliasUInt32Vector': reverse_call_func_alias_uint32_vector,
+    'CallFuncAliasUInt64Vector': reverse_call_func_alias_uint64_vector,
+    'CallFuncAliasPtrVector': reverse_call_func_alias_ptr_vector,
+    'CallFuncAliasFloatVector': reverse_call_func_alias_float_vector,
+    'CallFuncAliasDoubleVector': reverse_call_func_alias_double_vector,
+    'CallFuncAliasStringVector': reverse_call_func_alias_string_vector,
+    'CallFuncAliasAnyVector': reverse_call_func_alias_any_vector,
+    'CallFuncAliasVec2Vector': reverse_call_func_alias_vec2_vector,
+    'CallFuncAliasVec3Vector': reverse_call_func_alias_vec3_vector,
+    'CallFuncAliasVec4Vector': reverse_call_func_alias_vec4_vector,
+    'CallFuncAliasMat4x4Vector': reverse_call_func_alias_mat4x4_vector,
+    'CallFuncAliasVec2': reverse_call_func_alias_vec2,
+    'CallFuncAliasVec3': reverse_call_func_alias_vec3,
+    'CallFuncAliasVec4': reverse_call_func_alias_vec4,
+    'CallFuncAliasMat4x4': reverse_call_func_alias_mat4x4,
+    'CallFuncAliasAll': reverse_call_func_alias_all,
     'CallFunc1': reverse_call_func1,
     'CallFunc2': reverse_call_func2,
     'CallFunc3': reverse_call_func3,
