@@ -606,23 +606,48 @@ namespace py3lm {
 		void SetFallbackReturn(ValueType retType, ReturnSlot& ret) {
 			switch (retType) {
 			case ValueType::Void:
-				break;
+					break;
 			case ValueType::Bool:
+				ret.Set<bool>({});
+				break;
 			case ValueType::Char8:
+				ret.Set<char>({});
+				break;
 			case ValueType::Char16:
+				ret.Set<char16_t>({});
+				break;
 			case ValueType::Int8:
+				ret.Set<int8_t>({});
+				break;
 			case ValueType::Int16:
+				ret.Set<int16_t>({});
+				break;
 			case ValueType::Int32:
+				ret.Set<int32_t>({});
+				break;
 			case ValueType::Int64:
+				ret.Set<int64_t>({});
+				break;
 			case ValueType::UInt8:
+				ret.Set<uint8_t>({});
+				break;
 			case ValueType::UInt16:
+				ret.Set<uint16_t>({});
+				break;
 			case ValueType::UInt32:
+				ret.Set<uint32_t>({});
+				break;
 			case ValueType::UInt64:
+				ret.Set<uint64_t>({});
+				break;
 			case ValueType::Pointer:
-			case ValueType::Float:
-			case ValueType::Double:
-				// HACK: Fill all 8 byte with 0
 				ret.Set<uintptr_t>({});
+				break;
+			case ValueType::Float:
+				ret.Set<float>({});
+				break;
+			case ValueType::Double:
+				ret.Set<double>({});
 				break;
 			case ValueType::Function:
 				ret.Set<void*>(nullptr);
