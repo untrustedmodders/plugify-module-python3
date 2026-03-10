@@ -3,6 +3,8 @@
 #include <plugify/callback.hpp>
 #include <plugify/call.hpp>
 #include <plugify/language_module.hpp>
+#include <plugify/logger.hpp>
+#include <plugify/provider.hpp>
 #include <plugify/extension.hpp>
 
 #include <plg/numerics.hpp>
@@ -155,6 +157,8 @@ namespace py3lm {
 		std::vector<std::string> ExtractRequiredModules(std::string_view modulePath);
 
 		const std::unique_ptr<Provider>& GetProvider() const { return _provider; }
+		const std::shared_ptr<ILogger>& GetLogger() const { return _logger; }
+
 		void LogFatal(std::string_view msg) const;
 		void LogError() const;
 
@@ -166,6 +170,7 @@ namespace py3lm {
 
 	private:
 		std::unique_ptr<Provider> _provider;
+		std::shared_ptr<ILogger> _logger;
 		struct PluginData {
 			PyObject* module = nullptr;
 			PyObject* instance = nullptr;

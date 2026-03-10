@@ -5,9 +5,6 @@
 #include <bitset>
 #include <exception>
 
-#include <plugify/logger.hpp>
-#include <plugify/provider.hpp>
-
 #include <plg/string.hpp>
 #include <plg/any.hpp>
 #include <plg/format.hpp>
@@ -2770,6 +2767,19 @@ namespace py3lm {
 			}
 		}
 
+		void TraceCall(std::string_view message) {
+			if (const auto& logger = g_py3lm.GetLogger()/*; logger && logger->GetLogLevel() <= Severity::Debug*/) {
+				PyFrameObject* frame = PyEval_GetFrame();
+				size_t line = static_cast<size_t>(PyFrame_GetLineNumber(frame));
+				PyCodeObject* code = PyFrame_GetCode(frame);
+				const auto fileName = PyUnicode_AsString(code->co_filename);
+				const auto functionName = PyUnicode_AsString(code->co_name);
+				const auto moduleName = PyUnicode_AsUTF8(code->co_qualname);
+				logger->Log(message, Severity::Trace, Location(line, 0, fileName, functionName, moduleName));
+				Py_DECREF(code);
+			}
+		}
+
 		// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 		void ExternalCallNoArgs(const Method* method, MemAddr data, [[maybe_unused]] uint64_t* parameters, [[maybe_unused]] size_t count, void* return_) {
 			//ParametersSpan params(parameters, count);
@@ -2777,6 +2787,8 @@ namespace py3lm {
 
 			const Property& retType = method->GetRetType();
 			const bool hasHiddenParam = ValueUtils::IsHiddenParam(retType.GetType());
+
+			TraceCall(method->GetName());
 
 			ArgsScope a(hasHiddenParam);
 			Return r;
@@ -2800,25 +2812,21 @@ namespace py3lm {
 			ParametersSpan params(parameters, count);
 			ReturnSlot ret(return_, ValueUtils::SizeOf(ValueType::Pointer));
 
-			// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-			const auto args = params.Get<PyObject*>(1);
-
-			if (!PyTuple_Check(args)) {
-				const std::string error(std::format("Function \"{}\" expects a tuple of arguments", method->GetFuncName()));
-				SetTypeError(error, args);
-				ret.Set<void*>(nullptr);
-				return;
-			}
+			// PyObject* (MethodPyCall*)(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
+			const auto args = params.Get<PyObject *const *>(1);
+			const auto nargs = params.Get<Py_ssize_t>(2);
 
 			const auto& paramTypes = method->GetParamTypes();
 			const auto paramCount = paramTypes.size();
-			const size_t size = static_cast<size_t>(PyTuple_Size(args));
+			const size_t size = static_cast<size_t>(nargs);
 			if (size != paramCount) {
 				const std::string error(std::format("Wrong number of parameters, {} when {} required.", size, paramCount));
 				PyErr_SetString(PyExc_TypeError, error.c_str());
 				ret.Set<void*>(nullptr);
 				return;
 			}
+
+			TraceCall(method->GetName());
 
 			const Property& retType = method->GetRetType();
 			const bool hasHiddenParam = ValueUtils::IsHiddenParam(retType.GetType());
@@ -2838,7 +2846,7 @@ namespace py3lm {
 				}
 				using PushParamFunc = bool (*)(const Property&, PyObject*, ArgsScope&);
 				PushParamFunc const pushParamFunc = paramType.IsRef() ? &PushObjectAsRefParam : &PushObjectAsParam;
-				const bool pushResult = pushParamFunc(paramType, PyTuple_GetItem(args, static_cast<Py_ssize_t>(i)), a);
+				const bool pushResult = pushParamFunc(paramType, args[static_cast<Py_ssize_t>(i)], a);
 				if (!pushResult) {
 					// pushParamFunc set error
 					ret.Set<void*>(nullptr);
@@ -3002,7 +3010,7 @@ namespace py3lm {
 			PyObject* func = PyDict_GetItemString(moduleDict, methodName.c_str());
 			if (!func) {
 				PyErr_Clear();
-				g_py3lm.GetProvider()->Log(std::format(LOG_PREFIX "Method function not found: {}", binding.GetMethod()), Severity::Fatal);
+				g_py3lm.GetLogger()->Log(std::format(LOG_PREFIX "Method function not found: {}", binding.GetMethod()), Severity::Fatal);
 				Py_DECREF(tuple);
 				return nullptr;
 			}
@@ -3056,7 +3064,7 @@ namespace py3lm {
 				return nullptr;
 			}
 
-			g_py3lm.GetProvider()->Log(PyUnicode_AsString(message), Severity::Unknown);
+			g_py3lm.GetLogger()->Log(PyUnicode_AsString(message), Severity::Unknown);
 
 			Py_DECREF(message);
 
@@ -3071,6 +3079,7 @@ namespace py3lm {
 
 	Result<InitData> Python3LanguageModule::Initialize(const Provider& provider, const Extension& module) {
 		_provider = std::make_unique<Provider>(provider);
+		_logger = _provider->Resolve<ILogger>();
 
 		std::error_code ec;
 		const fs::path moduleBasePath = fs::absolute(module.GetLocation(), ec);
@@ -3424,6 +3433,7 @@ namespace py3lm {
 		_moduleFunctions.clear();
 		_pythonMethods.clear();
 		_pluginsMap.clear();
+		_logger.reset();
 		_provider.reset();
 	}
 
@@ -3543,7 +3553,7 @@ namespace py3lm {
 		std::string moduleName = filePathRelative.generic_string();
 		ReplaceAll(moduleName, "/", ".");
 
-		_provider->Log(std::format(LOG_PREFIX "Load plugin module '{}'", moduleName), Severity::Verbose);
+		_logger->Log(std::format(LOG_PREFIX "Load plugin module '{}'", moduleName), Severity::Debug);
 
 		GILLock lock{};
 
@@ -3732,7 +3742,7 @@ namespace py3lm {
 		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetUserData().RCast<PluginData*>()->start);
 		if (!returnObject) {
 			LogError();
-			_provider->Log(std::format(LOG_PREFIX "{}: call of 'plugin_start' failed", plugin.GetName()), Severity::Error);
+			_logger->Log(std::format(LOG_PREFIX "{}: call of 'plugin_start' failed", plugin.GetName()), Severity::Error);
 		}
 		Py_DECREF(returnObject);
 	}
@@ -3744,7 +3754,7 @@ namespace py3lm {
 		Py_DECREF(deltaTime);
 		if (!returnObject) {
 			LogError();
-			_provider->Log(std::format(LOG_PREFIX "{}: call of 'plugin_update' failed", plugin.GetName()), Severity::Error);
+			_logger->Log(std::format(LOG_PREFIX "{}: call of 'plugin_update' failed", plugin.GetName()), Severity::Error);
 		}
 		Py_DECREF(returnObject);
 	}
@@ -3754,7 +3764,7 @@ namespace py3lm {
 		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetUserData().RCast<PluginData*>()->end);
 		if (!returnObject) {
 			LogError();
-			_provider->Log(std::format(LOG_PREFIX "{}: call of 'plugin_end' failed", plugin.GetName()), Severity::Error);
+			_logger->Log(std::format(LOG_PREFIX "{}: call of 'plugin_end' failed", plugin.GetName()), Severity::Error);
 		}
 		Py_DECREF(returnObject);
 	}
@@ -3800,12 +3810,13 @@ namespace py3lm {
 
 		JitCallback callback{};
 
+		const bool noArgs = method.GetParamTypes().empty();
+
 		Signature sig{};
 		sig.AddArg(ValueType::Pointer);
 		sig.AddArg(ValueType::Pointer);
+		if (!noArgs) sig.AddArg(ValueType::Pointer);
 		sig.SetRet(ValueType::Pointer);
-
-		const bool noArgs = method.GetParamTypes().empty();
 
 		const MemAddr methodAddr = callback.GetJitFunc(sig, &method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
 		if (!methodAddr) {
@@ -3818,7 +3829,7 @@ namespace py3lm {
 		PyMethodDef& def = *(defPtr);
 		def.ml_name = "PlugifyExternal";
 		def.ml_meth = methodAddr.RCast<PyCFunction>();
-		def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
+		def.ml_flags = noArgs ? METH_NOARGS : METH_FASTCALL;
 		def.ml_doc = nullptr;
 
 		PyObject* const object = PyCFunction_New(defPtr.get(), nullptr);
@@ -4236,7 +4247,7 @@ namespace py3lm {
 		for (const auto& [method, addr] : plugin.GetMethodsData()) {
 			PyObject* const methodObject = FindPythonMethod(addr);
 			if (!methodObject) {
-				_provider->Log(std::format(LOG_PREFIX "Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
+				_logger->Log(std::format(LOG_PREFIX "Not found '{}' method while CreateInternalModule for '{}' plugin", method.GetName(), plugin.GetName()), Severity::Fatal);
 				std::terminate();
 			}
 			[[maybe_unused]] const auto res = PyDict_SetItemString(moduleDict, method.GetName().c_str(), methodObject);
@@ -4259,30 +4270,31 @@ namespace py3lm {
 
 			const MemAddr callAddr = call.GetJitFunc(method, addr);
 			if (!callAddr) {
-				_provider->Log(std::format(LOG_PREFIX "Lang module JIT failed to generate c++ call wrapper '{}'", call.GetError()), Severity::Fatal);
+				_logger->Log(std::format(LOG_PREFIX "Lang module JIT failed to generate c++ call wrapper '{}'", call.GetError()), Severity::Fatal);
 				std::terminate();
 			}
 
 			JitCallback callback{};
 
+			const bool noArgs = method.GetParamTypes().empty();
+
 			Signature sig{};
 			sig.AddArg(ValueType::Pointer);
 			sig.AddArg(ValueType::Pointer);
+			if (!noArgs) sig.AddArg(ValueType::Pointer);
 			sig.SetRet(ValueType::Pointer);
-
-			const bool noArgs = method.GetParamTypes().empty();
 
 			// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 			const MemAddr methodAddr = callback.GetJitFunc(sig, &method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
 			if (!methodAddr) {
-				_provider->Log(std::format(LOG_PREFIX "Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", callback.GetError()), Severity::Fatal);
+				_logger->Log(std::format(LOG_PREFIX "Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", callback.GetError()), Severity::Fatal);
 				std::terminate();
 			}
 
 			PyMethodDef& def = moduleMethods.emplace_back();
 			def.ml_name = method.GetName().c_str();
 			def.ml_meth = methodAddr.RCast<PyCFunction>();
-			def.ml_flags = noArgs ? METH_NOARGS : METH_VARARGS;
+			def.ml_flags = noArgs ? METH_NOARGS : METH_FASTCALL;
 			def.ml_doc = nullptr;
 
 			_moduleFunctions.emplace_back(std::move(callback), std::move(call));
@@ -4359,7 +4371,7 @@ namespace py3lm {
 			PyObject* constructorFunc = PyDict_GetItemString(moduleDict, constructorNames[i].c_str());
 			if (!constructorFunc) {
 				PyErr_Clear();
-				_provider->Log(std::format(LOG_PREFIX "Constructor function not found: {}", constructorNames[i]), Severity::Fatal);
+				_logger->Log(std::format(LOG_PREFIX "Constructor function not found: {}", constructorNames[i]), Severity::Fatal);
 				return;
 			}
 			Py_INCREF(constructorFunc);
@@ -4373,7 +4385,7 @@ namespace py3lm {
 			destructorFunc = PyDict_GetItemString(moduleDict, destructorName.c_str());
 			if (!destructorFunc) {
 				PyErr_Print();
-				_provider->Log(std::format(LOG_PREFIX "Destructor function not found: {}", destructorName), Severity::Fatal);
+				_logger->Log(std::format(LOG_PREFIX "Destructor function not found: {}", destructorName), Severity::Fatal);
 				return;
 			}
 		} else {
@@ -4437,7 +4449,7 @@ namespace py3lm {
 
 		if (!result) {
 			LogError();
-			_provider->Log(std::format(LOG_PREFIX "{}: call of 'bind_class_methods' failed", className), Severity::Error);
+			_logger->Log(std::format(LOG_PREFIX "{}: call of 'bind_class_methods' failed", className), Severity::Error);
 			return;
 		}
 
@@ -4550,7 +4562,7 @@ namespace py3lm {
 		Py_DECREF(pvalue);
 		Py_DECREF(ptraceback);
 		if (!strList) {
-			_provider->Log("Couldn't get exact error message", Severity::Error);
+			_logger->Log("Couldn't get exact error message", Severity::Error);
 			return;
 		}
 
@@ -4572,11 +4584,11 @@ namespace py3lm {
 
 		Py_DECREF(strList);
 
-		_provider->Log(result, Severity::Error);
+		_logger->Log(result, Severity::Error);
 	}
 
 	void Python3LanguageModule::LogFatal(std::string_view msg) const {
-		_provider->Log(msg, Severity::Fatal);
+		_logger->Log(msg, Severity::Fatal);
 	}
 
 	Python3LanguageModule g_py3lm;
