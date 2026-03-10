@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.0](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.16...v2.1.0) (2026-03-10)
+
+
+### Features
+
+* add new call logging ([a7030f5](https://github.com/untrustedmodders/plugify-module-python3/commit/a7030f58a74720720b903ebce82fd04ee87bd599))
+
+
+### Bug Fixes
+
+* add new alias tests ([7aa078c](https://github.com/untrustedmodders/plugify-module-python3/commit/7aa078c1129d3dbf7ca6e1b1ed51573613ac17d2))
+* supress asserts in return set ([11fb35f](https://github.com/untrustedmodders/plugify-module-python3/commit/11fb35fe764db97647c937a0920f7733fff2ea72))
+* update tests again ([061f4cf](https://github.com/untrustedmodders/plugify-module-python3/commit/061f4cfc013c04f3a5fb062ae9ec28ecee5749cc))
+
 ## [2.0.16](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.15...v2.0.16) (2026-01-03)
 
 
