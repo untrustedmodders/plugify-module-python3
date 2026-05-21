@@ -4,6 +4,7 @@
 #include <plugify/call.hpp>
 #include <plugify/language_module.hpp>
 #include <plugify/logger.hpp>
+#include <plugify/profiler.hpp>
 #include <plugify/provider.hpp>
 #include <plugify/extension.hpp>
 
@@ -158,6 +159,7 @@ namespace py3lm {
 
 		const std::unique_ptr<Provider>& GetProvider() const { return _provider; }
 		const std::shared_ptr<ILogger>& GetLogger() const { return _logger; }
+		const std::shared_ptr<IProfiler>& GetProfiler() const { return _profiler; }
 
 		void LogFatal(std::string_view msg) const;
 		void LogError() const;
@@ -171,6 +173,7 @@ namespace py3lm {
 	private:
 		std::unique_ptr<Provider> _provider;
 		std::shared_ptr<ILogger> _logger;
+		std::shared_ptr<IProfiler> _profiler;
 		struct PluginData {
 			PyObject* module = nullptr;
 			PyObject* instance = nullptr;

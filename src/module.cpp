@@ -2767,28 +2767,33 @@ namespace py3lm {
 			}
 		}
 
-		void TraceCall(std::string_view message) {
-			if (const auto& logger = g_py3lm.GetLogger()/*; logger && logger->GetLogLevel() <= Severity::Debug*/) {
-				PyFrameObject* frame = PyEval_GetFrame();
-				size_t line = static_cast<size_t>(PyFrame_GetLineNumber(frame));
-				PyCodeObject* code = PyFrame_GetCode(frame);
-				const auto fileName = PyUnicode_AsString(code->co_filename);
-				const auto functionName = PyUnicode_AsString(code->co_name);
-				const auto moduleName = PyUnicode_AsUTF8(code->co_qualname);
-				logger->Log(message, Severity::Trace, Location(line, 0, fileName, functionName, moduleName));
-				Py_DECREF(code);
+		ScopedZone TraceCall(std::string_view methodName) {
+			ScopedZone zone;
+			PyFrameObject* frame = PyEval_GetFrame();
+			const size_t line = static_cast<size_t>(PyFrame_GetLineNumber(frame));
+			const PyCodeObject* code = PyFrame_GetCode(frame);
+			const std::string_view fileName = PyUnicode_AsString(code->co_filename);
+			const std::string_view functionName = PyUnicode_AsString(code->co_name);
+			const std::string_view moduleName = PyUnicode_AsUTF8(code->co_qualname);
+			if (const auto& profiler = g_py3lm.GetProfiler()) {
+				zone = ScopedZone(profiler, ZoneInfo{std::format("{}::{}", moduleName, methodName), functionName, fileName, line, 0});
 			}
+			if (const auto& logger = g_py3lm.GetLogger()/*; logger && logger->GetLogLevel() <= Severity::Debug*/) {
+				logger->Log(methodName, Severity::Trace, Location(line, 0, fileName, functionName, moduleName));
+			}
+			Py_DECREF(code);
+			return zone;
 		}
 
 		// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
 		void ExternalCallNoArgs(const Method* method, MemAddr data, [[maybe_unused]] uint64_t* parameters, [[maybe_unused]] size_t count, void* return_) {
+			[[maybe_unused]] const auto zone = TraceCall(method->GetName());
+
 			//ParametersSpan params(parameters, count);
 			ReturnSlot ret(return_, ValueUtils::SizeOf(ValueType::Pointer));
 
 			const Property& retType = method->GetRetType();
 			const bool hasHiddenParam = ValueUtils::IsHiddenParam(retType.GetType());
-
-			TraceCall(method->GetName());
 
 			ArgsScope a(hasHiddenParam);
 			Return r;
@@ -2809,6 +2814,8 @@ namespace py3lm {
 		}
 
 		void ExternalCall(const Method* method, MemAddr data, uint64_t* parameters, size_t count, void* return_) {
+			[[maybe_unused]] const auto zone = TraceCall(method->GetName());
+
 			ParametersSpan params(parameters, count);
 			ReturnSlot ret(return_, ValueUtils::SizeOf(ValueType::Pointer));
 
@@ -2825,8 +2832,6 @@ namespace py3lm {
 				ret.Set<void*>(nullptr);
 				return;
 			}
-
-			TraceCall(method->GetName());
 
 			const Property& retType = method->GetRetType();
 			const bool hasHiddenParam = ValueUtils::IsHiddenParam(retType.GetType());
@@ -3080,6 +3085,7 @@ namespace py3lm {
 	Result<InitData> Python3LanguageModule::Initialize(const Provider& provider, const Extension& module) {
 		_provider = std::make_unique<Provider>(provider);
 		_logger = _provider->Resolve<ILogger>();
+		_profiler = _provider->TryResolve<IProfiler>();
 
 		std::error_code ec;
 		const fs::path moduleBasePath = fs::absolute(module.GetLocation(), ec);
@@ -3434,6 +3440,7 @@ namespace py3lm {
 		_pythonMethods.clear();
 		_pluginsMap.clear();
 		_logger.reset();
+		_profiler.reset();
 		_provider.reset();
 	}
 
