@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.1.0...v2.2.0) (2026-05-24)
+
+
+### Features
+
+* add new error handling ([67800e1](https://github.com/untrustedmodders/plugify-module-python3/commit/67800e11bb2a7c0d96840766e0223c396a946e15))
+
+
+### Bug Fixes
+
+* add profiler ([d435fb2](https://github.com/untrustedmodders/plugify-module-python3/commit/d435fb26b59d4d73e19021e11f3a96a6003b3a10))
+
 ## [2.1.0](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.0.16...v2.1.0) (2026-03-10)
 
 
