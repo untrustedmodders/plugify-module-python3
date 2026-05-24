@@ -106,6 +106,11 @@ namespace py3lm {
 		const char* name;
 	};
 
+	struct PythonError {
+		std::string message;
+		std::string traceback;
+	};
+
 	using PythonInternalMap = std::unordered_map<PyObject*, void*>;
 	using PythonExternalMap = std::unordered_map<void*, PyObject*>;
 	using PythonTypeMap = std::unordered_map<PyTypeObject*, PythonType>;
@@ -125,14 +130,14 @@ namespace py3lm {
 
 		// ILanguageModule
 		Result<InitData> Initialize(const Provider& provider, const Extension& module) override;
-		void Shutdown() override;
-		void OnUpdate([[maybe_unused]] std::chrono::milliseconds dt) override {};
-		void OnMethodExport(const Extension& plugin) override;
+		Result<void> Shutdown() override;
+		Result<void> OnUpdate([[maybe_unused]] std::chrono::milliseconds dt) override;
+		Result<void> OnMethodExport(const Extension& plugin) override;
 		Result<LoadData> OnPluginLoad(const Extension& plugin) override;
-		void OnPluginStart(const Extension& plugin) override;
-		void OnPluginUpdate(const Extension& plugin, std::chrono::milliseconds dt) override;
-		void OnPluginEnd(const Extension& plugin) override;
-		bool IsDebugBuild() override;
+		Result<void> OnPluginStart(const Extension& plugin) override;
+		Result<void> OnPluginUpdate(const Extension& plugin, std::chrono::milliseconds dt) override;
+		Result<void> OnPluginEnd(const Extension& plugin) override;
+		bool IsDebugBuild() const noexcept override;
 
 	private:
 		PyObject* FindExternal(void* funcAddr) const;
@@ -161,8 +166,9 @@ namespace py3lm {
 		const std::shared_ptr<ILogger>& GetLogger() const { return _logger; }
 		const std::shared_ptr<IProfiler>& GetProfiler() const { return _profiler; }
 
-		void LogFatal(std::string_view msg) const;
+		PythonError FetchError() const;
 		void LogError() const;
+		std::string LogError(std::string_view name, std::string_view method) const;
 
 	private:
 		PyObject* FindPythonMethod(MemAddr addr) const;

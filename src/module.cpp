@@ -729,7 +729,7 @@ namespace py3lm {
 				break;
 			default: {
 				const std::string error(std::format(LOG_PREFIX "SetFallbackReturn unsupported type {:#x}", static_cast<uint8_t>(retType)));
-				g_py3lm.LogFatal(error);
+				g_py3lm.GetLogger()->Log(error, Severity::Fatal);
 				std::terminate();
 			}
 			}
@@ -987,7 +987,7 @@ namespace py3lm {
 				break;
 			default: {
 				const std::string error(std::format(LOG_PREFIX "SetReturn unsupported type {:#x}", static_cast<uint8_t>(retType.GetType())));
-				g_py3lm.LogFatal(error);
+				g_py3lm.GetLogger()->Log(error, Severity::Fatal);
 				std::terminate();
 			}
 			}
@@ -1279,7 +1279,7 @@ namespace py3lm {
 				break;
 			default: {
 				const std::string error(std::format(LOG_PREFIX "SetRefParam unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
-				g_py3lm.LogFatal(error);
+				g_py3lm.GetLogger()->Log(error, Severity::Fatal);
 				std::terminate();
 			}
 			}
@@ -1546,7 +1546,7 @@ namespace py3lm {
 				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<uint64_t>*>(index)));
 			default: {
 				const std::string error(std::format(LOG_PREFIX "ParamToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
-				g_py3lm.LogFatal(error);
+				g_py3lm.GetLogger()->Log(error, Severity::Fatal);
 				std::terminate();
 				return nullptr;
 			}
@@ -1590,7 +1590,7 @@ namespace py3lm {
 				return CreatePyEnumObjectList(enumerator, *(params.Get<const plg::vector<uint64_t>*>(index)));
 			default: {
 				const std::string error(std::format(LOG_PREFIX "ParamRefToEnumObject unsupported enum type {:#x}", static_cast<uint8_t>(paramType.GetType())));
-				g_py3lm.LogFatal(error);
+				g_py3lm.GetLogger()->Log(error, Severity::Fatal);
 				std::terminate();
 				return nullptr;
 			}
@@ -1683,7 +1683,7 @@ namespace py3lm {
 				return CreatePyObject(*(params.Get<plg::mat4x4*>(index)));
 			default: {
 				const std::string error(std::format(LOG_PREFIX "ParamToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
-				g_py3lm.LogFatal(error);
+				g_py3lm.GetLogger()->Log(error, Severity::Fatal);
 				std::terminate();
 				return nullptr;
 			}
@@ -1774,7 +1774,7 @@ namespace py3lm {
 				return CreatePyObject(*(params.Get<plg::mat4x4*>(index)));
 			default: {
 				const std::string error(std::format(LOG_PREFIX "ParamRefToObject unsupported type {:#x}", static_cast<uint8_t>(paramType.GetType())));
-				g_py3lm.LogFatal(error);
+				g_py3lm.GetLogger()->Log(error, Severity::Fatal);
 				std::terminate();
 				return nullptr;
 			}
@@ -2157,8 +2157,7 @@ namespace py3lm {
 					break;
 				}
 				default:
-					const std::string error(std::format(LOG_PREFIX "BeginExternalCall unsupported type {:#x}", static_cast<uint8_t>(retType)));
-					g_py3lm.LogFatal(error);
+					g_py3lm.GetLogger()->Log(std::format(LOG_PREFIX "BeginExternalCall unsupported type {:#x}", static_cast<uint8_t>(retType)), Severity::Fatal);
 					std::terminate();
 					break;
 			}
@@ -2774,7 +2773,7 @@ namespace py3lm {
 			const PyCodeObject* code = PyFrame_GetCode(frame);
 			const std::string_view fileName = PyUnicode_AsString(code->co_filename);
 			const std::string_view functionName = PyUnicode_AsString(code->co_name);
-			const std::string_view moduleName = PyUnicode_AsUTF8(code->co_qualname);
+			const std::string_view moduleName = PyUnicode_AsString(code->co_qualname);
 			if (const auto& profiler = g_py3lm.GetProfiler()) {
 				zone = ScopedZone(profiler, ZoneInfo{std::format("{}::{}", moduleName, methodName), functionName, fileName, line, 0});
 			}
@@ -3347,7 +3346,7 @@ namespace py3lm {
 		return InitData{{ .hasUpdate = false }};
 	}
 
-	void Python3LanguageModule::Shutdown() {
+	Result<void> Python3LanguageModule::Shutdown() {
 		if (Py_IsInitialized()) {
 			if (_formatException) {
 				Py_DECREF(_formatException);
@@ -3442,6 +3441,12 @@ namespace py3lm {
 		_logger.reset();
 		_profiler.reset();
 		_provider.reset();
+
+		return {};
+	}
+
+	Result<void> Python3LanguageModule::OnUpdate([[maybe_unused]] std::chrono::milliseconds dt) {
+		return {};
 	}
 
 	void Python3LanguageModule::TryCreateModule(const Extension& plugin, bool empty) {
@@ -3468,8 +3473,9 @@ namespace py3lm {
 		}
 	}
 
-	void Python3LanguageModule::OnMethodExport(const Extension& plugin) {
+	Result<void> Python3LanguageModule::OnMethodExport(const Extension& plugin) {
 		TryCreateModule(plugin, true);
+		return {};
 	}
 
 	void Python3LanguageModule::ResolveRequiredModule(std::string_view moduleName) {
@@ -3744,39 +3750,39 @@ namespace py3lm {
 		return LoadData{ std::move(methods), &it->second, { updatePlugin != nullptr, startPlugin != nullptr, endPlugin != nullptr, !exportedMethods.empty() } };
 	}
 
-	void Python3LanguageModule::OnPluginStart(const Extension& plugin) {
+	Result<void> Python3LanguageModule::OnPluginStart(const Extension& plugin) {
 		GILLock lock{};
 		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetUserData().RCast<PluginData*>()->start);
 		if (!returnObject) {
-			LogError();
-			_logger->Log(std::format(LOG_PREFIX "{}: call of 'plugin_start' failed", plugin.GetName()), Severity::Error);
+			return MakeError(LogError(plugin.GetName(), "plugin_start"));
 		}
 		Py_DECREF(returnObject);
+		return {};
 	}
 
-	void Python3LanguageModule::OnPluginUpdate(const Extension& plugin, std::chrono::milliseconds dt) {
+	Result<void> Python3LanguageModule::OnPluginUpdate(const Extension& plugin, std::chrono::milliseconds dt) {
 		GILLock lock{};
 		PyObject* const deltaTime = CreatePyObject(std::chrono::duration<float>(dt).count());
 		PyObject* const returnObject = PyObject_CallOneArg(plugin.GetUserData().RCast<PluginData*>()->update, deltaTime);
 		Py_DECREF(deltaTime);
 		if (!returnObject) {
-			LogError();
-			_logger->Log(std::format(LOG_PREFIX "{}: call of 'plugin_update' failed", plugin.GetName()), Severity::Error);
+			return MakeError(LogError(plugin.GetName(), "plugin_update"));
 		}
 		Py_DECREF(returnObject);
+		return {};
 	}
 
-	void Python3LanguageModule::OnPluginEnd(const Extension& plugin) {
+	Result<void> Python3LanguageModule::OnPluginEnd(const Extension& plugin) {
 		GILLock lock{};
 		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetUserData().RCast<PluginData*>()->end);
 		if (!returnObject) {
-			LogError();
-			_logger->Log(std::format(LOG_PREFIX "{}: call of 'plugin_end' failed", plugin.GetName()), Severity::Error);
+			return MakeError(LogError(plugin.GetName(), "plugin_end"));
 		}
 		Py_DECREF(returnObject);
+		return {};
 	}
 
-	bool Python3LanguageModule::IsDebugBuild() {
+	bool Python3LanguageModule::IsDebugBuild() const noexcept {
 		return PY3LM_IS_DEBUG;
 	}
 
@@ -4455,8 +4461,7 @@ namespace py3lm {
 		Py_DECREF(args);
 
 		if (!result) {
-			LogError();
-			_logger->Log(std::format(LOG_PREFIX "{}: call of 'bind_class_methods' failed", className), Severity::Error);
+			[[maybe_unused]] auto _ = LogError(className, "bind_class_methods");
 			return;
 		}
 
@@ -4552,7 +4557,7 @@ namespace py3lm {
 		return { PyAbstractType::Invalid, name };
 	}
 
-	void Python3LanguageModule::LogError() const {
+	PythonError Python3LanguageModule::FetchError() const {
 		PyObject *ptype, *pvalue, *ptraceback;
 		PyErr_Fetch(&ptype, &pvalue, &ptraceback);
 		if (!pvalue) {
@@ -4564,38 +4569,48 @@ namespace py3lm {
 			ptraceback = Py_None;
 		}
 		PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
+
+		PythonError error{};
+
+		// short message
+		if (pvalue) {
+			PyObject* str = PyObject_Str(pvalue);
+			if (str) {
+				error.message = PyUnicode_AsString(str);
+				Py_DECREF(str);
+			}
+		}
+
+		// full trace
 		PyObject* strList = PyObject_CallFunctionObjArgs(_formatException, ptype, pvalue, ptraceback, nullptr);
 		Py_DECREF(ptype);
 		Py_DECREF(pvalue);
 		Py_DECREF(ptraceback);
-		if (!strList) {
-			_logger->Log("Couldn't get exact error message", Severity::Error);
-			return;
-		}
-
-		std::string result;
-
-		if (PySequence_Check(strList)) {
-			PyObject* strList_fast = PySequence_Fast(strList, "Shouldn't happen (1)");
-			PyObject** items = PySequence_Fast_ITEMS(strList_fast);
-			Py_ssize_t L = PySequence_Fast_GET_SIZE(strList_fast);
-			for (Py_ssize_t i = 0; i < L; ++i) {
-				PyObject* utf8 = PyUnicode_AsUTF8String(items[i]);
-				result += PyBytes_AsString(utf8);
-				Py_DECREF(utf8);
+		if (strList) {
+			if (PySequence_Check(strList)) {
+				PyObject* strList_fast = PySequence_Fast(strList, "Shouldn't happen (1)");
+				PyObject** items = PySequence_Fast_ITEMS(strList_fast);
+				Py_ssize_t L = PySequence_Fast_GET_SIZE(strList_fast);
+				for (Py_ssize_t i = 0; i < L; ++i) {
+					error.traceback += PyUnicode_AsString(items[i]);
+				}
+				Py_DECREF(strList_fast);
 			}
-			Py_DECREF(strList_fast);
-		} else {
-			result = "Can't get exact error message";
+			Py_DECREF(strList);
 		}
 
-		Py_DECREF(strList);
-
-		_logger->Log(result, Severity::Error);
+		return error;
 	}
 
-	void Python3LanguageModule::LogFatal(std::string_view msg) const {
-		_logger->Log(msg, Severity::Fatal);
+	void Python3LanguageModule::LogError() const {
+		auto [message, traceback] = FetchError();
+		_logger->Log(std::format(LOG_PREFIX "{}", traceback.empty() ? message : traceback), Severity::Error);
+	}
+
+	std::string Python3LanguageModule::LogError(std::string_view name, std::string_view method) const {
+		auto [message, traceback] = FetchError();
+		_logger->Log(std::format(LOG_PREFIX "{}: call of '{}' failed\n{}", name, method, traceback.empty() ? message : traceback), Severity::Error);
+		return message;
 	}
 
 	Python3LanguageModule g_py3lm;
