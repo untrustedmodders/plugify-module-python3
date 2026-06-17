@@ -3789,7 +3789,7 @@ namespace py3lm {
 	PyObject* Python3LanguageModule::FindExternal(void* funcAddr) const {
 		const auto it = _externalMap.find(funcAddr);
 		if (it != _externalMap.end()) {
-			return std::get<PyObject*>(*it);
+			return it->second;
 		}
 		return nullptr;
 	}
@@ -3797,7 +3797,7 @@ namespace py3lm {
 	void* Python3LanguageModule::FindInternal(PyObject* object) const {
 		const auto it = _internalMap.find(object);
 		if (it != _internalMap.end()) {
-			return std::get<void*>(*it);
+			return it->second;
 		}
 		return nullptr;
 	}
@@ -4539,7 +4539,7 @@ namespace py3lm {
 		PyTypeObject* const pytype = Py_TYPE(object);
 		auto it = _typeMap.find(pytype);
 		if (it != _typeMap.end()) {
-			return std::get<PythonType>(*it);
+			return it->second;
 		}
 		const char* name = "Unknown";
 		if (pytype != nullptr) {
