@@ -171,7 +171,7 @@ namespace py3lm {
 		std::string LogError(std::string_view name, std::string_view method) const;
 
 	private:
-		PyObject* FindPythonMethod(MemAddr addr) const;
+		PyObject* FindPythonMethod(Address addr) const;
 		PyObject* CreateInternalModule(const Extension& plugin, PyObject* moduleObject = nullptr);
 		PyObject* CreateExternalModule(const Extension& plugin, PyObject* moduleObject = nullptr);
 		void TryCreateModule(const Extension& plugin, bool empty);

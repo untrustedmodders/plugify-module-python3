@@ -1794,7 +1794,7 @@ namespace py3lm {
 			PyGILState_STATE _state;
 		};
 
-		void InternalCall(const Method* method, MemAddr data, uint64_t* parameters, const size_t count, void* return_) {
+		void InternalCall(const Method* method, Address data, uint64_t* parameters, const size_t count, void* return_) {
 			GILLock lock{};
 
 			const Property& retType = method->GetRetType();
@@ -1802,7 +1802,7 @@ namespace py3lm {
 			ParametersSpan params(parameters, count);
 			ReturnSlot ret(return_, ValueUtils::SizeOf(retType.GetType()));
 
-			PyObject* const func = data.RCast<PyObject*>();
+			PyObject* const func = data.As<PyObject*>();
 
 			enum class ParamProcess {
 				NoError,
@@ -2774,18 +2774,19 @@ namespace py3lm {
 			const std::string_view fileName = PyUnicode_AsString(code->co_filename);
 			const std::string_view functionName = PyUnicode_AsString(code->co_name);
 			const std::string_view moduleName = PyUnicode_AsString(code->co_qualname);
+			const Location location(line, 0, fileName, functionName, moduleName);
 			if (const auto& profiler = g_py3lm.GetProfiler()) {
-				zone = ScopedZone(profiler, ZoneInfo{std::format("{}::{}", moduleName, methodName), functionName, fileName, line, 0});
+				zone = ScopedZone(profiler, std::format("{}::{}", moduleName, methodName), location);
 			}
 			if (const auto& logger = g_py3lm.GetLogger()/*; logger && logger->GetLogLevel() <= Severity::Debug*/) {
-				logger->Log(methodName, Severity::Trace, Location(line, 0, fileName, functionName, moduleName));
+				logger->Log(methodName, Severity::Trace, location);
 			}
 			Py_DECREF(code);
 			return zone;
 		}
 
 		// PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-		void ExternalCallNoArgs(const Method* method, MemAddr data, [[maybe_unused]] uint64_t* parameters, [[maybe_unused]] size_t count, void* return_) {
+		void ExternalCallNoArgs(const Method* method, Address data, [[maybe_unused]] uint64_t* parameters, [[maybe_unused]] size_t count, void* return_) {
 			[[maybe_unused]] const auto zone = TraceCall(method->GetName());
 
 			//ParametersSpan params(parameters, count);
@@ -2803,7 +2804,7 @@ namespace py3lm {
 
 			using MakeExternalCallFunc = PyObject* (*)(const Property&, JitCall::CallingFunc, const ArgsScope&, Return&);
 			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnumerate() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
-			PyObject* const retObj = makeExternalCallFunc(retType, data.RCast<JitCall::CallingFunc>(), a, r);
+			PyObject* const retObj = makeExternalCallFunc(retType, data.As<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// makeExternalCallFunc set error
 				ret.Set<void*>(nullptr);
@@ -2812,7 +2813,7 @@ namespace py3lm {
 			ret.Set(retObj);
 		}
 
-		void ExternalCall(const Method* method, MemAddr data, uint64_t* parameters, size_t count, void* return_) {
+		void ExternalCall(const Method* method, Address data, uint64_t* parameters, size_t count, void* return_) {
 			[[maybe_unused]] const auto zone = TraceCall(method->GetName());
 
 			ParametersSpan params(parameters, count);
@@ -2860,7 +2861,7 @@ namespace py3lm {
 
 			using MakeExternalCallFunc = PyObject* (*)(const Property&, JitCall::CallingFunc, const ArgsScope&, Return&);
 			MakeExternalCallFunc const makeExternalCallFunc = retType.GetEnumerate() ? &MakeExternalCallWithEnumObject : &MakeExternalCallWithObject;
-			PyObject* retObj = makeExternalCallFunc(retType, data.RCast<JitCall::CallingFunc>(), a, r);
+			PyObject* retObj = makeExternalCallFunc(retType, data.As<JitCall::CallingFunc>(), a, r);
 			if (!retObj) {
 				// makeExternalCallFunc set error
 				ret.Set<void*>(nullptr);
@@ -3741,7 +3742,7 @@ namespace py3lm {
 		_pythonMethods.reserve(methodsHolders.size());
 
 		for (auto& [method, methodData] : methodsHolders) {
-			const MemAddr methodAddr = methodData.jitCallback.GetFunction();
+			const Address methodAddr = methodData.jitCallback.GetFunction();
 			methods.emplace_back(method, methodAddr);
 			AddToFunctionsMap(methodAddr, methodData.pythonFunction);
 			_pythonMethods.emplace_back(std::move(methodData));
@@ -3752,7 +3753,7 @@ namespace py3lm {
 
 	Result<void> Python3LanguageModule::OnPluginStart(const Extension& plugin) {
 		GILLock lock{};
-		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetUserData().RCast<PluginData*>()->start);
+		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetUserData().As<PluginData*>()->start);
 		if (!returnObject) {
 			return MakeError(LogError(plugin.GetName(), "plugin_start"));
 		}
@@ -3763,7 +3764,7 @@ namespace py3lm {
 	Result<void> Python3LanguageModule::OnPluginUpdate(const Extension& plugin, std::chrono::milliseconds dt) {
 		GILLock lock{};
 		PyObject* const deltaTime = CreatePyObject(std::chrono::duration<float>(dt).count());
-		PyObject* const returnObject = PyObject_CallOneArg(plugin.GetUserData().RCast<PluginData*>()->update, deltaTime);
+		PyObject* const returnObject = PyObject_CallOneArg(plugin.GetUserData().As<PluginData*>()->update, deltaTime);
 		Py_DECREF(deltaTime);
 		if (!returnObject) {
 			return MakeError(LogError(plugin.GetName(), "plugin_update"));
@@ -3774,7 +3775,7 @@ namespace py3lm {
 
 	Result<void> Python3LanguageModule::OnPluginEnd(const Extension& plugin) {
 		GILLock lock{};
-		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetUserData().RCast<PluginData*>()->end);
+		PyObject* const returnObject = PyObject_CallNoArgs(plugin.GetUserData().As<PluginData*>()->end);
 		if (!returnObject) {
 			return MakeError(LogError(plugin.GetName(), "plugin_end"));
 		}
@@ -3814,7 +3815,7 @@ namespace py3lm {
 		}
 		JitCall call{};
 
-		const MemAddr callAddr = call.GetJitFunc(method, funcAddr);
+		const Address callAddr = call.GetJitFunc(method, funcAddr);
 		if (!callAddr) {
 			const std::string error(std::format("Lang module JIT failed to generate c++ call wrapper '{}'", call.GetError()));
 			PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -3831,7 +3832,7 @@ namespace py3lm {
 		if (!noArgs) sig.AddArg(ValueType::Pointer);
 		sig.SetRet(ValueType::Pointer);
 
-		const MemAddr methodAddr = callback.GetJitFunc(sig, &method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
+		const Address methodAddr = callback.GetJitFunc(sig, &method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
 		if (!methodAddr) {
 			const std::string error(std::format("Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", callback.GetError()));
 			PyErr_SetString(PyExc_RuntimeError, error.c_str());
@@ -3841,7 +3842,7 @@ namespace py3lm {
 		auto defPtr = std::make_unique<PyMethodDef>();
 		PyMethodDef& def = *(defPtr);
 		def.ml_name = "PlugifyExternal";
-		def.ml_meth = methodAddr.RCast<PyCFunction>();
+		def.ml_meth = methodAddr.As<PyCFunction>();
 		def.ml_flags = noArgs ? METH_NOARGS : METH_FASTCALL;
 		def.ml_doc = nullptr;
 
@@ -4240,7 +4241,7 @@ namespace py3lm {
 		return matrix;
 	}
 
-	PyObject* Python3LanguageModule::FindPythonMethod(MemAddr addr) const {
+	PyObject* Python3LanguageModule::FindPythonMethod(Address addr) const {
 		for (const auto& data : _pythonMethods) {
 			if (data.jitCallback.GetFunction() == addr) {
 				return data.pythonFunction;
@@ -4281,7 +4282,7 @@ namespace py3lm {
 		for (const auto& [method, addr] : plugin.GetMethodsData()) {
 			JitCall call{};
 
-			const MemAddr callAddr = call.GetJitFunc(method, addr);
+			const Address callAddr = call.GetJitFunc(method, addr);
 			if (!callAddr) {
 				_logger->Log(std::format(LOG_PREFIX "Lang module JIT failed to generate c++ call wrapper '{}'", call.GetError()), Severity::Fatal);
 				std::terminate();
@@ -4298,7 +4299,7 @@ namespace py3lm {
 			sig.SetRet(ValueType::Pointer);
 
 			// Generate function --> PyObject* (MethodPyCall*)(PyObject* self, PyObject* args)
-			const MemAddr methodAddr = callback.GetJitFunc(sig, &method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
+			const Address methodAddr = callback.GetJitFunc(sig, &method, noArgs ? &ExternalCallNoArgs : &ExternalCall, callAddr, false);
 			if (!methodAddr) {
 				_logger->Log(std::format(LOG_PREFIX "Lang module JIT failed to generate c++ PyCFunction wrapper '{}'", callback.GetError()), Severity::Fatal);
 				std::terminate();
@@ -4306,7 +4307,7 @@ namespace py3lm {
 
 			PyMethodDef& def = moduleMethods.emplace_back();
 			def.ml_name = method.GetName().c_str();
-			def.ml_meth = methodAddr.RCast<PyCFunction>();
+			def.ml_meth = methodAddr.As<PyCFunction>();
 			def.ml_flags = noArgs ? METH_NOARGS : METH_FASTCALL;
 			def.ml_doc = nullptr;
 
