@@ -3396,16 +3396,16 @@ namespace py3lm {
 				Py_DECREF(_PluginInfoTypeObject);
 			}
 
-			for (const auto& data : _internalFunctions) {
-				Py_DECREF(data.pythonFunction);
+			for (const auto& [_, pythonFunction] : _internalFunctions) {
+				Py_DECREF(pythonFunction);
 			}
 
 			for (const auto& [_1, _2, _3, object] : _externalFunctions) {
 				Py_DECREF(object);
 			}
 
-			for (const auto& data : _pythonMethods) {
-				Py_DECREF(data.pythonFunction);
+			for (const auto& [_, pythonFunction] : _pythonMethods) {
+				Py_DECREF(pythonFunction);
 			}
 
 			for (const auto& [object, _] : _internalEnumMap) {
