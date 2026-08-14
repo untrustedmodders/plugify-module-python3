@@ -115,7 +115,7 @@ namespace py3lm {
 	using PythonExternalMap = std::unordered_map<void*, PyObject*>;
 	using PythonTypeMap = std::unordered_map<PyTypeObject*, PythonType>;
 	using PythonEnumMap = std::map<int64_t, PyObject*>;
-	using PythonExternalEnumMap = std::unordered_map<const EnumObject*, std::shared_ptr<PythonEnumMap>>;
+	using PythonExternalEnumMap = std::unordered_map<const Enum*, std::shared_ptr<PythonEnumMap>>;
 	using PythonInternalEnumMap = std::unordered_map<PyObject*, std::shared_ptr<PythonEnumMap>>;
 
 	struct PythonMethodData {
@@ -156,8 +156,8 @@ namespace py3lm {
 		PyObject* CreateMatrix4x4Object(const plg::mat4x4& matrix);
 		std::optional<plg::mat4x4> Matrix4x4ValueFromObject(PyObject* object);
 		PythonType GetObjectType(PyObject* type) const;
-		PyObject* GetEnumObject(const EnumObject& enumerator, int64_t value) const;
-		void CreateEnumsObject(const EnumObject& enumerator, PyObject* moduleDict);
+		PyObject* GetEnumObject(const Enum& enumerator, int64_t value) const;
+		void CreateEnumsObject(const Enum& enumerator, PyObject* moduleDict);
 		void CreateClassObject(const Class& cls, PyObject* moduleDict);
 		void ResolveRequiredModule(std::string_view moduleName);
 		std::vector<std::string> ExtractRequiredModules(std::string_view modulePath);

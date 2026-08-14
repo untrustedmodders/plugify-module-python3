@@ -9,8 +9,8 @@
 #include <plg/any.hpp>
 #include <plg/format.hpp>
 
-#include <plugify/enum_object.hpp>
-#include <plugify/enum_value.hpp>
+#include <plugify/enum.hpp>
+#include <plugify/value.hpp>
 #include <plugify/alias.hpp>
 #include <plugify/binding.hpp>
 
@@ -1488,12 +1488,12 @@ namespace py3lm {
 		}
 
 		template<typename T>
-		PyObject* CreatePyEnumObject(const EnumObject& enumerator, const T& value) {
+		PyObject* CreatePyEnumObject(const Enum& enumerator, const T& value) {
 			return g_py3lm.GetEnumObject(enumerator, static_cast<int64_t>(value));
 		}
 
 		template<typename T>
-		PyObject* CreatePyEnumObjectList(const EnumObject& enumerator, const plg::vector<T>& arrayArg) {
+		PyObject* CreatePyEnumObjectList(const Enum& enumerator, const plg::vector<T>& arrayArg) {
 			const auto size = arrayArg.size();
 			PyObject* const arrayObject = PyList_New(static_cast<Py_ssize_t>(size));
 			if (arrayObject) {
@@ -4469,7 +4469,7 @@ namespace py3lm {
 		Py_DECREF(result);
 	}
 
-	void Python3LanguageModule::CreateEnumsObject(const EnumObject& enumerator, PyObject* moduleDict) {
+	void Python3LanguageModule::CreateEnumsObject(const Enum& enumerator, PyObject* moduleDict) {
 		const std::string& enumName = enumerator.GetName();
 		PyObject* enumClass = PyDict_GetItemString(moduleDict, enumName.c_str());
 		if (enumClass) {
@@ -4519,7 +4519,7 @@ namespace py3lm {
 		_internalEnumMap.try_emplace(enumClass, enumMap);
 	}
 
-	PyObject* Python3LanguageModule::GetEnumObject(const EnumObject& enumerator, int64_t value) const {
+	PyObject* Python3LanguageModule::GetEnumObject(const Enum& enumerator, int64_t value) const {
 		const auto it1 = _externalEnumMap.find(&enumerator);
 		if (it1 != _externalEnumMap.end()) {
 			PyObject* object;
