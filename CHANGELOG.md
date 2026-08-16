@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.3](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.2.2...v2.2.3) (2026-08-16)
+
+
+### Bug Fixes
+
+* change schema path ([de69136](https://github.com/untrustedmodders/plugify-module-python3/commit/de69136a2989ddaff2f72fefac7a067a9ef6841a))
+* update plugify and manifests ([956bdc2](https://github.com/untrustedmodders/plugify-module-python3/commit/956bdc23e84f6513a1ce5abaf56c72aebbc5d0a0))
+
 ## [2.2.2](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.2.1...v2.2.2) (2026-06-29)
 
 
