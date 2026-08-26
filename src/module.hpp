@@ -157,8 +157,8 @@ namespace py3lm {
 		std::optional<plg::mat4x4> Matrix4x4ValueFromObject(PyObject* object);
 		PythonType GetObjectType(PyObject* type) const;
 		PyObject* GetEnumObject(const Enum& enumerator, int64_t value) const;
-		void CreateEnumsObject(const Enum& enumerator, PyObject* moduleDict);
-		void CreateClassObject(const Class& cls, PyObject* moduleDict);
+		void CreateEnumObject(const Enum& enumerator, PyObject* moduleDict);
+		void CreateClassObject(const Class& klass, PyObject* moduleDict);
 		void ResolveRequiredModule(std::string_view moduleName);
 		std::vector<std::string> ExtractRequiredModules(std::string_view modulePath);
 

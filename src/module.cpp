@@ -2914,24 +2914,6 @@ namespace py3lm {
 			return value;
 		}
 
-		void CreateEnumObject(const Method& method, PyObject* moduleDict);
-
-		void CreateEnumObject(const Property& paramType, PyObject* moduleDict) {
-			if (const auto prototype = paramType.GetPrototype()) {
-				CreateEnumObject(*prototype, moduleDict);
-			}
-			if (const auto enumerator = paramType.GetEnumerate()) {
-				g_py3lm.CreateEnumsObject(*enumerator, moduleDict);
-			}
-		}
-
-		void CreateEnumObject(const Method& method, PyObject* moduleDict) {
-			CreateEnumObject(method.GetRetType(), moduleDict);
-			for (const auto& paramType : method.GetParamTypes()) {
-				CreateEnumObject(paramType, moduleDict);
-			}
-		}
-
 		PyObject* GetInvalidValueForType(ValueType handleType, std::string_view invalidValue) {
 			if (!invalidValue.empty()) {
 				// Single numeric parse path
@@ -4266,7 +4248,10 @@ namespace py3lm {
 			}
 			[[maybe_unused]] const auto res = PyDict_SetItemString(moduleDict, method.GetName().c_str(), methodObject);
 			assert(res  == 0);
-			CreateEnumObject(method, moduleDict);
+		}
+
+		for (const auto& enm : plugin.GetEnums()) {
+			CreateEnumObject(*enm, moduleDict);
 		}
 
 		for (const auto& cls : plugin.GetClasses()) {
@@ -4327,8 +4312,8 @@ namespace py3lm {
 
 		PyModule_AddFunctions(moduleObject, moduleMethods.data());
 
-		for (const auto& method : plugin.GetMethods()) {
-			CreateEnumObject(method, moduleDict);
+		for (const auto& enm : plugin.GetEnums()) {
+			CreateEnumObject(*enm, moduleDict);
 		}
 
 		for (const auto& cls : plugin.GetClasses()) {
@@ -4338,8 +4323,8 @@ namespace py3lm {
 		return moduleObject;
 	}
 
-	void Python3LanguageModule::CreateClassObject(const Class& cls, PyObject* moduleDict) {
-		const std::string& className = cls.GetName();
+	void Python3LanguageModule::CreateClassObject(const Class& klass, PyObject* moduleDict) {
+		const std::string& className = klass.GetName();
 
 		// 1. Get or create the class object
 		PyObject* classObj = PyDict_GetItemString(moduleDict, className.c_str());
@@ -4375,7 +4360,7 @@ namespace py3lm {
 		}
 
 		// 2. Build constructors list
-		const auto& constructorNames = cls.GetConstructors();
+		const auto& constructorNames = klass.GetConstructors();
 		PyObject* const constructorsTuple = PyTuple_New(static_cast<Py_ssize_t>(constructorNames.size()));
 		if (!constructorsTuple) {
 			Py_DECREF(classObj);
@@ -4394,7 +4379,7 @@ namespace py3lm {
 
 		// 3. Get destructor function
 		PyObject* destructorFunc;
-		const std::string& destructorName = cls.GetDestructor();
+		const std::string& destructorName = klass.GetDestructor();
 		if (!destructorName.empty()) {
 			destructorFunc = PyDict_GetItemString(moduleDict, destructorName.c_str());
 			if (!destructorFunc) {
@@ -4408,7 +4393,7 @@ namespace py3lm {
 		Py_INCREF(destructorFunc);
 
 		// 4. Build methods list
-		const auto& bindings = cls.GetBindings();
+		const auto& bindings = klass.GetBindings();
 		PyObject* const methodsTuple = PyTuple_New(static_cast<Py_ssize_t>(bindings.size()));
 		if (!methodsTuple) {
 			Py_DECREF(destructorFunc);
@@ -4431,8 +4416,8 @@ namespace py3lm {
 
 		// 5. Get invalid value
 		PyObject* const invalidValue = GetInvalidValueForType(
-			cls.GetHandleType(),
-			cls.GetInvalidValue()
+			klass.GetHandleType(),
+			klass.GetInvalidValue()
 		);
 		if (!invalidValue) {
 			Py_DECREF(methodsTuple);
@@ -4469,7 +4454,7 @@ namespace py3lm {
 		Py_DECREF(result);
 	}
 
-	void Python3LanguageModule::CreateEnumsObject(const Enum& enumerator, PyObject* moduleDict) {
+	void Python3LanguageModule::CreateEnumObject(const Enum& enumerator, PyObject* moduleDict) {
 		const std::string& enumName = enumerator.GetName();
 		PyObject* enumClass = PyDict_GetItemString(moduleDict, enumName.c_str());
 		if (enumClass) {
