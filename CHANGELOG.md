@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.5](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.2.4...v2.2.5) (2026-08-26)
+
+
+### Bug Fixes
+
+* improve enum creation ([c2a98c4](https://github.com/untrustedmodders/plugify-module-python3/commit/c2a98c416c00549d7b6743b7fce63abf59ff7788))
+
 ## [2.2.4](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.2.3...v2.2.4) (2026-08-16)
 
 
