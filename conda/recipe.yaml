@@ -1,0 +1,67 @@
+context:
+  name: plugify-module-python3
+  version: ${{ env.get("PACKAGE_VERSION") }}
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  path: .
+  use_gitignore: false
+
+build:
+  number: 0
+  string: ${{ target_platform | replace("-", "_") }}
+  dynamic_linking:
+    missing_dso_allowlist:
+      - if: linux
+        then:
+          - "*/ld-linux*.so.*"
+          - "*/libc.so.*"
+          - "*/libm.so.*"
+          - "*/libdl.so.*"
+          - "*/libpthread.so.*"
+          - "*/librt.so.*"
+          - "*/libplugify.so*"
+          - "*/libpython3.12.so*"
+      - if: osx
+        then:
+          - "/usr/lib/libc++.1.dylib"
+          - "/usr/lib/libSystem.B.dylib"
+          - "/usr/lib/libc++abi.dylib"
+          - "/usr/lib/libutil.dylib"
+          - "/System/Library/Frameworks/*"
+          - "*/libplugify.dylib"
+          - "*/libplugify.*.dylib"
+          - "@rpath/libplugify.dylib"
+          - "@loader_path/libplugify.dylib"
+          - "*/libpython3.12.dylib"
+          - "*/libpython3.12.*.dylib"
+          - "@rpath/libpython3.12.dylib"
+          - "@loader_path/libpython3.12.dylib"
+      - if: win
+        then:
+          - "*/plugify.dll"
+          - "*/python312.dll"
+
+requirements:
+  run:
+    - if: linux
+      then: __glibc >=2.30
+    - if: osx and arm64
+      then: __osx >=11.0
+
+about:
+  homepage: https://github.com/${{ env.get("GITHUB_REPOSITORY", default="untrustedmodders/plugify-module-python3") }}
+  license: MIT
+  license_file: LICENSE
+  summary: "Adds support for Python3 plugins"
+  description: |
+    Adds support for Python3 plugins
+  documentation: https://github.com/${{ env.get("GITHUB_REPOSITORY", default="untrustedmodders/plugify-module-python3") }}/blob/main/README.md
+  repository: https://github.com/${{ env.get("GITHUB_REPOSITORY", default="untrustedmodders/plugify-module-python3") }}
+
+extra:
+  recipe-maintainers:
+    - ${{ env.get("GITHUB_ACTOR", default="untrustedmodders") }}
