@@ -15,7 +15,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <module_export.h>
@@ -114,7 +113,7 @@ namespace py3lm {
 	using PythonInternalMap = std::unordered_map<PyObject*, void*>;
 	using PythonExternalMap = std::unordered_map<void*, PyObject*>;
 	using PythonTypeMap = std::unordered_map<PyTypeObject*, PythonType>;
-	using PythonEnumMap = std::map<int64_t, PyObject*>;
+	using PythonEnumMap = std::flat_map<int64_t, PyObject*>;
 	using PythonExternalEnumMap = std::unordered_map<const Enum*, std::shared_ptr<PythonEnumMap>>;
 	using PythonInternalEnumMap = std::unordered_map<PyObject*, std::shared_ptr<PythonEnumMap>>;
 
@@ -187,7 +186,7 @@ namespace py3lm {
 			PyObject* start = nullptr;
 			PyObject* end = nullptr;
 		};
-		std::map<UniqueId, PluginData> _pluginsMap;
+		std::flat_map<UniqueId, PluginData> _pluginsMap;
 		std::vector<PythonMethodData> _pythonMethods;
 		PyObject* _PluginTypeObject = nullptr;
 		PyObject* _PluginInfoTypeObject = nullptr;
