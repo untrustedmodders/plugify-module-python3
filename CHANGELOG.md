@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.7](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.2.6...v2.2.7) (2026-11-15)
+
+
+### Bug Fixes
+
+* add flat_map ([c4de3d7](https://github.com/untrustedmodders/plugify-module-python3/commit/c4de3d7e32a4e0578df7e95c720123f9d8c18638))
+
 ## [2.2.6](https://github.com/untrustedmodders/plugify-module-python3/compare/v2.2.5...v2.2.6) (2026-10-14)
 
 
